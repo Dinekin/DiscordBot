@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= guild.name %> - Panel zarządzania</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+
+  <div class="container mt-4">
+    <div class="row">
+      <%- include('../partials/guild-sidebar', { path: '/dashboard/guild/' + guild.id }) %>
+
+      <div class="col-md-9">
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <h2 class="card-title">Panel zarządzania - <%= guild.name %></h2>
+            <p class="card-text">Witaj w panelu zarządzania dla twojego serwera Discord. Wybierz jedną z dostępnych opcji, aby rozpocząć konfigurację.</p>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <i class="fas fa-cog fa-2x text-primary me-3"></i>
+                  <h3 class="card-title mb-0">Ustawienia</h3>
+                </div>
+                <p class="card-text">Skonfiguruj podstawowe ustawienia bota, takie jak prefix, kanały i język.</p>
+                <a href="/dashboard/guild/<%= guild.id %>/settings" class="btn btn-primary mt-auto">
+                  Zarządzaj ustawieniami
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-4">
+            <div class="card shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <i class="fas fa-tags fa-2x text-primary me-3"></i>
+                  <h3 class="card-title mb-0">Role reakcji</h3>
+                </div>
+                <p class="card-text">Twórz i zarządzaj systemami ról poprzez reakcje emotikonami na twoim serwerze.</p>
+                <a href="/dashboard/guild/<%= guild.id %>/reaction-roles" class="btn btn-primary mt-auto">
+                  Zarządzaj rolami reakcji
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Statystyki serwera</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 mb-3 mb-md-0">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="text-muted">Członkowie</h6>
+                    <h3><%= guild.memberCount %></h3>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4 mb-3 mb-md-0">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="text-muted">Kanały</h6>
+                    <h3><%= guild.channels.cache.size %></h3>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="card bg-light">
+                  <div class="card-body text-center">
+                    <h6 class="text-muted">Role</h6>
+                    <h3><%= guild.roles.cache.size %></h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

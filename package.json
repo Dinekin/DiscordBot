@@ -1,0 +1,35 @@
+{
+  "name": "discord-reaction-roles-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord do zarządzania rolami poprzez reakcje z konfiguracją webową",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "deploy": "node src/deploy-commands.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "reaction",
+    "roles",
+    "dashboard"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "connect-mongo": "^5.0.0",
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.0.3",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "mongoose": "^7.3.0",
+    "passport": "^0.6.0",
+    "passport-discord": "^0.1.4",
+    "winston": "^3.9.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

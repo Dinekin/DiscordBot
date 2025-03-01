@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Role reakcji - <%= guild.name %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+
+  <div class="container mt-4">
+    <div class="row">
+      <%- include('../partials/guild-sidebar', { path: '/dashboard/guild/' + guild.id + '/reaction-roles' }) %>
+
+      <div class="col-md-9">
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <h2 class="card-title">Role reakcji</h2>
+            <p class="card-text">Stwórz i zarządzaj systemami ról przez reakcje na twoim serwerze.</p>
+
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createReactionRoleModal">
+              <i class="fas fa-plus"></i> Stwórz nową wiadomość
+            </button>
+          </div>
+        </div>
+
+        <% if (reactionRoles && reactionRoles.length > 0) { %>
+          <% reactionRoles.forEach(reaction => { %>
+            <div class="card shadow-sm mb-4">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><%= reaction.title %></h5>
+                <div>
+                  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal" data-message-id="<%= reaction.messageId %>">
+                    <i class="fas fa-plus"></i> Dodaj rolę
+                  </button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteReactionRole('<%= guild.id %>', '<%= reaction.messageId %>')">
+                    <i class="fas fa-trash"></i> Usuń
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p><strong>ID wiadomości:</strong> <%= reaction.messageId %></p>
+                <p><strong>Kanał:</strong> <% if (guild.channels.cache.get(reaction.channelId)) { %>#<%= guild.channels.cache.get(reaction.channelId).name %><% } else { %><em>Nieznany kanał</em><% } %></p>
+                <p><strong>Opis:</strong> <%= reaction.description %></p>
+
+                <% if (reaction.roles && reaction.roles.length > 0) { %>
+                  <h6 class="mt-4">Role:</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Emoji</th>
+                          <th>Rola</th>
+                          <th>Powiadomienie</th>
+                          <th>Akcje</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% reaction.roles.forEach(role => { %>
+                          <tr>
+                            <td><%= role.emoji %></td>
+                            <td>
+                              <% if (guild.roles.cache.get(role.roleId)) { %>
+                                <span class="badge" style="background-color: #<%= guild.roles.cache.get(role.roleId).color.toString(16).padStart(6, '0') %>">
+                                  <%= guild.roles.cache.get(role.roleId).name %>
+                                </span>
+                              <% } else { %>
+                                <em>Nieznana rola</em>
+                              <% } %>
+                            </td>
+                            <td><%= role.notificationEnabled ? 'Tak' : 'Nie' %></td>
+                            <td>
+                              <button class="btn btn-sm btn-danger" onclick="deleteRole('<%= guild.id %>', '<%= reaction.messageId %>', '<%= role.emoji %>')">
+                                <i class="fas fa-trash"></i>
+                              </button>
+                            </td>
+                          </tr>
+                        <% }); %>
+                      </tbody>
+                    </table>
+                  </div>
+                <% } else { %>
+                  <div class="alert alert-warning">
+                    Brak przypisanych ról. Dodaj role, klikając przycisk "Dodaj rolę".
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <div class="alert alert-info">
+            Nie masz jeszcze żadnych wiadomości z rolami reakcji. Kliknij przycisk "Stwórz nową wiadomość", aby zacząć.
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal do tworzenia nowej wiadomości z reaction roles -->
+  <div class="modal fade" id="createReactionRoleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Stwórz nową wiadomość z rolami reakcji</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="createReactionRoleForm">
+            <div class="mb-3">
+              <label for="channelId" class="form-label">Kanał</label>
+              <select class="form-select" id="channelId" name="channelId" required>
+                <option value="">Wybierz kanał...</option>
+                <% channels.forEach(channel => { %>
+                  <option value="<%= channel.id %>">#<%= channel.name %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="title" class="form-label">Tytuł wiadomości</label>
+              <input type="text" class="form-control" id="title" name="title" required>
+            </div>
+            <div class="mb-3">
+              <label for="description" class="form-label">Opis</label>
+              <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-primary" onclick="createReactionRole('<%= guild.id %>')">Stwórz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal do dodawania roli -->
+  <div class="modal fade" id="addRoleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Dodaj rolę</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addRoleForm">
+            <input type="hidden" id="messageId" name="messageId">
+            <div class="mb-3">
+              <label for="roleId" class="form-label">Rola</label>
+              <select class="form-select" id="roleId" name="roleId" required>
+                <option value="">Wybierz rolę...</option>
+                <% roles.forEach(role => { %>
+                  <option value="<%= role.id %>" style="color: #<%= role.color.toString(16).padStart(6, '0') %>">
+                    <%= role.name %>
+                  </option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="emoji" class="form-label">Emoji</label>
+              <input type="text" class="form-control" id="emoji" name="emoji" placeholder="Wpisz emoji lub ID emoji" required>
+              <small class="form-text text-muted">Możesz użyć standardowych emoji (np. 😀) lub własnych emoji serwera (np. :nazwa:)</small>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="notificationEnabled" name="notificationEnabled">
+              <label class="form-check-label" for="notificationEnabled">
+                Wysyłaj powiadomienie gdy ktoś doda/usunie tę rolę
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-primary" onclick="addRole('<%= guild.id %>')">Dodaj</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Obsługa otwarcia modala dodawania roli
+    const addRoleModal = document.getElementById('addRoleModal');
+    if (addRoleModal) {
+      addRoleModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const messageId = button.getAttribute('data-message-id');
+        document.getElementById('messageId').value = messageId;
+      });
+    }
+
+    // Funkcja do tworzenia nowej wiadomości reaction role
+    async function createReactionRole(guildId) {
+      const form = document.getElementById('createReactionRoleForm');
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/reaction-roles`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channelId: formData.get('channelId'),
+            title: formData.get('title'),
+            description: formData.get('description')
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Zamknij modal i odśwież stronę
+          const modal = bootstrap.Modal.getInstance(document.getElementById('createReactionRoleModal'));
+          modal.hide();
+          location.reload();
+        } else {
+          alert(`Błąd: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas tworzenia wiadomości.');
+      }
+    }
+
+    // Funkcja do dodawania roli
+    async function addRole(guildId) {
+      const form = document.getElementById('addRoleForm');
+      const formData = new FormData(form);
+      const messageId = formData.get('messageId');
+
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/reaction-roles/${messageId}/roles`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            roleId: formData.get('roleId'),
+            emoji: formData.get('emoji'),
+            notificationEnabled: formData.get('notificationEnabled') ? 'true' : 'false'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Zamknij modal i odśwież stronę
+          const modal = bootstrap.Modal.getInstance(document.getElementById('addRoleModal'));
+          modal.hide();
+          location.reload();
+        } else {
+          alert(`Błąd: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas dodawania roli.');
+      }
+    }
+
+    // Funkcja do usuwania roli
+    async function deleteRole(guildId, messageId, emoji) {
+      if (!confirm('Czy na pewno chcesz usunąć tę rolę?')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/reaction-roles/${messageId}/roles/${encodeURIComponent(emoji)}`, {
+          method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(`Błąd: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas usuwania roli.');
+      }
+    }
+
+    // Funkcja do usuwania całej wiadomości reaction role
+    async function deleteReactionRole(guildId, messageId) {
+      if (!confirm('Czy na pewno chcesz usunąć tę wiadomość z rolami reakcji? Ta operacja usunie również wiadomość z Discorda.')) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/reaction-roles/${messageId}`, {
+          method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          location.reload();
+        } else {
+          alert(`Błąd: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas usuwania wiadomości.');
+      }
+    }
+  </script>
+</body>
+</html>

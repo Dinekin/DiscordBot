@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Błąd <%= statusCode %> - Discord Reaction Roles Bot</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm text-center py-5">
+          <div class="card-body">
+            <h1 class="display-1 text-muted"><%= statusCode %></h1>
+            <h2 class="mb-4"><%= message %></h2>
+            <p class="mb-4">Przepraszamy, ale wystąpił błąd podczas przetwarzania twojego żądania.</p>
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+              <a href="/" class="btn btn-primary">
+                <i class="fas fa-home me-2"></i> Strona główna
+              </a>
+              <a href="/dashboard" class="btn btn-outline-secondary">
+                <i class="fas fa-tachometer-alt me-2"></i> Panel zarządzania
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

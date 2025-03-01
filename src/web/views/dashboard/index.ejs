@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel bota Discord - Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+
+  <div class="container mt-4">
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="card-title">Twoje serwery</h2>
+
+            <div class="row mt-4">
+              <% if (guilds && guilds.length > 0) { %>
+                <% guilds.forEach(guild => { %>
+                  <div class="col-md-4 mb-4">
+                    <div class="card server-card h-100">
+                      <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center mb-3">
+                          <% if (guild.icon) { %>
+                            <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="<%= guild.name %>" class="server-icon me-3">
+                          <% } else { %>
+                            <div class="server-icon server-icon-placeholder me-3">
+                              <%= guild.name.charAt(0) %>
+                            </div>
+                          <% } %>
+                          <h5 class="card-title mb-0"><%= guild.name %></h5>
+                        </div>
+
+                        <% if (guild.hasBot) { %>
+                          <a href="/dashboard/guild/<%= guild.id %>" class="btn btn-primary mt-auto">
+                            Zarządzaj
+                          </a>
+                        <% } else { %>
+                          <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>" class="btn btn-outline-primary mt-auto">
+                            Dodaj bota
+                          </a>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                <% }); %>
+              <% } else { %>
+                <div class="col-12">
+                  <div class="alert alert-info">
+                    Nie masz dostępu do żadnych serwerów lub nie jesteś administratorem na żadnym serwerze.
+                  </div>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

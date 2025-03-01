@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ustawienia - <%= guild.name %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+
+  <div class="container mt-4">
+    <div class="row">
+      <%- include('../partials/guild-sidebar', { path: '/dashboard/guild/' + guild.id + '/settings' }) %>
+
+      <div class="col-md-9">
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <h2 class="card-title">Ustawienia serwera</h2>
+            <p class="card-text">Dostosuj ustawienia bota dla serwera <%= guild.name %>.</p>
+
+            <form id="settingsForm">
+              <div class="mb-3">
+                <label for="prefix" class="form-label">Prefix</label>
+                <input type="text" class="form-control" id="prefix" name="prefix" value="<%= settings.prefix || '!' %>" required>
+                <div class="form-text">Prefix używany do komend tekstowych (np. !help).</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="welcomeChannel" class="form-label">Kanał powitalny</label>
+                <select class="form-select" id="welcomeChannel" name="welcomeChannel">
+                  <option value="">Brak (wyłączony)</option>
+                  <% channels.forEach(channel => { %>
+                    <option value="<%= channel.id %>" <%= settings.welcomeChannel === channel.id ? 'selected' : '' %>>#<%= channel.name %></option>
+                  <% }); %>
+                </select>
+                <div class="form-text">Kanał, na którym będą wysyłane powitania nowych członków.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="notificationChannel" class="form-label">Kanał powiadomień</label>
+                <select class="form-select" id="notificationChannel" name="notificationChannel">
+                  <option value="">Brak (wyłączony)</option>
+                  <% channels.forEach(channel => { %>
+                    <option value="<%= channel.id %>" <%= settings.notificationChannel === channel.id ? 'selected' : '' %>>#<%= channel.name %></option>
+                  <% }); %>
+                </select>
+                <div class="form-text">Kanał, na którym będą wysyłane powiadomienia o zmianach ról.</div>
+              </div>
+
+              <div class="mb-3">
+                <label for="language" class="form-label">Język</label>
+                <select class="form-select" id="language" name="language">
+                  <option value="pl" <%= settings.language === 'pl' ? 'selected' : '' %>>Polski</option>
+                  <option value="en" <%= settings.language === 'en' ? 'selected' : '' %>>English</option>
+                </select>
+                <div class="form-text">Język używany przez bota w wiadomościach.</div>
+              </div>
+
+              <div class="card mb-3">
+                <div class="card-header">
+                  <h5 class="mb-0">Moduły</h5>
+                </div>
+                <div class="card-body">
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="reactionRolesModule" name="modules.reactionRoles" <%= settings.modules && settings.modules.reactionRoles ? 'checked' : '' %>>
+                    <label class="form-check-label" for="reactionRolesModule">Role reakcji</label>
+                    <div class="form-text">Włącz lub wyłącz moduł ról przez reakcje.</div>
+                  </div>
+
+                  <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="notificationsModule" name="modules.notifications" <%= settings.modules && settings.modules.notifications ? 'checked' : '' %>>
+                    <label class="form-check-label" for="notificationsModule">Powiadomienia</label>
+                    <div class="form-text">Włącz lub wyłącz powiadomienia o zmianach ról.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-grid">
+                <button type="button" class="btn btn-primary" onclick="saveSettings('<%= guild.id %>')">
+                  <i class="fas fa-save me-2"></i> Zapisz ustawienia
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script>
+    async function saveSettings(guildId) {
+      const form = document.getElementById('settingsForm');
+      const formData = new FormData(form);
+
+      // Pobierz wartości przełączników
+      formData.set('modules.reactionRoles', document.getElementById('reactionRolesModule').checked ? 'true' : 'false');
+      formData.set('modules.notifications', document.getElementById('notificationsModule').checked ? 'true' : 'false');
+
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/settings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(Object.fromEntries(formData))
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('Ustawienia zostały zapisane!');
+        } else {
+          alert(`Błąd: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas zapisywania ustawień.');
+      }
+    }

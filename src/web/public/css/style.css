@@ -1,0 +1,111 @@
+/* Ogólne style */
+body {
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Style dla ikon serwerów */
+.server-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.server-icon-lg {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.server-icon-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #5865F2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.server-icon-lg.server-icon-placeholder {
+    width: 80px;
+    height: 80px;
+    font-size: 1.5rem;
+}
+
+/* Style dla kart serwerów */
+.server-card {
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.server-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Avatar użytkownika w nawigacji */
+.user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Avatar bota na stronie głównej */
+.bot-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.bot-avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: #5865F2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+}
+
+/* Kolorowanie statusu aktywności modułów */
+.module-status {
+    font-weight: bold;
+}
+
+.module-status.enabled {
+    color: #28a745;
+}
+
+.module-status.disabled {
+    color: #dc3545;
+}
+
+/* Dodatkowe style dla tabeli ról */
+.role-badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+/* Responsywne style dla urządzeń mobilnych */
+@media (max-width: 767.98px) {
+    .server-icon-lg {
+        width: 60px;
+        height: 60px;
+    }
+
+    .bot-avatar, .bot-avatar-placeholder {
+        width: 100px;
+        height: 100px;
+    }
+}

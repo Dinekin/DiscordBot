@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Discord Reaction Roles Bot</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<%- include('partials/navbar') %>
+
+<div class="container">
+<div class="row justify-content-center">
+<div class="col-md-10 col-lg-8">
+<div class="text-center mt-5">
+<% if (botUser && botUser.avatar) { %>
+    <img src="https://cdn.discordapp.com/avatars/<%= botUser.id %>/<%= botUser.avatar %>.png" alt="Bot Avatar" class="bot-avatar mb-4">
+    <% } else { %>
+        <div class="bot-avatar-placeholder mb-4 mx-auto">
+        <i class="fas fa-robot"></i>
+        </div>
+        <% } %>
+        <h1 class="display-4">Choco</h1>
+        <p class="lead">Prosty bot do discorda.</p>
+
+        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mt-4">
+        <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands" class="btn btn-primary btn-lg px-4 gap-3">
+        <i class="fas fa-plus-circle me-2"></i> Dodaj do swojego serwera
+        </a>
+        <a href="/dashboard" class="btn btn-outline-primary btn-lg px-4">
+        <i class="fas fa-tachometer-alt me-2"></i> Panel zarządzania
+        </a>
+        </div>
+        </div>
+
+        <div class="row mt-5">
+        <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+        <i class="fas fa-tags fa-3x text-primary mb-3"></i>
+        <h3>Role przez reakcje</h3>
+        <p>Pozwól użytkownikom wybierać role poprzez kliknięcie emotki pod wiadomością.</p>
+        </div>
+        </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+        <i class="fas fa-bell fa-3x text-primary mb-3"></i>
+        <h3>Powiadomienia</h3>
+        <p>Otrzymuj powiadomienia gdy użytkownicy dodają lub usuwają role.</p>
+        </div>
+        </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+        <i class="fas fa-cog fa-3x text-primary mb-3"></i>
+        <h3>Panel webowy</h3>
+        <p>Zarządzaj wszystkimi ustawieniami bota przez prosty panel internetowy.</p>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+        </div>
+
+        <footer class="bg-light mt-5 py-4">
+        <div class="container text-center">
+        <p class="text-muted">Discord Reaction Roles Bot &copy; 2025</p>
+        </div>
+        </footer>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+        </body>
+        </html>

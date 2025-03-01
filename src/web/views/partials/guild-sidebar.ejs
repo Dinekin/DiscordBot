@@ -1,0 +1,26 @@
+<div class="col-md-3 mb-4">
+<div class="card shadow-sm">
+<div class="card-body text-center">
+<% if (guild.icon) { %>
+    <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="<%= guild.name %>" class="server-icon-lg mb-3">
+    <% } else { %>
+        <div class="server-icon-lg server-icon-placeholder mb-3 mx-auto">
+        <%= guild.name.charAt(0) %>
+        </div>
+        <% } %>
+        <h5 class="mb-0"><%= guild.name %></h5>
+        <p class="text-muted"><small><%= guild.memberCount %> członków</small></p>
+        </div>
+        <div class="list-group list-group-flush">
+        <a href="/dashboard/guild/<%= guild.id %>" class="list-group-item list-group-item-action <%= path.includes('/guild/' + guild.id) && !path.includes('/settings') && !path.includes('/reaction-roles') ? 'active' : '' %>">
+        <i class="fas fa-tachometer-alt me-2"></i> Panel główny
+        </a>
+        <a href="/dashboard/guild/<%= guild.id %>/settings" class="list-group-item list-group-item-action <%= path.includes('/settings') ? 'active' : '' %>">
+        <i class="fas fa-cog me-2"></i> Ustawienia
+        </a>
+        <a href="/dashboard/guild/<%= guild.id %>/reaction-roles" class="list-group-item list-group-item-action <%= path.includes('/reaction-roles') ? 'active' : '' %>">
+        <i class="fas fa-tags me-2"></i> Role reakcji
+        </a>
+        </div>
+        </div>
+        </div>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logowanie - Discord Reaction Roles Bot</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/navbar') %>
+
+  <div class="container mt-5">
+    <div class="row justify-content-center">
+      <div class="col-md-6">
+        <div class="card shadow-sm">
+          <div class="card-body text-center py-5">
+            <i class="fab fa-discord fa-5x text-primary mb-4"></i>
+            <h1 class="h3 mb-4">Zaloguj się przez Discord</h1>
+            <p class="mb-4">Aby uzyskać dostęp do panelu zarządzania botem, musisz zalogować się używając swojego konta Discord.</p>
+            <a href="/auth/discord" class="btn btn-primary btn-lg">
+              <i class="fab fa-discord me-2"></i> Zaloguj przez Discord
+            </a>
+            <p class="mt-4 text-muted">
+              <small>Bot wymaga uprawnień dostępu do podstawowych informacji o twoim koncie oraz liście serwerów.</small>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
