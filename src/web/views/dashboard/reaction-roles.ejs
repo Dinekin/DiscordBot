@@ -76,6 +76,9 @@
                               <button class="btn btn-sm btn-danger" onclick="deleteRole('<%= guild.id %>', '<%= reaction.messageId %>', '<%= role.emoji %>')">
                                 <i class="fas fa-trash"></i>
                               </button>
+                              <button class="btn btn-sm btn-warning" onclick="resetReactions('<%= guild.id %>', '<%= reaction.messageId %>')">
+                                <i class="fas fa-sync"></i> Resetuj reakcje
+                              </button>
                             </td>
                           </tr>
                         <% }); %>
@@ -283,6 +286,29 @@
         alert('Wystąpił błąd podczas usuwania roli.');
       }
     }
+
+    async function resetReactions(guildId, messageId) {
+    if (!confirm('Czy na pewno chcesz zresetować wszystkie reakcje dla tej wiadomości?')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/guilds/${guildId}/reaction-roles/${messageId}/reset`, {
+        method: 'POST'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Reakcje zostały zresetowane!');
+      } else {
+        alert(`Błąd: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Błąd:', error);
+      alert('Wystąpił błąd podczas resetowania reakcji.');
+    }
+  }
 
     // Funkcja do usuwania całej wiadomości reaction role
     async function deleteReactionRole(guildId, messageId) {

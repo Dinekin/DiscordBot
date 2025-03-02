@@ -1,118 +1,98 @@
 const { Events } = require('discord.js');
-const MessageLog = require('../models/MessageLog');
+const ReactionRole = require('../models/ReactionRole');
 const Guild = require('../models/Guild');
 const logger = require('../utils/logger');
 
 module.exports = {
-  name: Events.MessageReactionRemove,
-  async execute(reaction, user) {
-    // Ignoruj reakcje botów
-    if (user.bot) return;
-    
-    // Sprawdź, czy reakcja jest częściowa i załaduj ją w całości
-    if (reaction.partial) {
-      try {
-        await reaction.fetch();
-      } catch (error) {
-        logger.error('Błąd podczas pobierania reakcji:', error);
-        return;
-      }
-    }
-    
-    try {
-      // Sprawdzenie czy funkcja logowania wiadomości jest włączona na serwerze
-      const guildSettings = await Guild.findOne({ guildId: reaction.message.guild?.id });
-      
-      // Jeśli nie ma guildSettings lub funkcja nie jest włączona, zakończ
-      if (!reaction.message.guild || !guildSettings || !guildSettings.modules?.messageLog) return;
-      
-// Znajdź log wiadomości
-const messageLog = await MessageLog.findOne({ messageId: reaction.message.id });
-      
-if (messageLog) {
-  // Pobierz informacje o emoji
-  const emoji = reaction.emoji;
-  const emojiId = emoji.id;
-  const emojiName = emoji.name;
-  
-  // Sprawdź, czy ta reakcja istnieje w logu
-  const existingReactionIndex = messageLog.reactions.findIndex(r => 
-    (emojiId && r.id === emojiId) || (!emojiId && r.name === emojiName)
-  );
-  
-  if (existingReactionIndex !== -1) {
-    // Aktualizuj istniejącą reakcję
-    const existingReaction = messageLog.reactions[existingReactionIndex];
-    
-    // Zmniejsz licznik reakcji
-    existingReaction.count = Math.max(0, (existingReaction.count || 1) - 1);
-    
-    // Inicjalizuj tablicę users jeśli nie istnieje
-    if (!existingReaction.users) {
-      existingReaction.users = [];
-    }
-    
-    // Usuń użytkownika z listy
-    existingReaction.users = existingReaction.users.filter(id => id !== user.id);
-    logger.debug(`Usunięto użytkownika ${user.id} z listy dla reakcji ${emojiName} na wiadomość ${reaction.message.id}`);
-    
-    // Jeśli nie ma już reakcji tego typu, usuń ją z listy
-    if (existingReaction.count === 0) {
-      messageLog.reactions.splice(existingReactionIndex, 1);
-      logger.debug(`Usunięto reakcję ${emojiName} z listy dla wiadomości ${reaction.message.id}`);
-    }
-  }
-        
-        await messageLog.save();
-        logger.debug(`Zaktualizowano log dla usunięcia reakcji z wiadomości ${reaction.message.id}`);
-        
-        // Opcjonalnie wysyłanie logu na wyznaczony kanał
-        if (guildSettings.messageLogChannel) {
-          const logChannel = await reaction.message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
-          
-          if (logChannel && logChannel.id !== reaction.message.channel.id) {
-            // Loguj tylko ważniejsze zmiany, np. gdy nie ma już żadnej reakcji tego typu
-            // lub co 5 usuniętych reakcji
-            const currentCount = existingReactionIndex !== -1 
-              ? messageLog.reactions[existingReactionIndex]?.count || 0
-              : 0;
-              
-            const wasRemoved = existingReactionIndex !== -1 && currentCount === 0;
-            const isSignificantChange = currentCount % 5 === 0;
+    name: Events.MessageReactionRemove,
+    async execute(reaction, user) {
+        // Ignoruj reakcje od botów
+        if (user.bot) return;
+
+        try {
+            logger.debug(`Reakcja usunięta: ${user.tag} usunął emoji ${reaction.emoji.name || reaction.emoji.id} z wiadomości ${reaction.message.id}`);
             
-            if (wasRemoved || isSignificantChange) {
-              const emojiDisplay = emojiId 
-                ? `<${emoji.animated ? 'a' : ''}:${emojiName}:${emojiId}>`
-                : emojiName;
-              
-              const logEmbed = {
-                color: 0xe74c3c,
-                author: {
-                  name: user.tag,
-                  icon_url: user.displayAvatarURL({ dynamic: true })
-                },
-                description: `**Reakcja usunięta z [wiadomości](${reaction.message.url}) w <#${reaction.message.channel.id}>**\n${emojiDisplay} (pozostało: ${currentCount})`,
-                fields: [],
-                footer: {
-                  text: `Wiadomość ID: ${reaction.message.id}`
-                },
-                timestamp: new Date()
-              };
-              
-              // Jeśli to customowa emoji, dodaj jej obraz
-              if (emojiId) {
-                logEmbed.thumbnail = {
-                  url: `https://cdn.discordapp.com/emojis/${emojiId}.${emoji.animated ? 'gif' : 'png'}`
-                };
-              }
-              
-              await logChannel.send({ embeds: [logEmbed] });
+            // Sprawdź, czy reakcja jest częściowa i załaduj ją w całości
+            if (reaction.partial) {
+                try {
+                    await reaction.fetch();
+                    logger.debug('Reakcja częściowa została pobrana w całości');
+                } catch (error) {
+                    logger.error(`Błąd podczas pobierania reakcji: ${error.message}`);
+                    return;
+                }
             }
-          }
+
+            // Pobierz informacje o serwerze
+            const guildSettings = await Guild.findOne({ guildId: reaction.message.guildId });
+            logger.debug(`Ustawienia serwera: ${JSON.stringify(guildSettings ? guildSettings.modules : 'brak')}`);
+            
+            // Sprawdź czy moduł reaction roles jest włączony
+            if (guildSettings && guildSettings.modules && guildSettings.modules.reactionRoles === false) {
+                logger.debug('Moduł reaction roles jest wyłączony, przerywam');
+                return;
+            }
+
+            // Znajdź reakcję w bazie danych
+            const reactionRole = await ReactionRole.findOne({
+                guildId: reaction.message.guildId,
+                messageId: reaction.message.id
+            });
+
+            if (!reactionRole) {
+                logger.debug(`Nie znaleziono konfiguracji reaction role dla wiadomości ${reaction.message.id}`);
+                return;
+            }
+
+            // Sprawdź, czy emoji jest w bazie danych
+            const emojiIdentifier = reaction.emoji.id || reaction.emoji.name;
+            logger.debug(`Szukam emoji: ${emojiIdentifier} w konfiguracji ról`);
+            
+            const roleInfo = reactionRole.roles.find(r => r.emoji === emojiIdentifier);
+
+            if (!roleInfo) {
+                logger.debug(`Nie znaleziono roli dla emoji ${emojiIdentifier}`);
+                return;
+            }
+
+            try {
+                // Usuń rolę użytkownikowi
+                const guild = reaction.message.guild;
+                const member = await guild.members.fetch(user.id);
+                
+                // Pobierz rolę, aby sprawdzić czy istnieje
+                const role = await guild.roles.fetch(roleInfo.roleId).catch(err => {
+                    logger.error(`Nie można znaleźć roli ${roleInfo.roleId}: ${err.message}`);
+                    return null;
+                });
+                
+                if (!role) {
+                    logger.error(`Rola o ID ${roleInfo.roleId} nie istnieje na serwerze`);
+                    return;
+                }
+                
+                await member.roles.remove(roleInfo.roleId);
+                logger.info(`Usunięto rolę ${role.name} użytkownikowi ${member.user.tag}`);
+
+                // Sprawdź, czy powiadomienia są włączone
+                if (roleInfo.notificationEnabled && guildSettings.notificationChannel) {
+                    try {
+                        const notificationChannel = await guild.channels.fetch(guildSettings.notificationChannel);
+                        
+                        if (notificationChannel) {
+                            await notificationChannel.send(
+                                `Użytkownik ${user} usunął rolę ${role.name} poprzez usunięcie reakcji w kanale <#${reaction.message.channel.id}>`
+                            );
+                        }
+                    } catch (notifError) {
+                        logger.error(`Błąd podczas wysyłania powiadomienia: ${notifError.message}`);
+                    }
+                }
+            } catch (error) {
+                logger.error(`Błąd podczas usuwania roli: ${error.stack}`);
+            }
+        } catch (error) {
+            logger.error(`Ogólny błąd podczas obsługi usunięcia reakcji: ${error.stack}`);
         }
-      }
-    } catch (error) {
-      logger.error(`Błąd podczas logowania usunięcia reakcji: ${error.stack}`);
-    }
-  }
+    },
 };

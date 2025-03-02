@@ -96,46 +96,55 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
   <script>
-    async function saveSettings(guildId) {
-      const form = document.getElementById('settingsForm');
-      const formData = new FormData(form);
+  async function saveSettings(guildId) {
+  // Pobieramy wartości bezpośrednio z elementów formularza
+  const prefix = document.getElementById('prefix').value;
+  const welcomeChannel = document.getElementById('welcomeChannel').value;
+  const notificationChannel = document.getElementById('notificationChannel').value;
+  const language = document.getElementById('language').value;
+  
+  // Ważne: pobieramy surowe wartości checked z checkboxów (true/false)
+  const reactionRolesEnabled = document.getElementById('reactionRolesModule').checked;
+  const notificationsEnabled = document.getElementById('notificationsModule').checked;
+  const messageLogEnabled = document.getElementById('messageLogModule').checked;
+  
+  // Tworzymy czysty obiekt danych (bez FormData)
+  const settings = {
+    prefix: prefix,
+    welcomeChannel: welcomeChannel,
+    notificationChannel: notificationChannel,
+    language: language,
+    messageLog: messageLogEnabled, // Dodajemy bezpośrednią wartość dla messageLog
+    logDeletedOnly: document.getElementById('logDeletedOnly') ? 
+                    document.getElementById('logDeletedOnly').checked : false
+  };
+  
+  // Dodajemy logi aby pomóc w debugowaniu
+  console.log('Wysyłane dane ustawień:', settings);
+  console.log('Stan checkboxa messageLog:', messageLogEnabled);
+  
+  try {
+    const response = await fetch(`/api/guilds/${guildId}/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(settings)
+    });
 
-// Pobierz wartości przełączników i zapisz w formie JSON
-      const modules = {
-        'modules.reactionRoles': document.getElementById('reactionRolesModule').checked ? 'true' : 'false',
-        'modules.notifications': document.getElementById('notificationsModule').checked ? 'true' : 'false',
-        'modules.messageLog': document.getElementById('messageLogModule').checked ? 'true' : 'false'
-      };
-      
-      // Wypisz do konsoli, co będziemy wysyłać
-      console.log('Wysyłane dane:', {
-        ...Object.fromEntries(formData),
-        ...modules
-      });
-      
-      // Dodaj moduły do formData
-      Object.entries(modules).forEach(([key, value]) => {
-        formData.set(key, value);
-      });
+    const data = await response.json();
+    console.log('Odpowiedź serwera:', data);
 
-      try {
-        const response = await fetch(`/api/guilds/${guildId}/settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(Object.fromEntries(formData))
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          alert('Ustawienia zostały zapisane!');
-        } else {
-          alert(`Błąd: ${data.error}`);
-        }
-      } catch (error) {
-        console.error('Błąd:', error);
-        alert('Wystąpił błąd podczas zapisywania ustawień.');
-      }
+    if (data.success) {
+      alert('Ustawienia zostały zapisane!');
+      // Odświeżamy stronę, aby zobaczyć zmiany
+      window.location.reload();
+    } else {
+      alert(`Błąd: ${data.error}`);
     }
+  } catch (error) {
+    console.error('Błąd podczas zapisywania ustawień:', error);
+    alert('Wystąpił błąd podczas zapisywania ustawień. Sprawdź konsolę.');
+  }
+}
+<script/>

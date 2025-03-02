@@ -1,149 +1,129 @@
 const { Events } = require('discord.js');
-const MessageLog = require('../models/MessageLog');
+const ReactionRole = require('../models/ReactionRole');
 const Guild = require('../models/Guild');
-const logger = require('../utils/logger');
+const logger = require('../utils/logger'); // Upewnij się, że masz importowany logger
 
 module.exports = {
   name: Events.MessageReactionAdd,
   async execute(reaction, user) {
-    // Ignoruj reakcje botów
+    // Ignoruj reakcje od botów
     if (user.bot) return;
     
-    // Sprawdź, czy reakcja jest częściowa i załaduj ją w całości
-    if (reaction.partial) {
-      try {
-        await reaction.fetch();
-      } catch (error) {
-        logger.error('Błąd podczas pobierania reakcji:', error);
+    try {
+      logger.debug(`Reakcja otrzymana: ${user.tag} dodał emoji ${reaction.emoji.name || reaction.emoji.id} do wiadomości ${reaction.message.id}`);
+      
+      // Sprawdź, czy reakcja jest częściowa i załaduj ją w całości
+      if (reaction.partial) {
+        try {
+          await reaction.fetch();
+          logger.debug('Reakcja częściowa została pobrana w całości');
+        } catch (error) {
+          logger.error(`Błąd podczas pobierania reakcji: ${error.message}`);
+          return;
+        }
+      }
+      
+      // Pobierz informacje o serwerze
+      const guildSettings = await Guild.findOne({ guildId: reaction.message.guildId });
+      logger.debug(`Ustawienia serwera: ${JSON.stringify(guildSettings ? guildSettings.modules : 'brak')}`);
+      
+      // Sprawdź czy moduł reaction roles jest włączony
+      if (guildSettings && guildSettings.modules && guildSettings.modules.reactionRoles === false) {
+        logger.debug('Moduł reaction roles jest wyłączony, przerywam');
         return;
       }
-    }
-    
-    try {
-      // Sprawdzenie czy funkcja logowania wiadomości jest włączona na serwerze
-      const guildSettings = await Guild.findOne({ guildId: reaction.message.guild?.id });
       
-      // Jeśli nie ma guildSettings lub funkcja nie jest włączona, zakończ
-      if (!reaction.message.guild || !guildSettings || !guildSettings.modules?.messageLog) return;
+      // Znajdź reakcję w bazie danych
+      const reactionRole = await ReactionRole.findOne({ 
+        guildId: reaction.message.guildId,
+        messageId: reaction.message.id 
+      });
       
-// Znajdź reakcję w bazie danych
-const messageLog = await MessageLog.findOne({ messageId: reaction.message.id });
+      if (!reactionRole) {
+        logger.debug(`Nie znaleziono konfiguracji reaction role dla wiadomości ${reaction.message.id}`);
+        return;
+      }
       
-if (messageLog) {
-  // Pobierz informacje o emoji
-  const emoji = reaction.emoji;
-  const emojiId = emoji.id;
-  const emojiName = emoji.name;
-  
-  // Sprawdź, czy ta reakcja już istnieje w logu
-  const existingReactionIndex = messageLog.reactions.findIndex(r => 
-    (emojiId && r.id === emojiId) || (!emojiId && r.name === emojiName)
-  );
-  
-  if (existingReactionIndex !== -1) {
-    // Aktualizuj istniejącą reakcję
-    const existingReaction = messageLog.reactions[existingReactionIndex];
-    existingReaction.count = (existingReaction.count || 0) + 1;
-    
-    // Dodaj użytkownika do listy, jeśli jeszcze go tam nie ma
-    if (!existingReaction.users) {
-      existingReaction.users = [];
-    }
-    
-    if (!existingReaction.users.includes(user.id)) {
-      existingReaction.users.push(user.id);
-      logger.debug(`Dodano użytkownika ${user.id} do listy dla reakcji ${emojiName} na wiadomość ${reaction.message.id}`);
-    }
-  } else {
-    // Dodaj nową reakcję
-    messageLog.reactions.push({
-      name: emojiName,
-      id: emojiId,
-      count: 1,
-      isCustom: !!emojiId,
-      animated: emoji.animated || false,
-      url: emojiId ? `https://cdn.discordapp.com/emojis/${emojiId}.${emoji.animated ? 'gif' : 'png'}` : null,
-      users: [user.id]
-    });
-  }
+      logger.debug(`Znaleziono konfigurację: ${JSON.stringify(reactionRole)}`);
+      
+      // Sprawdź, czy emoji jest w bazie danych
+      const emojiIdentifier = reaction.emoji.id || reaction.emoji.name;
+      logger.debug(`Szukam emoji: ${emojiIdentifier} w konfiguracji ról`);
+      
+      // Wypisz wszystkie dostępne emoji w konfiguracji
+      logger.debug(`Dostępne emoji w konfiguracji: ${reactionRole.roles.map(r => r.emoji).join(', ')}`);
+      
+      const roleInfo = reactionRole.roles.find(r => r.emoji === emojiIdentifier);
+      
+      if (!roleInfo) {
+        logger.debug(`Nie znaleziono roli dla emoji ${emojiIdentifier}`);
+        return;
+      }
+      
+      logger.debug(`Znaleziono rolę: ${JSON.stringify(roleInfo)}`);
+      
+      // Dodaj rolę użytkownikowi
+      const guild = reaction.message.guild;
+      
+      if (!guild) {
+        logger.error('Nie można uzyskać dostępu do obiektu serwera');
+        return;
+      }
+      
+      try {
+        const member = await guild.members.fetch(user.id);
+        logger.debug(`Pobrano członka serwera: ${member.user.tag}`);
         
-        await messageLog.save();
-        logger.debug(`Zaktualizowano log dla reakcji na wiadomość ${reaction.message.id}`);
+        // Pobierz rolę, aby sprawdzić czy istnieje
+        const role = await guild.roles.fetch(roleInfo.roleId).catch(err => {
+          logger.error(`Nie można znaleźć roli ${roleInfo.roleId}: ${err.message}`);
+          return null;
+        });
         
-        // Opcjonalnie wysyłanie logu na wyznaczony kanał
-        if (guildSettings.messageLogChannel) {
-          const logChannel = await reaction.message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
-          
-          if (logChannel && logChannel.id !== reaction.message.channel.id) {
-            // Twórz logowanie tylko w określonych przypadkach, aby nie zaśmiecać kanału logów
-            // Na przykład: pierwszy użytkownik dodający daną reakcję lub co 5 reakcja tego samego typu
-            const currentCount = messageLog.reactions.find(r => 
-              (emojiId && r.id === emojiId) || (!emojiId && r.name === emojiName)
-            )?.count || 1;
+        if (!role) {
+          logger.error(`Rola o ID ${roleInfo.roleId} nie istnieje na serwerze`);
+          return;
+        }
+        
+        // Sprawdź, czy bot ma uprawnienia do zarządzania rolami
+        const botMember = guild.members.cache.get(guild.client.user.id);
+        if (!botMember.permissions.has('ManageRoles')) {
+          logger.error('Bot nie ma uprawnień do zarządzania rolami');
+          return;
+        }
+        
+        // Sprawdź, czy rola jest wyżej w hierarchii niż rola bota
+        if (role.position >= botMember.roles.highest.position) {
+          logger.error(`Rola ${role.name} jest wyżej w hierarchii niż najwyższa rola bota`);
+          return;
+        }
+        
+        // Dodaj rolę
+        await member.roles.add(roleInfo.roleId);
+        logger.info(`Dodano rolę ${role.name} użytkownikowi ${member.user.tag}`);
+        
+        // Sprawdź, czy powiadomienia są włączone
+        if (roleInfo.notificationEnabled && guildSettings && guildSettings.notificationChannel) {
+          try {
+            const notificationChannel = await guild.channels.fetch(guildSettings.notificationChannel);
             
-            if (currentCount === 1 || currentCount % 5 === 0) {
-              const emojiDisplay = emojiId 
-                ? `<${emoji.animated ? 'a' : ''}:${emojiName}:${emojiId}>`
-                : emojiName;
-              
-              const logEmbed = {
-                color: 0x3498db,
-                author: {
-                  name: user.tag,
-                  icon_url: user.displayAvatarURL({ dynamic: true })
-                },
-                description: `**Reakcja dodana do [wiadomości](${reaction.message.url}) w <#${reaction.message.channel.id}>**\n${emojiDisplay} (${currentCount})`,
-                fields: [],
-                footer: {
-                  text: `Wiadomość ID: ${reaction.message.id}`
-                },
-                timestamp: new Date()
-              };
-              
-              // Jeśli to customowa emoji, dodaj jej obraz
-              if (emojiId) {
-                logEmbed.thumbnail = {
-                  url: `https://cdn.discordapp.com/emojis/${emojiId}.${emoji.animated ? 'gif' : 'png'}`
-                };
-              }
-              
-              await logChannel.send({ embeds: [logEmbed] });
+            if (notificationChannel) {
+              await notificationChannel.send(
+                `Użytkownik ${user} otrzymał rolę ${role.name} poprzez reakcję w kanale <#${reaction.message.channel.id}>`
+              );
+              logger.debug('Wysłano powiadomienie o przyznaniu roli');
+            } else {
+              logger.warn(`Kanał powiadomień ${guildSettings.notificationChannel} nie istnieje`);
             }
+          } catch (notifError) {
+            logger.error(`Błąd podczas wysyłania powiadomienia: ${notifError.message}`);
           }
         }
-      } else {
-        // Jeśli log nie istnieje, możemy go stworzyć, ale tylko jeśli mamy dostęp do pełnej wiadomości
-        // Uproszczona wersja tworzenia logu, bo głównie interesują nas reakcje
-        if (!reaction.message.partial) {
-          const message = reaction.message;
-          
-          // Stwórz uproszczony log wiadomości
-          const newMessageLog = new MessageLog({
-            guildId: message.guild.id,
-            channelId: message.channel.id,
-            messageId: message.id,
-            authorId: message.author?.id || 'unknown',
-            authorTag: message.author?.tag || 'Unknown User',
-            content: message.content || '',
-            attachments: [],  // Puste dla uproszczenia
-            reactions: [{
-              name: reaction.emoji.name,
-              id: reaction.emoji.id,
-              count: reaction.count,
-              isCustom: !!reaction.emoji.id,
-              animated: reaction.emoji.animated || false,
-              url: reaction.emoji.id ? `https://cdn.discordapp.com/emojis/${reaction.emoji.id}.${reaction.emoji.animated ? 'gif' : 'png'}` : null,
-              users: [user.id]
-            }],
-            createdAt: message.createdAt || new Date()
-          });
-          
-          await newMessageLog.save();
-          logger.debug(`Utworzono nowy log dla reakcji na wiadomość ${message.id}`);
-        }
+      } catch (memberError) {
+        logger.error(`Błąd podczas pobierania członka serwera: ${memberError.message}`);
       }
     } catch (error) {
-      logger.error(`Błąd podczas logowania dodania reakcji: ${error.stack}`);
+      logger.error(`Ogólny błąd podczas obsługi reakcji: ${error.stack}`);
     }
-  }
+  },
 };
