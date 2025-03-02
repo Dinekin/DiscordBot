@@ -238,78 +238,84 @@ module.exports = {
       // Zapisz log w bazie danych
       await MessageLog.create(messageData);
       
-      // Opcjonalnie wysyłanie logu na wyznaczony kanał
-      if (guildSettings.messageLogChannel) {
-        const logChannel = await message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
+// Opcjonalnie wysyłanie logu na wyznaczony kanał
+if (guildSettings.messageLogChannel) {
+    const logChannel = await message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
+    
+    if (logChannel) {
+      // Nie logujemy wiadomości z kanału logów
+      if (logChannel.id === message.channel.id) return;
+      
+      // Sprawdź, czy mamy logować tylko usunięte wiadomości
+      if (guildSettings.logDeletedOnly) {
+        // Jeśli tak, nie logujemy tworzenia wiadomości
+        return;
+      }
+      
+      // Przygotowanie embedu z informacjami o wiadomości
+      const logEmbed = {
+        color: 0x3498db,
+        author: {
+          name: message.author.tag,
+          icon_url: message.author.displayAvatarURL({ dynamic: true })
+        },
+        description: `**Wiadomość wysłana w <#${message.channel.id}>**\n${message.content || (messageData.stickers.length > 0 ? '*Naklejka bez tekstu*' : '*Brak treści*')}`,
+        fields: [],
+        footer: {
+          text: `ID: ${message.id}`
+        },
+        timestamp: new Date()
+      };
+      
+      // Dodanie informacji o załącznikach
+      if (attachments.length > 0) {
+        logEmbed.fields.push({
+          name: `📎 Załączniki (${attachments.length})`,
+          value: attachments.map(a => `[${a.name}](${a.url}) ${a.contentType ? `(${a.contentType})` : ''}`).join('\n')
+        });
         
-        if (logChannel) {
-          // Nie logujemy wiadomości z kanału logów
-          if (logChannel.id === message.channel.id) return;
-          
-          // Przygotowanie embedu z informacjami o wiadomości
-          const logEmbed = {
-            color: 0x3498db,
-            author: {
-              name: message.author.tag,
-              icon_url: message.author.displayAvatarURL({ dynamic: true })
-            },
-            description: `**Wiadomość wysłana w <#${message.channel.id}>**\n${message.content || (messageData.stickers.length > 0 ? '*Naklejka bez tekstu*' : '*Brak treści*')}`,
-            fields: [],
-            footer: {
-              text: `ID: ${message.id}`
-            },
-            timestamp: new Date()
-          };
-          
-          // Dodanie informacji o załącznikach
-          if (attachments.length > 0) {
-            logEmbed.fields.push({
-              name: `📎 Załączniki (${attachments.length})`,
-              value: attachments.map(a => `[${a.name}](${a.url}) ${a.contentType ? `(${a.contentType})` : ''}`).join('\n')
-            });
-            
-            // Dodanie obrazka do embedu jeśli to obrazek
-            const imageAttachment = attachments.find(a => 
-              a.contentType && a.contentType.startsWith('image/')
-            );
-            
-            if (imageAttachment) {
-              logEmbed.image = { url: imageAttachment.url };
-            }
-          }
-          
-          // Dodanie informacji o naklejkach
-          if (messageData.stickers.length > 0) {
-            logEmbed.fields.push({
-              name: `🏷️ Naklejki (${messageData.stickers.length})`,
-              value: messageData.stickers.map(s => s.url ? `[${s.name}](${s.url})` : s.name).join('\n')
-            });
-            
-            // Dodaj obraz naklejki, jeśli nie dodano już innego obrazu i naklejka ma URL
-            if (!logEmbed.image && messageData.stickers[0].url) {
-              logEmbed.image = { url: messageData.stickers[0].url };
-            }
-          }
-          
-          // Dodanie informacji o gifie
-          if (messageData.gifAttachment) {
-            logEmbed.fields.push({
-              name: '🎬 GIF',
-              value: `[${messageData.gifAttachment.platform}](${messageData.gifAttachment.url})`
-            });
-          }
-          
-          // Dodanie informacji o referencji
-          if (messageData.reference) {
-            logEmbed.fields.push({
-              name: '↩️ Odpowiedź na',
-              value: `Wiadomość od ${messageData.reference.authorTag || 'nieznanego użytkownika'}: ${messageData.reference.content || '[brak treści]'}`
-            });
-          }
-          
-          await logChannel.send({ embeds: [logEmbed] });
+        // Dodanie obrazka do embedu jeśli to obrazek
+        const imageAttachment = attachments.find(a => 
+          a.contentType && a.contentType.startsWith('image/')
+        );
+        
+        if (imageAttachment) {
+          logEmbed.image = { url: imageAttachment.url };
         }
       }
+      
+      // Dodanie informacji o naklejkach
+      if (messageData.stickers.length > 0) {
+        logEmbed.fields.push({
+          name: `🏷️ Naklejki (${messageData.stickers.length})`,
+          value: messageData.stickers.map(s => s.url ? `[${s.name}](${s.url})` : s.name).join('\n')
+        });
+        
+        // Dodaj obraz naklejki, jeśli nie dodano już innego obrazu i naklejka ma URL
+        if (!logEmbed.image && messageData.stickers[0].url) {
+          logEmbed.image = { url: messageData.stickers[0].url };
+        }
+      }
+      
+      // Dodanie informacji o gifie
+      if (messageData.gifAttachment) {
+        logEmbed.fields.push({
+          name: '🎬 GIF',
+          value: `[${messageData.gifAttachment.platform}](${messageData.gifAttachment.url})`
+        });
+      }
+      
+      // Dodanie informacji o referencji
+      if (messageData.reference) {
+        logEmbed.fields.push({
+          name: '↩️ Odpowiedź na',
+          value: `Wiadomość od ${messageData.reference.authorTag || 'nieznanego użytkownika'}: ${messageData.reference.content || '[brak treści]'}`
+        });
+      }
+      
+      await logChannel.send({ embeds: [logEmbed] });
+    }
+  }
     } catch (error) {
       logger.error(`Błąd podczas logowania wiadomości: ${error}`);
     }

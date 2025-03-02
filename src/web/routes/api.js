@@ -266,6 +266,87 @@ router.post('/guilds/:guildId/reaction-roles', hasGuildPermission, async (req, r
   }
 });
 
+// Zaktualizuj ustawienia serwera
+router.post('/guilds/:guildId/settings', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  try {
+    logger.debug(`Aktualizacja ustawień serwera: ${guildId}, dane: ${JSON.stringify(req.body)}`);
+    
+    // Pobierz aktualne ustawienia
+    let guildSettings = await Guild.findOne({ guildId: guildId });
+    
+    // Jeśli nie ma, utwórz nowe
+    if (!guildSettings) {
+      guildSettings = new Guild({ 
+        guildId: guildId,
+        modules: {
+          reactionRoles: true,
+          notifications: true,
+          messageLog: false
+        }
+      });
+      logger.info(`Utworzono nowe ustawienia dla serwera ${guildId}`);
+    }
+    // Zaktualizuj pola, które zostały przesłane
+    if (req.body.prefix !== undefined) guildSettings.prefix = req.body.prefix;
+    if (req.body.notificationChannel !== undefined) guildSettings.notificationChannel = req.body.notificationChannel;
+    if (req.body.welcomeChannel !== undefined) guildSettings.welcomeChannel = req.body.welcomeChannel;
+    if (req.body.messageLogChannel !== undefined) guildSettings.messageLogChannel = req.body.messageLogChannel;
+    if (req.body.language !== undefined) guildSettings.language = req.body.language;
+    
+    // Dodaj obsługę nowej opcji logDeletedOnly
+    if (req.body.logDeletedOnly !== undefined) {
+      guildSettings.logDeletedOnly = req.body.logDeletedOnly === 'true' || req.body.logDeletedOnly === true;
+      logger.debug(`Ustawiono logDeletedOnly na ${guildSettings.logDeletedOnly} z wartości ${req.body.logDeletedOnly} (typ: ${typeof req.body.logDeletedOnly})`);
+    }
+    
+    // Upewnij się, że struktura modułów istnieje
+    if (!guildSettings.modules) {
+      guildSettings.modules = {
+        reactionRoles: true,
+        notifications: true,
+        messageLog: false
+      };
+      logger.info(`Zainicjalizowano brakującą strukturę modułów dla serwera ${guildId}`);
+    }
+    
+    // Aktualizacja modułów
+    if (req.body['modules.reactionRoles'] !== undefined) {
+      guildSettings.modules.reactionRoles = req.body['modules.reactionRoles'] === 'true';
+    }
+    
+    if (req.body['modules.notifications'] !== undefined) {
+      guildSettings.modules.notifications = req.body['modules.notifications'] === 'true';
+    }
+    
+    // Sprawdź różne możliwe nazwy pola messageLog
+    if (req.body['modules.messageLog'] !== undefined) {
+      guildSettings.modules.messageLog = req.body['modules.messageLog'] === 'true';
+    } else if (req.body.messageLog !== undefined) {
+      // Dodano obsługę pola bez prefiksu modules
+      guildSettings.modules.messageLog = req.body.messageLog === true || req.body.messageLog === 'true';
+      logger.debug(`Ustawiono messageLog na ${guildSettings.modules.messageLog} z wartości ${req.body.messageLog} (typ: ${typeof req.body.messageLog})`);
+    }
+    
+    await guildSettings.save();
+    
+    logger.info(`Zaktualizowano ustawienia serwera ${guildId}`);
+    
+    res.json({
+      success: true,
+      message: 'Ustawienia zostały zaktualizowane',
+      settings: guildSettings
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas aktualizacji ustawień: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas aktualizacji ustawień'
+    });
+  }
+});
+
 // Dodawanie roli do istniejącej wiadomości
 router.post('/guilds/:guildId/reaction-roles/:messageId/roles', hasGuildPermission, async (req, res) => {
   const { guildId, messageId } = req.params;
@@ -344,6 +425,95 @@ router.post('/guilds/:guildId/reaction-roles/:messageId/roles', hasGuildPermissi
     res.status(500).json({
       success: false,
       error: 'Wystąpił błąd podczas dodawania roli'
+    });
+  }
+});
+
+router.get('/guilds/:guildId/toggle-message-log/:state', hasGuildPermission, async (req, res) => {
+  const { guildId, state } = req.params;
+  const enabled = state === 'on';
+  
+  try {
+    logger.info(`Próba ręcznego ${enabled ? 'włączenia' : 'wyłączenia'} logowania wiadomości dla serwera ${guildId}`);
+    
+    // Pobierz lub utwórz ustawienia serwera
+    let guildSettings = await Guild.findOne({ guildId });
+    
+    if (!guildSettings) {
+      guildSettings = new Guild({
+        guildId,
+        modules: {
+          messageLog: false
+        }
+      });
+    }
+    
+    // Upewnij się, że struktura modułów istnieje
+    if (!guildSettings.modules) {
+      guildSettings.modules = {};
+    }
+    
+    // Ustaw wartość
+    guildSettings.modules.messageLog = enabled;
+    await guildSettings.save();
+    
+    res.json({
+      success: true,
+      message: `Logowanie wiadomości zostało ${enabled ? 'włączone' : 'wyłączone'} dla serwera ${guildId}`,
+      settings: {
+        guildId: guildSettings.guildId,
+        modules: guildSettings.modules,
+        logDeletedOnly: guildSettings.logDeletedOnly
+      }
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas przełączania logowania wiadomości: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas zmiany ustawień'
+    });
+  }
+});
+
+// Dodajmy nowy endpoint do przełączania trybu logowania tylko usuniętych wiadomości
+router.get('/guilds/:guildId/toggle-log-deleted-only/:state', hasGuildPermission, async (req, res) => {
+  const { guildId, state } = req.params;
+  const deletedOnly = state === 'on';
+  
+  try {
+    logger.info(`Próba ręcznego ${deletedOnly ? 'włączenia' : 'wyłączenia'} trybu logowania tylko usuniętych wiadomości dla serwera ${guildId}`);
+    
+    // Pobierz lub utwórz ustawienia serwera
+    let guildSettings = await Guild.findOne({ guildId });
+    
+    if (!guildSettings) {
+      guildSettings = new Guild({
+        guildId,
+        modules: {
+          messageLog: false
+        },
+        logDeletedOnly: false
+      });
+    }
+    
+    // Ustaw wartość
+    guildSettings.logDeletedOnly = deletedOnly;
+    await guildSettings.save();
+    
+    res.json({
+      success: true,
+      message: `Tryb logowania tylko usuniętych wiadomości został ${deletedOnly ? 'włączony' : 'wyłączony'} dla serwera ${guildId}`,
+      settings: {
+        guildId: guildSettings.guildId,
+        modules: guildSettings.modules,
+        logDeletedOnly: guildSettings.logDeletedOnly
+      }
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas przełączania trybu logowania tylko usuniętych wiadomości: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas zmiany ustawień'
     });
   }
 });

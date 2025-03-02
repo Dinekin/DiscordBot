@@ -49,6 +49,9 @@
               <span class="module-status <%= settings.modules && settings.modules.messageLog ? 'enabled' : 'disabled' %>">
                 <%= settings.modules && settings.modules.messageLog ? 'WŁĄCZONY' : 'WYŁĄCZONY' %>
               </span>
+              <% if (settings.modules && settings.modules.messageLog && settings.logDeletedOnly) { %>
+                <span class="badge bg-warning text-dark ms-2">Tylko usunięte wiadomości</span>
+              <% } %>
             </div>
 
             <div class="alert alert-warning mb-3">
@@ -56,26 +59,35 @@
               <div class="mt-2">
                 <a href="/api/guilds/<%= guild.id %>/toggle-message-log/on" class="btn btn-success btn-sm" target="_blank">Włącz logi wiadomości</a>
                 <a href="/api/guilds/<%= guild.id %>/toggle-message-log/off" class="btn btn-danger btn-sm" target="_blank">Wyłącz logi wiadomości</a>
+                <a href="/api/guilds/<%= guild.id %>/toggle-log-deleted-only/on" class="btn btn-warning btn-sm text-dark" target="_blank">Loguj tylko usunięte</a>
+                <a href="/api/guilds/<%= guild.id %>/toggle-log-deleted-only/off" class="btn btn-secondary btn-sm" target="_blank">Loguj wszystkie wiadomości</a>
               </div>
             </div>
               
             <div class="mb-4">
               <h5>Ustawienia</h5>
               <form id="messageLogSettingsForm" class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <label for="messageLogEnabled" class="form-label">Status</label>
                   <select class="form-select" id="messageLogEnabled" name="messageLogEnabled">
                     <option value="true" <%= settings.modules && settings.modules.messageLog ? 'selected' : '' %>>Włączony</option>
                     <option value="false" <%= !settings.modules || !settings.modules.messageLog ? 'selected' : '' %>>Wyłączony</option>
                   </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                   <label for="messageLogChannel" class="form-label">Kanał logów</label>
                   <select class="form-select" id="messageLogChannel" name="messageLogChannel">
                     <option value="">Brak (wyłączony)</option>
                     <% channels.forEach(channel => { %>
                       <option value="<%= channel.id %>" <%= settings.messageLogChannel === channel.id ? 'selected' : '' %>>#<%= channel.name %></option>
                     <% }); %>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label for="logDeletedOnly" class="form-label">Tryb logowania</label>
+                  <select class="form-select" id="logDeletedOnly" name="logDeletedOnly">
+                    <option value="false" <%= !settings.logDeletedOnly ? 'selected' : '' %>>Wszystkie wiadomości</option>
+                    <option value="true" <%= settings.logDeletedOnly ? 'selected' : '' %>>Tylko usunięte wiadomości</option>
                   </select>
                 </div>
                 <div class="col-12">
@@ -148,27 +160,25 @@
                 <!-- Paginacja będzie wstawiona tutaj przez JavaScript -->
               </div>
             </div>
-
-<!-- Modal do wyświetlania szczegółów wiadomości -->
-<div class="modal fade" id="messageDetailsModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Szczegóły wiadomości</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div id="messageDetails">
-          <!-- Szczegóły wiadomości będą wstawione tutaj przez JavaScript -->
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
-      </div>
-    </div>
-  </div>
-</div>
-
+              <!-- Modal do wyświetlania szczegółów wiadomości -->
+              <div class="modal fade" id="messageDetailsModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Szczegóły wiadomości</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div id="messageDetails">
+                        <!-- Szczegóły wiadomości będą wstawione tutaj przez JavaScript -->
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <!-- Modal do wyświetlania użytkowników, którzy dodali reakcję -->
               <div class="modal fade" id="reactionUsersModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog">
@@ -408,40 +418,43 @@
     }
     
     // Funkcja do zapisywania ustawień
-    async function saveSettings(guildId) {
-      const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
-      const messageLogChannel = document.getElementById('messageLogChannel').value;
+async function saveSettings(guildId) {
+  const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
+  const messageLogChannel = document.getElementById('messageLogChannel').value;
+  const logDeletedOnly = document.getElementById('logDeletedOnly').value === 'true';
 
-      try {
-        // Dodajemy logowanie aby zobaczyć, co wysyłamy
-        console.log('Wysyłanie ustawień:', {
-          messageLogChannel: messageLogChannel,
-          'modules.messageLog': messageLogEnabled
-        });
-        
-        const response = await fetch(`/api/guilds/${guildId}/settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messageLogChannel: messageLogChannel,
-            messageLog: messageLogEnabled  // Zmieniona nazwa pola - usunięto prefiks modules.
-          })
-        });
+  try {
+    // Dodajemy logowanie aby zobaczyć, co wysyłamy
+    console.log('Wysyłanie ustawień:', {
+      messageLogChannel: messageLogChannel,
+      'modules.messageLog': messageLogEnabled,
+      logDeletedOnly: logDeletedOnly
+    });
+    
+    const response = await fetch(`/api/guilds/${guildId}/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messageLogChannel: messageLogChannel,
+        messageLog: messageLogEnabled,
+        logDeletedOnly: logDeletedOnly
+      })
+    });
 
-        const data = await response.json();
+    const data = await response.json();
 
-        if (data.success) {
-          alert('Ustawienia zostały zapisane!');
-        } else {
-          alert(`Błąd: ${data.error}`);
-        }
-      } catch (error) {
-        console.error('Błąd:', error);
-        alert('Wystąpił błąd podczas zapisywania ustawień.');
-      }
+    if (data.success) {
+      alert('Ustawienia zostały zapisane!');
+    } else {
+      alert(`Błąd: ${data.error}`);
     }
+  } catch (error) {
+    console.error('Błąd:', error);
+    alert('Wystąpił błąd podczas zapisywania ustawień.');
+  }
+}
 
       // Funkcja do wyszukiwania logów
       async function searchLogs(guildId) {

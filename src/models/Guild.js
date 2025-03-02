@@ -23,6 +23,11 @@ const GuildSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Flaga określająca czy logować tylko usunięte wiadomości
+  logDeletedOnly: {
+    type: Boolean,
+    default: false
+  },
   language: {
     type: String,
     default: 'pl'
