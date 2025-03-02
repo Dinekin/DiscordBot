@@ -75,8 +75,12 @@
                     <label class="form-check-label" for="notificationsModule">Powiadomienia</label>
                     <div class="form-text">Włącz lub wyłącz powiadomienia o zmianach ról.</div>
                   </div>
-                </div>
-              </div>
+                  
+                  <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" id="messageLogModule" name="modules.messageLog" <%= settings.modules && settings.modules.messageLog ? 'checked' : '' %>>
+                    <label class="form-check-label" for="messageLogModule">Logi wiadomości</label>
+                    <div class="form-text">Włącz lub wyłącz logowanie wiadomości (tworzenie, edycja, usuwanie).</div>
+                  </div>
 
               <div class="d-grid">
                 <button type="button" class="btn btn-primary" onclick="saveSettings('<%= guild.id %>')">
@@ -96,9 +100,23 @@
       const form = document.getElementById('settingsForm');
       const formData = new FormData(form);
 
-      // Pobierz wartości przełączników
-      formData.set('modules.reactionRoles', document.getElementById('reactionRolesModule').checked ? 'true' : 'false');
-      formData.set('modules.notifications', document.getElementById('notificationsModule').checked ? 'true' : 'false');
+// Pobierz wartości przełączników i zapisz w formie JSON
+      const modules = {
+        'modules.reactionRoles': document.getElementById('reactionRolesModule').checked ? 'true' : 'false',
+        'modules.notifications': document.getElementById('notificationsModule').checked ? 'true' : 'false',
+        'modules.messageLog': document.getElementById('messageLogModule').checked ? 'true' : 'false'
+      };
+      
+      // Wypisz do konsoli, co będziemy wysyłać
+      console.log('Wysyłane dane:', {
+        ...Object.fromEntries(formData),
+        ...modules
+      });
+      
+      // Dodaj moduły do formData
+      Object.entries(modules).forEach(([key, value]) => {
+        formData.set(key, value);
+      });
 
       try {
         const response = await fetch(`/api/guilds/${guildId}/settings`, {

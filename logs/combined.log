@@ -97,3 +97,373 @@
 [2025-03-01 11:49:48] [INFO] Połączono z bazą danych MongoDB
 [2025-03-01 11:49:48] [INFO] Zalogowano jako Kotori#2155!
 [2025-03-01 11:49:48] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 00:24:04] [INFO] Załadowano komendę: help
+[2025-03-02 00:24:04] [INFO] Załadowano komendę: messagelog
+[2025-03-02 00:24:04] [INFO] Załadowano komendę: ping
+[2025-03-02 00:24:04] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 00:24:04] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 00:24:04] [INFO] Załadowano event: interactionCreate
+[2025-03-02 00:24:04] [INFO] Załadowano event: messageCreate
+[2025-03-02 00:24:04] [INFO] Załadowano event: messageDelete
+[2025-03-02 00:24:04] [INFO] Załadowano event: messageUpdate
+[2025-03-02 00:24:04] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 00:24:04] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 00:24:04] [INFO] Załadowano event: ready
+[2025-03-02 00:24:05] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 00:24:05] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 00:24:05] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 00:25:51] [INFO] Załadowano komendę: help
+[2025-03-02 00:25:51] [INFO] Załadowano komendę: messagelog
+[2025-03-02 00:25:51] [INFO] Załadowano komendę: ping
+[2025-03-02 00:25:51] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 00:25:51] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 00:25:51] [INFO] Załadowano event: interactionCreate
+[2025-03-02 00:25:51] [INFO] Załadowano event: messageCreate
+[2025-03-02 00:25:51] [INFO] Załadowano event: messageDelete
+[2025-03-02 00:25:51] [INFO] Załadowano event: messageUpdate
+[2025-03-02 00:25:51] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 00:25:51] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 00:25:51] [INFO] Załadowano event: ready
+[2025-03-02 00:25:52] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 00:25:52] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 00:25:52] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 00:34:56] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 00:34:56] [INFO] Znaleziono 4 plików komend
+[2025-03-02 00:34:56] [INFO] Załadowano komendę: help
+[2025-03-02 00:34:56] [INFO] Załadowano komendę: messagelog
+[2025-03-02 00:34:56] [INFO] Załadowano komendę: ping
+[2025-03-02 00:34:56] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 00:34:56] [INFO] Znaleziono 8 plików eventów
+[2025-03-02 00:34:56] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 00:34:56] [INFO] Załadowano event: interactionCreate
+[2025-03-02 00:34:56] [INFO] Załadowano event: messageCreate
+[2025-03-02 00:34:56] [INFO] Załadowano event: messageDelete
+[2025-03-02 00:34:56] [INFO] Załadowano event: messageUpdate
+[2025-03-02 00:34:56] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 00:34:56] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 00:34:56] [INFO] Załadowano event: ready
+[2025-03-02 00:34:56] [INFO] Bot ma zarejestrowanych 11 listenerów zdarzeń:
+[2025-03-02 00:34:56] [INFO] - shardDisconnect: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - warn: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - error: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - guildMemberAdd: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - interactionCreate: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - messageCreate: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - messageDelete: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - messageUpdate: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - messageReactionRemove: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - messageReactionAdd: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] - ready: 1 listener(s)
+[2025-03-02 00:34:56] [INFO] Łączenie z API Discorda...
+[2025-03-02 00:34:56] [INFO] Bot został uruchomiony pomyślnie i obsługuje 1 serwerów
+[2025-03-02 00:34:56] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 00:34:56] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 00:36:18] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 00:36:18] [INFO] Znaleziono 4 plików komend
+[2025-03-02 00:36:18] [INFO] Załadowano komendę: help
+[2025-03-02 00:36:18] [INFO] Załadowano komendę: messagelog
+[2025-03-02 00:36:18] [INFO] Załadowano komendę: ping
+[2025-03-02 00:36:18] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 00:36:18] [INFO] Znaleziono 8 plików eventów
+[2025-03-02 00:36:18] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 00:36:18] [INFO] Załadowano event: interactionCreate
+[2025-03-02 00:36:18] [INFO] Załadowano event: messageCreate
+[2025-03-02 00:36:18] [INFO] Załadowano event: messageDelete
+[2025-03-02 00:36:18] [INFO] Załadowano event: messageUpdate
+[2025-03-02 00:36:18] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 00:36:18] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 00:36:18] [INFO] Załadowano event: ready
+[2025-03-02 00:36:18] [INFO] Bot ma zarejestrowanych 11 listenerów zdarzeń:
+[2025-03-02 00:36:18] [INFO] - shardDisconnect: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - warn: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - error: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - guildMemberAdd: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - interactionCreate: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - messageCreate: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - messageDelete: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - messageUpdate: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - messageReactionRemove: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - messageReactionAdd: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] - ready: 1 listener(s)
+[2025-03-02 00:36:18] [INFO] Łączenie z API Discorda...
+[2025-03-02 00:36:18] [INFO] Bot został uruchomiony pomyślnie i obsługuje 1 serwerów
+[2025-03-02 00:36:18] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 00:36:18] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 00:36:23] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 00:36:26] [DEBUG] Aktualizacja ustawień serwera: 290267595322556426, dane: {"messageLogChannel":"522070886665158679","modules.messageLog":true}
+[2025-03-02 00:36:26] [INFO] Zaktualizowano ustawienia serwera 290267595322556426
+[2025-03-02 00:36:27] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 00:37:29] [DEBUG] Odebrano interakcję typu: 2, messagelog
+[2025-03-02 00:37:29] [INFO] Użytkownik dine wykonuje komendę messagelog
+[2025-03-02 00:37:29] [INFO] Rozpoczęto wykonywanie komendy messagelog przez dine
+[2025-03-02 00:37:29] [DEBUG] Podkomenda messagelog: channel
+[2025-03-02 00:37:29] [DEBUG] Wykonywanie podkomendy channel
+[2025-03-02 00:37:29] [INFO] Kanał logowania wiadomości dla serwera 290267595322556426 ustawiony na 522070886665158679
+[2025-03-02 00:37:40] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426"}
+[2025-03-02 00:37:41] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:37:45] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"dine"}
+[2025-03-02 00:37:45] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:37:48] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"dine"}
+[2025-03-02 00:37:48] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:37:51] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"Dine"}
+[2025-03-02 00:37:51] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:37:52] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 00:38:21] [DEBUG] Odebrano interakcję typu: 2, messagelog
+[2025-03-02 00:38:21] [INFO] Użytkownik dine wykonuje komendę messagelog
+[2025-03-02 00:38:21] [INFO] Rozpoczęto wykonywanie komendy messagelog przez dine
+[2025-03-02 00:38:21] [DEBUG] Podkomenda messagelog: toggle
+[2025-03-02 00:38:21] [DEBUG] Wykonywanie podkomendy toggle
+[2025-03-02 00:38:21] [INFO] Logowanie wiadomości dla serwera 290267595322556426 zostało włączone
+[2025-03-02 00:38:30] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"Dine"}
+[2025-03-02 00:38:30] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:38:31] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"Dine"}
+[2025-03-02 00:38:31] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:38:32] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"Dine","channelId":"978777104479027210"}
+[2025-03-02 00:38:32] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:10] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"Dine","channelId":"978777104479027210"}
+[2025-03-02 00:39:10] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:11] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"Dine","channelId":"978777104479027210"}
+[2025-03-02 00:39:11] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:11] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"Dine","channelId":"978777104479027210"}
+[2025-03-02 00:39:11] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:26] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"83494235508051968"}
+[2025-03-02 00:39:26] [DEBUG] Znaleziono 3 logów, totalDocs: 3, totalPages: 1
+[2025-03-02 00:39:32] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"dine"}
+[2025-03-02 00:39:32] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:32] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"dine"}
+[2025-03-02 00:39:32] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:33] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"dine"}
+[2025-03-02 00:39:33] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:33] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"dine"}
+[2025-03-02 00:39:33] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:39:37] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"83494235508051968"}
+[2025-03-02 00:39:37] [DEBUG] Znaleziono 3 logów, totalDocs: 3, totalPages: 1
+[2025-03-02 00:39:40] [DEBUG] Pobieranie szczegółów logu wiadomości 67c39a88dcbbe0bd848e2f75 na serwerze 290267595322556426
+[2025-03-02 00:39:44] [DEBUG] Pobieranie szczegółów logu wiadomości 67c39a71dcbbe0bd848e2f69 na serwerze 290267595322556426
+[2025-03-02 00:52:54] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 00:52:54] [INFO] Znaleziono 4 plików komend
+[2025-03-02 00:52:54] [INFO] Załadowano komendę: help
+[2025-03-02 00:52:54] [INFO] Załadowano komendę: messagelog
+[2025-03-02 00:52:54] [INFO] Załadowano komendę: ping
+[2025-03-02 00:52:54] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 00:52:54] [INFO] Znaleziono 8 plików eventów
+[2025-03-02 00:52:54] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 00:52:54] [INFO] Załadowano event: interactionCreate
+[2025-03-02 00:52:54] [INFO] Załadowano event: messageCreate
+[2025-03-02 00:52:54] [INFO] Załadowano event: messageDelete
+[2025-03-02 00:52:54] [INFO] Załadowano event: messageUpdate
+[2025-03-02 00:52:54] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 00:52:54] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 00:52:54] [INFO] Załadowano event: ready
+[2025-03-02 00:52:54] [INFO] Bot ma zarejestrowanych 11 listenerów zdarzeń:
+[2025-03-02 00:52:54] [INFO] - shardDisconnect: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - warn: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - error: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - guildMemberAdd: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - interactionCreate: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - messageCreate: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - messageDelete: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - messageUpdate: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - messageReactionRemove: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - messageReactionAdd: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] - ready: 1 listener(s)
+[2025-03-02 00:52:54] [INFO] Łączenie z API Discorda...
+[2025-03-02 00:52:54] [INFO] Bot został uruchomiony pomyślnie i obsługuje 1 serwerów
+[2025-03-02 00:52:54] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 00:52:54] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 00:53:12] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 00:54:06] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 00:54:09] [DEBUG] Aktualizacja ustawień serwera: 290267595322556426, dane: {"messageLogChannel":"522070886665158679","messageLog":false}
+[2025-03-02 00:54:09] [DEBUG] Ustawiono messageLog na false z wartości false (typ: boolean)
+[2025-03-02 00:54:09] [INFO] Zaktualizowano ustawienia serwera 290267595322556426
+[2025-03-02 00:54:11] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 00:54:14] [INFO] Próba ręcznego włączenia logowania wiadomości dla serwera 290267595322556426
+[2025-03-02 00:54:19] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 00:54:21] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426"}
+[2025-03-02 00:54:21] [DEBUG] Znaleziono 3 logów, totalDocs: 3, totalPages: 1
+[2025-03-02 00:54:27] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426","authorId":"dine"}
+[2025-03-02 00:54:27] [DEBUG] Znaleziono 0 logów, totalDocs: 0, totalPages: 0
+[2025-03-02 00:54:29] [DEBUG] Wyszukiwanie logów wiadomości dla serwera 290267595322556426, filtr: {"guildId":"290267595322556426"}
+[2025-03-02 00:54:29] [DEBUG] Znaleziono 3 logów, totalDocs: 3, totalPages: 1
+[2025-03-02 01:06:07] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 01:06:07] [INFO] Znaleziono 4 plików komend
+[2025-03-02 01:06:07] [INFO] Załadowano komendę: help
+[2025-03-02 01:06:07] [INFO] Załadowano komendę: messagelog
+[2025-03-02 01:06:07] [INFO] Załadowano komendę: ping
+[2025-03-02 01:06:07] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 01:06:07] [INFO] Znaleziono 8 plików eventów
+[2025-03-02 01:06:07] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 01:06:07] [INFO] Załadowano event: interactionCreate
+[2025-03-02 01:06:07] [INFO] Załadowano event: messageCreate
+[2025-03-02 01:06:07] [INFO] Załadowano event: messageDelete
+[2025-03-02 01:06:07] [INFO] Załadowano event: messageUpdate
+[2025-03-02 01:06:07] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 01:06:07] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 01:06:07] [INFO] Załadowano event: ready
+[2025-03-02 01:06:07] [INFO] Bot ma zarejestrowanych 11 listenerów zdarzeń:
+[2025-03-02 01:06:07] [INFO] - shardDisconnect: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - warn: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - error: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - guildMemberAdd: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - interactionCreate: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - messageCreate: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - messageDelete: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - messageUpdate: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - messageReactionRemove: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - messageReactionAdd: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] - ready: 1 listener(s)
+[2025-03-02 01:06:07] [INFO] Łączenie z API Discorda...
+[2025-03-02 01:06:08] [INFO] Bot został uruchomiony pomyślnie i obsługuje 1 serwerów
+[2025-03-02 01:06:08] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 01:06:08] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 01:06:13] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 01:06:22] [DEBUG] Znaleziono 3 logów, totalDocs: 3, totalPages: 1
+[2025-03-02 01:06:47] [DEBUG] Pobieranie szczegółów logu wiadomości 67c39a70dcbbe0bd848e2f66 na serwerze 290267595322556426
+[2025-03-02 01:07:35] [DEBUG] Znaleziono 4 logów, totalDocs: 4, totalPages: 1
+[2025-03-02 01:09:42] [DEBUG] Znaleziono 6 logów, totalDocs: 6, totalPages: 1
+[2025-03-02 01:09:43] [DEBUG] Znaleziono 6 logów, totalDocs: 6, totalPages: 1
+[2025-03-02 01:15:53] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 01:15:53] [INFO] Znaleziono 4 plików komend
+[2025-03-02 01:15:53] [INFO] Załadowano komendę: help
+[2025-03-02 01:15:53] [INFO] Załadowano komendę: messagelog
+[2025-03-02 01:15:53] [INFO] Załadowano komendę: ping
+[2025-03-02 01:15:53] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 01:15:53] [INFO] Znaleziono 11 plików eventów
+[2025-03-02 01:15:53] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 01:15:53] [INFO] Załadowano event: interactionCreate
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageCreate
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageDelete
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageReactionRemoveAll
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageUpdate
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 01:15:53] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 01:15:53] [INFO] Załadowano event: ready
+[2025-03-02 01:15:53] [INFO] Bot ma zarejestrowanych 12 listenerów zdarzeń:
+[2025-03-02 01:15:53] [INFO] - shardDisconnect: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - warn: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - error: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - guildMemberAdd: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - interactionCreate: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - messageCreate: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - messageDelete: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - messageReactionAdd: 2 listener(s)
+[2025-03-02 01:15:53] [INFO] - messageReactionRemove: 2 listener(s)
+[2025-03-02 01:15:53] [INFO] - messageReactionRemoveAll: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - messageUpdate: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] - ready: 1 listener(s)
+[2025-03-02 01:15:53] [INFO] Łączenie z API Discorda...
+[2025-03-02 01:15:54] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 01:15:54] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 01:15:54] [INFO] Bot został uruchomiony pomyślnie i obsługuje 1 serwerów
+[2025-03-02 01:15:57] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 01:15:58] [DEBUG] Znaleziono 6 logów, totalDocs: 6, totalPages: 1
+[2025-03-02 01:15:59] [DEBUG] Znaleziono 6 logów, totalDocs: 6, totalPages: 1
+[2025-03-02 01:16:09] [DEBUG] Znaleziono 7 logów, totalDocs: 7, totalPages: 1
+[2025-03-02 01:16:10] [DEBUG] Znaleziono 7 logów, totalDocs: 7, totalPages: 1
+[2025-03-02 01:25:38] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 01:25:38] [INFO] Znaleziono 4 plików komend
+[2025-03-02 01:25:38] [INFO] Załadowano komendę: help
+[2025-03-02 01:25:38] [INFO] Załadowano komendę: messagelog
+[2025-03-02 01:25:38] [INFO] Załadowano komendę: ping
+[2025-03-02 01:25:38] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 01:25:38] [INFO] Znaleziono 11 plików eventów
+[2025-03-02 01:25:38] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 01:25:38] [INFO] Załadowano event: interactionCreate
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageCreate
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageDelete
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageReactionRemoveAll
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageUpdate
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 01:25:38] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 01:25:38] [INFO] Załadowano event: ready
+[2025-03-02 01:25:38] [INFO] Bot ma zarejestrowanych 12 listenerów zdarzeń:
+[2025-03-02 01:25:38] [INFO] - shardDisconnect: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - warn: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - error: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - guildMemberAdd: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - interactionCreate: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - messageCreate: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - messageDelete: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - messageReactionAdd: 2 listener(s)
+[2025-03-02 01:25:38] [INFO] - messageReactionRemove: 2 listener(s)
+[2025-03-02 01:25:38] [INFO] - messageReactionRemoveAll: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - messageUpdate: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] - ready: 1 listener(s)
+[2025-03-02 01:25:38] [INFO] Łączenie z API Discorda...
+[2025-03-02 01:25:39] [INFO] Bot został uruchomiony pomyślnie i obsługuje 1 serwerów
+[2025-03-02 01:25:39] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 01:25:39] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 01:25:41] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 01:25:42] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:25:50] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a1b554665fe71e3f8b06 na serwerze 290267595322556426
+[2025-03-02 01:25:53] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a347b6862f061f19204f na serwerze 290267595322556426
+[2025-03-02 01:25:57] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a351b6862f061f19205a na serwerze 290267595322556426
+[2025-03-02 01:25:59] [DEBUG] Pobieranie szczegółów logu wiadomości 67c39a88dcbbe0bd848e2f75 na serwerze 290267595322556426
+[2025-03-02 01:26:02] [DEBUG] Pobieranie szczegółów logu wiadomości 67c39a71dcbbe0bd848e2f69 na serwerze 290267595322556426
+[2025-03-02 01:26:07] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a14254665fe71e3f8b01 na serwerze 290267595322556426
+[2025-03-02 01:26:15] [DEBUG] Utworzono nowy log dla reakcji na wiadomość 1345550248172322877
+[2025-03-02 01:26:20] [DEBUG] Zaktualizowano log dla reakcji na wiadomość 1345550246293274684
+[2025-03-02 01:26:25] [DEBUG] Znaleziono 9 logów, totalDocs: 9, totalPages: 1
+[2025-03-02 01:26:27] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a5a7e78e52045cb20222 na serwerze 290267595322556426
+[2025-03-02 01:26:37] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a5a7e78e52045cb20222 na serwerze 290267595322556426
+[2025-03-02 01:26:44] [DEBUG] Zaktualizowano log dla usunięcia reakcji z wiadomości 1345550248172322877
+[2025-03-02 01:26:46] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 01:26:47] [DEBUG] Znaleziono 9 logów, totalDocs: 9, totalPages: 1
+[2025-03-02 01:26:50] [DEBUG] Znaleziono 9 logów, totalDocs: 9, totalPages: 1
+[2025-03-02 01:26:50] [DEBUG] Znaleziono 9 logów, totalDocs: 9, totalPages: 1
+[2025-03-02 01:27:22] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a351b6862f061f19205a na serwerze 290267595322556426
+[2025-03-02 01:29:25] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:29:27] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a351b6862f061f19205a na serwerze 290267595322556426
+[2025-03-02 01:29:34] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:29:44] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:29:45] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:29:47] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:29:49] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:29:50] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:41:18] [INFO] Połączono z bazą danych MongoDB
+[2025-03-02 01:41:18] [INFO] Znaleziono 4 plików komend
+[2025-03-02 01:41:18] [INFO] Załadowano komendę: help
+[2025-03-02 01:41:18] [INFO] Załadowano komendę: messagelog
+[2025-03-02 01:41:18] [INFO] Załadowano komendę: ping
+[2025-03-02 01:41:18] [INFO] Załadowano komendę: reactionroles
+[2025-03-02 01:41:18] [INFO] Znaleziono 11 plików eventów
+[2025-03-02 01:41:18] [INFO] Załadowano event: guildMemberAdd
+[2025-03-02 01:41:18] [INFO] Załadowano event: interactionCreate
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageCreate
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageDelete
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageReactionRemoveAll
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageUpdate
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageReactionRemove
+[2025-03-02 01:41:18] [INFO] Załadowano event: messageReactionAdd
+[2025-03-02 01:41:18] [INFO] Załadowano event: ready
+[2025-03-02 01:41:18] [INFO] Bot ma zarejestrowanych 12 listenerów zdarzeń:
+[2025-03-02 01:41:18] [INFO] - shardDisconnect: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - warn: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - error: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - guildMemberAdd: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - interactionCreate: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - messageCreate: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - messageDelete: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - messageReactionAdd: 2 listener(s)
+[2025-03-02 01:41:18] [INFO] - messageReactionRemove: 2 listener(s)
+[2025-03-02 01:41:18] [INFO] - messageReactionRemoveAll: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - messageUpdate: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] - ready: 1 listener(s)
+[2025-03-02 01:41:18] [INFO] Łączenie z API Discorda...
+[2025-03-02 01:41:19] [INFO] Bot został uruchomiony pomyślnie i obsługuje 1 serwerów
+[2025-03-02 01:41:19] [INFO] Zalogowano jako Kotori#2155!
+[2025-03-02 01:41:19] [INFO] Bot obsługuje 1 serwerów
+[2025-03-02 01:41:22] [INFO] Renderowanie strony message-logs dla serwera 290267595322556426
+[2025-03-02 01:41:25] [DEBUG] Znaleziono 8 logów, totalDocs: 8, totalPages: 1
+[2025-03-02 01:41:27] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a351b6862f061f19205a na serwerze 290267595322556426
+[2025-03-02 01:41:39] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a351b6862f061f19205a na serwerze 290267595322556426
+[2025-03-02 01:41:47] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a351b6862f061f19205a na serwerze 290267595322556426
+[2025-03-02 01:41:54] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a351b6862f061f19205a na serwerze 290267595322556426
+[2025-03-02 01:42:01] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a1b554665fe71e3f8b06 na serwerze 290267595322556426
+[2025-03-02 01:42:07] [DEBUG] Pobieranie szczegółów logu wiadomości 67c3a347b6862f061f19204f na serwerze 290267595322556426

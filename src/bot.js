@@ -4,38 +4,53 @@ const path = require('path');
 const { connectToDatabase } = require('./utils/database');
 const logger = require('./utils/logger');
 
+// Konfiguracja klienta Discord z odpowiednimi uprawnieniami
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent, // Potrzebne do logowania wiadomości
+    GatewayIntentBits.GuildMembers // Potrzebne do wydarzeń członków serwera
   ],
   partials: [
     Partials.Message,
     Partials.Channel,
-    Partials.Reaction
+    Partials.Reaction,
+    Partials.User,
+    Partials.GuildMember
   ]
 });
 
-// Kolekcje komend i eventów
+// Kolekcje komend i cooldownów
 client.commands = new Collection();
 client.cooldowns = new Collection();
 
 // Funkcja do ładowania komend
 function loadCommands() {
   const commandsPath = path.join(__dirname, 'commands');
+  
+  if (!fs.existsSync(commandsPath)) {
+    logger.error(`Katalog komend nie istnieje: ${commandsPath}`);
+    return;
+  }
+  
   const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-
+  logger.info(`Znaleziono ${commandFiles.length} plików komend`);
+  
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
-    
-    if ('data' in command && 'execute' in command) {
-      client.commands.set(command.data.name, command);
-      logger.info(`Załadowano komendę: ${command.data.name}`);
-    } else {
-      logger.warn(`Komenda w ${filePath} nie posiada wymaganego "data" lub "execute"`);
+    try {
+      const command = require(filePath);
+      
+      if ('data' in command && 'execute' in command) {
+        client.commands.set(command.data.name, command);
+        logger.info(`Załadowano komendę: ${command.data.name}`);
+      } else {
+        logger.warn(`Komenda w ${filePath} nie posiada wymaganego "data" lub "execute"`);
+      }
+    } catch (error) {
+      logger.error(`Błąd podczas ładowania komendy ${file}: ${error.stack}`);
     }
   }
 }
@@ -43,35 +58,80 @@ function loadCommands() {
 // Funkcja do ładowania eventów
 function loadEvents() {
   const eventsPath = path.join(__dirname, 'events');
+  
+  if (!fs.existsSync(eventsPath)) {
+    logger.error(`Katalog eventów nie istnieje: ${eventsPath}`);
+    return;
+  }
+  
   const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
-
+  logger.info(`Znaleziono ${eventFiles.length} plików eventów`);
+  
   for (const file of eventFiles) {
     const filePath = path.join(eventsPath, file);
-    const event = require(filePath);
-    
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args, client));
+    try {
+      const event = require(filePath);
+      
+      if (!event.name) {
+        logger.warn(`Event w ${filePath} nie posiada właściwości "name"`);
+        continue;
+      }
+      
+      if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args, client));
+      } else {
+        client.on(event.name, (...args) => event.execute(...args, client));
+      }
+      
+      logger.info(`Załadowano event: ${event.name}`);
+    } catch (error) {
+      logger.error(`Błąd podczas ładowania eventu ${file}: ${error.stack}`);
     }
-    
-    logger.info(`Załadowano event: ${event.name}`);
   }
 }
 
+// Obsługa błędów niekrytycznych
+client.on('warn', warn => {
+  logger.warn(`Ostrzeżenie Discord: ${warn}`);
+});
+
+// Obsługa błędów
+client.on('error', error => {
+  logger.error(`Błąd Discord: ${error.message}`);
+});
+
+// Funkcja diagnostyczna do sprawdzenia zarejestrowanych listenerów
+function listRegisteredEvents() {
+  const events = client.eventNames();
+  logger.info(`Bot ma zarejestrowanych ${events.length} listenerów zdarzeń:`);
+  events.forEach(event => {
+    const listenerCount = client.listenerCount(event);
+    logger.info(`- ${event}: ${listenerCount} listener(s)`);
+  });
+}
+
 // Funkcja startująca bota
-function startBot() {
-  // Połączenie z bazą danych
-  connectToDatabase();
-  
-  // Ładowanie komend i eventów
-  loadCommands();
-  loadEvents();
-  
-  // Logowanie do Discord
-  client.login(process.env.DISCORD_TOKEN);
-  
-  return client;
+async function startBot() {
+  try {
+    // Połączenie z bazą danych
+    await connectToDatabase();
+    
+    // Ładowanie komend i eventów
+    loadCommands();
+    loadEvents();
+    
+    // Lista zarejestrowanych listenerów po załadowaniu
+    listRegisteredEvents();
+    
+    // Logowanie do Discord
+    logger.info('Łączenie z API Discorda...');
+    await client.login(process.env.DISCORD_TOKEN);
+    
+    logger.info(`Bot został uruchomiony pomyślnie i obsługuje ${client.guilds.cache.size} serwerów`);
+  } catch (error) {
+    logger.error(`Błąd podczas uruchamiania bota: ${error.stack}`);
+    process.exit(1);
+  }
 }
 
 module.exports = { startBot, client };

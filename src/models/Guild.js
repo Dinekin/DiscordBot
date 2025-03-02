@@ -18,6 +18,11 @@ const GuildSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Kanał do logowania wiadomości
+  messageLogChannel: {
+    type: String,
+    default: null
+  },
   language: {
     type: String,
     default: 'pl'
@@ -30,6 +35,10 @@ const GuildSchema = new mongoose.Schema({
     notifications: {
       type: Boolean,
       default: true
+    },
+    messageLog: {
+      type: Boolean,
+      default: false
     }
   }
 }, { timestamps: true });

@@ -3,6 +3,8 @@ const router = express.Router();
 const { client } = require('../../bot');
 const Guild = require('../../models/Guild');
 const ReactionRole = require('../../models/ReactionRole');
+const MessageLog = require('../../models/MessageLog');
+const logger = require('../../utils/logger');
 
 // Middleware do sprawdzania uprawnień na serwerze
 function hasGuildPermission(req, res, next) {
@@ -137,6 +139,45 @@ router.get('/guild/:guildId/reaction-roles', hasGuildPermission, async (req, res
     channels: textChannels,
     roles: roles
   });
+});
+
+// Zarządzanie logami wiadomości
+router.get('/guild/:guildId/message-logs', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  // Pobierz dane serwera z Discorda
+  const guild = client.guilds.cache.get(guildId);
+  
+  if (!guild) {
+    logger.warn(`Próba dostępu do panelu message-logs dla serwera ${guildId}, ale bot nie jest na tym serwerze`);
+    return res.redirect('/dashboard');
+  }
+  
+  try {
+    // Pobierz ustawienia z bazy danych
+    const settings = await Guild.findOne({ guildId: guildId });
+    
+    // Pobierz listę kanałów tekstowych
+    const textChannels = guild.channels.cache
+      .filter(c => c.type === 0) // 0 = kanał tekstowy
+      .map(c => ({ id: c.id, name: c.name }));
+    
+    logger.info(`Renderowanie strony message-logs dla serwera ${guildId}`);
+    
+    res.render('dashboard/message-logs', {
+      user: req.user,
+      guild: guild,
+      settings: settings || {},
+      channels: textChannels
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania strony message-logs: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania strony logów wiadomości'
+    });
+  }
 });
 
 module.exports = router;
