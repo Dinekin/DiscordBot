@@ -43,24 +43,72 @@
             <h2 class="card-title">Logi wiadomości</h2>
             <p class="card-text">Przeglądaj i zarządzaj logami wiadomości na serwerze.</p>
 
+            <!-- Ulepszony alert statusu -->
             <div class="alert alert-info">
               <i class="fas fa-info-circle me-2"></i> 
-              Aktualny status logowania wiadomości: 
+              <strong>Status logowania wiadomości:</strong> 
               <span class="module-status <%= settings.modules && settings.modules.messageLog ? 'enabled' : 'disabled' %>">
                 <%= settings.modules && settings.modules.messageLog ? 'WŁĄCZONY' : 'WYŁĄCZONY' %>
               </span>
-              <% if (settings.modules && settings.modules.messageLog && settings.logDeletedOnly) { %>
-                <span class="badge bg-warning text-dark ms-2">Tylko usunięte wiadomości</span>
+              
+              <% if (settings.modules && settings.modules.messageLog) { %>
+                <div class="mt-2">
+                  <strong>Kanał logów:</strong> 
+                  <% if (settings.messageLogChannel) { %>
+                    <% const channelName = channels.find(c => c.id === settings.messageLogChannel); %>
+                    <span class="badge bg-primary">
+                      #<%= channelName ? channelName.name : settings.messageLogChannel %>
+                    </span>
+                  <% } else { %>
+                    <span class="badge bg-secondary">Nie ustawiono</span>
+                  <% } %>
+                  
+                  <strong class="ms-3">Tryb logowania:</strong>
+                  <% if (settings.logDeletedOnly) { %>
+                    <span class="badge bg-warning text-dark">Tylko usunięte wiadomości</span>
+                  <% } else { %>
+                    <span class="badge bg-info">Wszystkie wiadomości</span>
+                  <% } %>
+                </div>
               <% } %>
             </div>
 
+            <!-- Ulepszone przyciski bezpośredniego dostępu -->
             <div class="alert alert-warning mb-3">
               <strong>Masz problemy z zapisywaniem ustawień?</strong> Użyj poniższych przycisków bezpośredniego dostępu:
-              <div class="mt-2">
-                <a href="/api/guilds/<%= guild.id %>/toggle-message-log/on" class="btn btn-success btn-sm" target="_blank">Włącz logi wiadomości</a>
-                <a href="/api/guilds/<%= guild.id %>/toggle-message-log/off" class="btn btn-danger btn-sm" target="_blank">Wyłącz logi wiadomości</a>
-                <a href="/api/guilds/<%= guild.id %>/toggle-log-deleted-only/on" class="btn btn-warning btn-sm text-dark" target="_blank">Loguj tylko usunięte</a>
-                <a href="/api/guilds/<%= guild.id %>/toggle-log-deleted-only/off" class="btn btn-secondary btn-sm" target="_blank">Loguj wszystkie wiadomości</a>
+              
+              <div class="row mt-2">
+                <div class="col-md-6 mb-2">
+                  <div class="card border-0 bg-light">
+                    <div class="card-body py-2">
+                      <h6 class="mb-2">Przełączanie modułu:</h6>
+                      <a href="/api/guilds/<%= guild.id %>/toggle-message-log/on" class="btn btn-success btn-sm me-1" target="_blank">
+                        <i class="fas fa-power-off me-1"></i> Włącz logi
+                      </a>
+                      <a href="/api/guilds/<%= guild.id %>/toggle-message-log/off" class="btn btn-danger btn-sm" target="_blank">
+                        <i class="fas fa-power-off me-1"></i> Wyłącz logi
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="col-md-6 mb-2">
+                  <div class="card border-0 bg-light">
+                    <div class="card-body py-2">
+                      <h6 class="mb-2">Tryb logowania:</h6>
+                      <a href="/api/guilds/<%= guild.id %>/toggle-log-deleted-only/on" class="btn btn-warning btn-sm text-dark me-1" target="_blank">
+                        <i class="fas fa-trash me-1"></i> Tylko usunięte
+                      </a>
+                      <a href="/api/guilds/<%= guild.id %>/toggle-log-deleted-only/off" class="btn btn-info btn-sm" target="_blank">
+                        <i class="fas fa-list me-1"></i> Wszystkie wiadomości
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-2 small text-muted">
+                <i class="fas fa-info-circle me-1"></i> Po kliknięciu przycisku odśwież stronę, aby zobaczyć zmiany.
               </div>
             </div>
               
@@ -86,9 +134,10 @@
                 <div class="col-md-4">
                   <label for="logDeletedOnly" class="form-label">Tryb logowania</label>
                   <select class="form-select" id="logDeletedOnly" name="logDeletedOnly">
-                    <option value="false" <%= !settings.logDeletedOnly ? 'selected' : '' %>>Wszystkie wiadomości</option>
-                    <option value="true" <%= settings.logDeletedOnly ? 'selected' : '' %>>Tylko usunięte wiadomości</option>
+                    <option value="false" <%= (!settings.logDeletedOnly || settings.logDeletedOnly === undefined) ? 'selected' : '' %>>Wszystkie wiadomości</option>
+                    <option value="true" <%= settings.logDeletedOnly === true ? 'selected' : '' %>>Tylko usunięte wiadomości</option>
                   </select>
+                  <div class="form-text">Wybierz, czy chcesz logować wszystkie wiadomości, czy tylko te usunięte. Tryb "Tylko usunięte" pomija logi tworzenia i edycji wiadomości.</div>
                 </div>
                 <div class="col-12">
                   <button type="button" class="btn btn-primary" onclick="saveSettings('<%= guild.id %>')">
@@ -160,41 +209,42 @@
                 <!-- Paginacja będzie wstawiona tutaj przez JavaScript -->
               </div>
             </div>
-              <!-- Modal do wyświetlania szczegółów wiadomości -->
-              <div class="modal fade" id="messageDetailsModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog modal-lg">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h5 class="modal-title">Szczegóły wiadomości</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+
+            <!-- Modal do wyświetlania szczegółów wiadomości -->
+            <div class="modal fade" id="messageDetailsModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Szczegóły wiadomości</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div id="messageDetails">
+                      <!-- Szczegóły wiadomości będą wstawione tutaj przez JavaScript -->
                     </div>
-                    <div class="modal-body">
-                      <div id="messageDetails">
-                        <!-- Szczegóły wiadomości będą wstawione tutaj przez JavaScript -->
-                      </div>
-                    </div>
-                    <div class="modal-footer">
-                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
-                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
                   </div>
                 </div>
               </div>
-              <!-- Modal do wyświetlania użytkowników, którzy dodali reakcję -->
-              <div class="modal fade" id="reactionUsersModal" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
-                  <div class="modal-content">
-                    <div class="modal-header">
-                      <h5 class="modal-title">Użytkownicy, którzy dodali reakcję</h5>
-                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal do wyświetlania użytkowników, którzy dodali reakcję -->
+            <div class="modal fade" id="reactionUsersModal" tabindex="-1" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Użytkownicy, którzy dodali reakcję</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div id="reactionUsersList">
+                      <!-- Lista użytkowników będzie wstawiona tutaj przez JavaScript -->
                     </div>
-                    <div class="modal-body">
-                      <div id="reactionUsersList">
-                        <!-- Lista użytkowników będzie wstawiona tutaj przez JavaScript -->
-                      </div>
-                    </div>
-                    <div class="modal-footer">
-                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
-                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
                   </div>
                 </div>
               </div>
@@ -417,47 +467,50 @@
       userSearchResults.classList.remove('show');
     }
     
-    // Funkcja do zapisywania ustawień
-async function saveSettings(guildId) {
-  const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
-  const messageLogChannel = document.getElementById('messageLogChannel').value;
-  const logDeletedOnly = document.getElementById('logDeletedOnly').value === 'true';
+    // POPRAWIONA funkcja do zapisywania ustawień
+    async function saveSettings(guildId) {
+      const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
+      const messageLogChannel = document.getElementById('messageLogChannel').value;
+      // Jawna konwersja do boolean dla bezpieczeństwa
+      const logDeletedOnly = document.getElementById('logDeletedOnly').value === 'true';
 
-  try {
-    // Dodajemy logowanie aby zobaczyć, co wysyłamy
-    console.log('Wysyłanie ustawień:', {
-      messageLogChannel: messageLogChannel,
-      'modules.messageLog': messageLogEnabled,
-      logDeletedOnly: logDeletedOnly
-    });
-    
-    const response = await fetch(`/api/guilds/${guildId}/settings`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messageLogChannel: messageLogChannel,
-        messageLog: messageLogEnabled,
-        logDeletedOnly: logDeletedOnly
-      })
-    });
+      try {
+        // Dodajemy logowanie aby zobaczyć, co wysyłamy
+        console.log('Wysyłanie ustawień:', {
+          messageLogChannel: messageLogChannel,
+          'modules.messageLog': messageLogEnabled,
+          logDeletedOnly: logDeletedOnly
+        });
+        
+        const response = await fetch(`/api/guilds/${guildId}/settings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messageLogChannel: messageLogChannel,
+            messageLog: messageLogEnabled,
+            logDeletedOnly: logDeletedOnly
+          })
+        });
 
-    const data = await response.json();
+        const data = await response.json();
 
-    if (data.success) {
-      alert('Ustawienia zostały zapisane!');
-    } else {
-      alert(`Błąd: ${data.error}`);
+        if (data.success) {
+          alert('Ustawienia zostały zapisane!');
+          // Odśwież stronę po zapisaniu ustawień
+          window.location.reload();
+        } else {
+          alert(`Błąd: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas zapisywania ustawień.');
+      }
     }
-  } catch (error) {
-    console.error('Błąd:', error);
-    alert('Wystąpił błąd podczas zapisywania ustawień.');
-  }
-}
-
-      // Funkcja do wyszukiwania logów
-      async function searchLogs(guildId) {
+    
+    // Wyszukiwanie logów
+    async function searchLogs(guildId) {
       const userId = document.getElementById('userId').value;
       const userInput = document.getElementById('userSearch').value;
       const channelId = document.getElementById('channelId').value;
@@ -521,7 +574,7 @@ async function saveSettings(guildId) {
         const channelName = channels[log.channelId] ? `#${channels[log.channelId]}` : 'Nieznany kanał';
         
         // Skrócona treść do wyświetlenia w tabeli
-      let displayContent = log.content;
+        let displayContent = log.content;
         if (!displayContent || displayContent.trim() === '') {
           // Jeśli wiadomość zawiera naklejki, ale nie ma tekstu
           if (log.stickers && log.stickers.length > 0) {
@@ -537,7 +590,7 @@ async function saveSettings(guildId) {
           displayContent = displayContent.substring(0, 100) + '...';
         }
         
-      // Status wiadomości
+        // Status wiadomości
         let statusBadge = '<span class="badge bg-success">Normalna</span>';
         if (log.deletedAt) {
           statusBadge = '<span class="badge bg-danger">Usunięta</span>';
@@ -568,7 +621,7 @@ async function saveSettings(guildId) {
         
         // Dodaj wiersz do tabeli
         const row = document.createElement('tr');
-          row.innerHTML = `
+        row.innerHTML = `
           <td>${formattedDate}</td>
           <td>${authorName}</td>
           <td>${channelName}</td>
@@ -675,8 +728,8 @@ async function saveSettings(guildId) {
       }
     }
     
-      // Funkcja do wyświetlania szczegółów wiadomości w modalu
-      function displayMessageDetails(log, channels, users) {
+    // Funkcja do wyświetlania szczegółów wiadomości w modalu
+    function displayMessageDetails(log, channels, users) {
       // Zapisz aktualne ID logu do zmiennej globalnej
       currentLogId = log._id;
       const messageDetails = document.getElementById('messageDetails');
@@ -725,7 +778,7 @@ async function saveSettings(guildId) {
           </table>
         </div>
         
-          <div class="mb-3">
+        <div class="mb-3">
           <h6>Treść wiadomości:</h6>
           <div class="p-3 bg-light border rounded">
             ${log.content ? log.content : (
@@ -782,8 +835,8 @@ async function saveSettings(guildId) {
         contentHTML += '</div></div>';
       }
       
-// Naklejki
-if (log.stickers && log.stickers.length > 0) {
+      // Naklejki
+      if (log.stickers && log.stickers.length > 0) {
         contentHTML += '<div class="mt-3 mb-3"><h6>Naklejki:</h6><div class="row">';
         
         log.stickers.forEach(sticker => {
@@ -879,6 +932,7 @@ if (log.stickers && log.stickers.length > 0) {
                       <i class="fas fa-trash"></i> Usuń
                     </button>
                   </div>
+                </div>
               </div>
             </div>
           `;

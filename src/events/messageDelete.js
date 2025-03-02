@@ -134,31 +134,35 @@ module.exports = {
         logger.debug(`Utworzono nowy log dla usuniętej wiadomości ${message.id}`);
       }
       
-      // Opcjonalnie wysyłanie logu na wyznaczony kanał
-      if (guildSettings.messageLogChannel) {
-        const logChannel = await message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
-        
-        if (logChannel) {
-          // Nie logujemy wiadomości z kanału logów
-          if (logChannel.id === message.channel.id) return;
+        // Opcjonalnie wysyłanie logu na wyznaczony kanał
+        if (guildSettings.messageLogChannel) {
+          const logChannel = await message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
           
-// Przygotowanie embedu z informacjami o usuniętej wiadomości
-const logEmbed = {
-    color: 0xe74c3c,
-    author: {
-      name: message.author?.tag || 'Nieznany użytkownik',
-      icon_url: message.author?.displayAvatarURL({ dynamic: true })
-    },
-    description: `**Wiadomość usunięta w <#${message.channel.id}>**\n${
-      message.content || 
-      (message.stickers?.size > 0 ? '*Naklejka bez tekstu*' : '*Brak treści*')
-    }`,
-    fields: [],
-    footer: {
-      text: `ID: ${message.id}`
-    },
-    timestamp: new Date()
-  };
+          if (logChannel) {
+            // Nie logujemy wiadomości z kanału logów
+            if (logChannel.id === message.channel.id) return;
+            
+            // Uwaga: Intencjonalnie nie sprawdzamy logDeletedOnly, ponieważ
+            // ta opcja dotyczy właśnie logowania usuwanych wiadomości,
+            // więc w tym przypadku zawsze logujemy, niezależnie od wartości logDeletedOnly
+            
+            // Przygotowanie embedu z informacjami o usuniętej wiadomości
+            const logEmbed = {
+              color: 0xe74c3c,
+              author: {
+                name: message.author?.tag || 'Nieznany użytkownik',
+                icon_url: message.author?.displayAvatarURL({ dynamic: true })
+              },
+              description: `**Wiadomość usunięta w <#${message.channel.id}>**\n${
+                message.content || 
+                (message.stickers?.size > 0 ? '*Naklejka bez tekstu*' : '*Brak treści*')
+              }`,
+              fields: [],
+              footer: {
+                text: `ID: ${message.id}`
+              },
+              timestamp: new Date()
+            };
           
           // Dodanie informacji o załącznikach
           if (message.attachments.size > 0) {
