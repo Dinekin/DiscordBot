@@ -52,6 +52,27 @@
                 <div class="form-text">Kanał, na którym będą wysyłane powiadomienia o zmianach ról.</div>
               </div>
 
+              <div class="card mb-3">
+                <div class="card-header">
+                  <h5 class="mb-0">Zarządzanie rolami</h5>
+                </div>
+                <div class="card-body">
+                  <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="restoreRolesOption" 
+                           <%= settings.restoreRoles !== false ? 'checked' : '' %>>
+                    <label class="form-check-label" for="restoreRolesOption">Przywracanie ról</label>
+                    <div class="form-text">Włącz lub wyłącz automatyczne przywracanie ról po powrocie użytkownika na serwer.</div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label for="roleExpiryDays" class="form-label">Czas wygaśnięcia zapisanych ról (dni)</label>
+                    <input type="number" class="form-control" id="roleExpiryDays" name="roleExpiryDays" 
+                           value="<%= settings.roleExpiryDays || 0 %>" min="0" max="365">
+                    <div class="form-text">Czas w dniach, po którym zapisane role użytkownika są usuwane. 0 oznacza, że role nigdy nie wygasają.</div>
+                  </div>
+                </div>
+              </div>
+
               <div class="mb-3">
                 <label for="language" class="form-label">Język</label>
                 <select class="form-select" id="language" name="language">
@@ -105,63 +126,73 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
   <script src="/js/dark-mode.js"></script>
   <script>
-    // Funkcja do zapisywania ustawień
-    async function saveSettings(guildId) {
-      // Pobierz wartości z formularza
-      const prefix = document.getElementById('prefix').value;
-      const welcomeChannel = document.getElementById('welcomeChannel').value;
-      const notificationChannel = document.getElementById('notificationChannel').value;
-      const language = document.getElementById('language').value;
-      
-      // Pobierz wartości checkboxów
-      const reactionRolesEnabled = document.getElementById('reactionRolesModule').checked;
-      const notificationsEnabled = document.getElementById('notificationsModule').checked;
-      const messageLogEnabled = document.getElementById('messageLogModule').checked;
-      
-      console.log('Wartości formularza:');
-      console.log('- messageLogEnabled:', messageLogEnabled);
-      console.log('- reactionRolesEnabled:', reactionRolesEnabled);
-      console.log('- notificationsEnabled:', notificationsEnabled);
-      
-      // Utwórz obiekt z danymi
-      const data = {
-        prefix: prefix,
-        welcomeChannel: welcomeChannel,
-        notificationChannel: notificationChannel,
-        language: language,
-        
-        // Kluczowe: wysyłamy wartości boolean bezpośrednio, nie jako stringi
-        messageLog: messageLogEnabled,
-        reactionRoles: reactionRolesEnabled,
-        notifications: notificationsEnabled
-      };
-      
-      console.log('Wysyłanie danych:', data);
-      
-      try {
-        const response = await fetch(`/api/guilds/${guildId}/settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data)
-        });
+// Funkcja do zapisywania ustawień
+async function saveSettings(guildId) {
+  // Pobierz wartości z formularza
+  const prefix = document.getElementById('prefix').value;
+  const welcomeChannel = document.getElementById('welcomeChannel').value;
+  const notificationChannel = document.getElementById('notificationChannel').value;
+  const language = document.getElementById('language').value;
   
-        const responseData = await response.json();
-        console.log('Odpowiedź serwera:', responseData);
+  // Pobierz wartości checkboxów
+  const reactionRolesEnabled = document.getElementById('reactionRolesModule').checked;
+  const notificationsEnabled = document.getElementById('notificationsModule').checked;
+  const messageLogEnabled = document.getElementById('messageLogModule').checked;
   
-        if (responseData.success) {
-          // Pokaż komunikat o sukcesie
-          alert('Ustawienia zostały pomyślnie zapisane!');
-          
-          // Odśwież stronę
-          window.location.reload();
-        } else {
-          alert('Błąd: ' + (responseData.error || 'Nieznany błąd podczas zapisywania ustawień'));
-        }
-      } catch (error) {
-        console.error('Błąd podczas zapisywania ustawień:', error);
-        alert('Wystąpił błąd podczas zapisywania ustawień. Sprawdź konsolę przeglądarki dla szczegółów.');
-      }
+  console.log('Wartości formularza:');
+  console.log('- messageLogEnabled:', messageLogEnabled);
+  console.log('- reactionRolesEnabled:', reactionRolesEnabled);
+  console.log('- notificationsEnabled:', notificationsEnabled);
+  
+  // Utwórz obiekt z danymi
+  const data = {
+    prefix: prefix,
+    welcomeChannel: welcomeChannel,
+    notificationChannel: notificationChannel,
+    language: language,
+    
+    // Pełne nazwy pól dla bezpośredniego przypisania
+    messageLog: messageLogEnabled,
+    reactionRoles: reactionRolesEnabled,
+    notifications: notificationsEnabled,
+    
+    // Dodaj jawne wartości wewnątrz obiektu modules
+    'modules.messageLog': messageLogEnabled,
+    'modules.reactionRoles': reactionRolesEnabled,
+    'modules.notifications': notificationsEnabled
+  };
+  
+  console.log('Wysyłanie danych:', JSON.stringify(data));
+  
+  try {
+    // Czysty fetch z pełnym logowaniem
+    const response = await fetch(`/api/guilds/${guildId}/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    
+    console.log('Otrzymano odpowiedź', response.status);
+    
+    const responseData = await response.json();
+    console.log('Odpowiedź serwera:', JSON.stringify(responseData));
+    
+    if (responseData.success) {
+      // Pokaż komunikat o sukcesie
+      alert('Ustawienia zostały pomyślnie zapisane!');
+      
+      // Odśwież stronę z opóźnieniem
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      alert('Błąd: ' + (responseData.error || 'Nieznany błąd podczas zapisywania ustawień'));
     }
+  } catch (error) {
+    console.error('Błąd podczas zapisywania ustawień:', error);
+    alert('Wystąpił błąd podczas zapisywania ustawień. Sprawdź konsolę przeglądarki dla szczegółów.');
+  }
+}
   </script> 

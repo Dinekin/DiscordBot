@@ -651,7 +651,9 @@ router.post('/guilds/:guildId/reaction-roles', hasGuildPermission, async (req, r
   }
 });
 
-// Zaktualizuj ustawienia serwera
+// Ten kod zastępuje funkcję obsługi zapisywania ustawień w src/web/routes/api.js
+
+// Zaktualizuj endpoint do zapisywania ustawień serwera
 router.post('/guilds/:guildId/settings', hasGuildPermission, async (req, res) => {
   const guildId = req.params.guildId;
   
@@ -683,6 +685,7 @@ router.post('/guilds/:guildId/settings', hasGuildPermission, async (req, res) =>
         notifications: true,
         messageLog: false
       };
+      logger.debug("Utworzono domyślną strukturę modułów, bo nie istniała");
     }
     
     // Aktualizuj ustawienia podstawowe
@@ -692,46 +695,75 @@ router.post('/guilds/:guildId/settings', hasGuildPermission, async (req, res) =>
     if (req.body.messageLogChannel !== undefined) guildSettings.messageLogChannel = req.body.messageLogChannel;
     if (req.body.language !== undefined) guildSettings.language = req.body.language;
     
-    // POPRAWIONA obsługa wartości boolean dla modułów
-    // Funkcja pomocnicza do bezpiecznej konwersji wartości boolean
+    // Funkcja do bezpiecznej konwersji na wartość boolean
     function safelyConvertToBoolean(value) {
       if (typeof value === 'boolean') return value;
-      if (typeof value === 'string') return value === 'true';
+      if (typeof value === 'string') return value.toLowerCase() === 'true';
       if (typeof value === 'number') return value !== 0;
       return false;
     }
     
-    // Moduł messageLog - sprawdź obie możliwe nazwy pola
+    // KLUCZOWA POPRAWKA: Bezpośrednia aktualizacja pól zagnieżdżonych
+    // Obsługa messageLog
     if (req.body.messageLog !== undefined) {
-      guildSettings.modules.messageLog = safelyConvertToBoolean(req.body.messageLog);
-      logger.debug(`Ustawiono modules.messageLog=${guildSettings.modules.messageLog} z wartości ${req.body.messageLog} (typ: ${typeof req.body.messageLog})`);
-    } else if (req.body['modules.messageLog'] !== undefined) {
-      guildSettings.modules.messageLog = safelyConvertToBoolean(req.body['modules.messageLog']);
-      logger.debug(`Ustawiono modules.messageLog=${guildSettings.modules.messageLog} z wartości ${req.body['modules.messageLog']} (typ: ${typeof req.body['modules.messageLog']})`);
+      const messageLogEnabled = safelyConvertToBoolean(req.body.messageLog);
+      // Upewnij się, że obiekt modules istnieje przed przypisaniem
+      if (!guildSettings.modules) guildSettings.modules = {};
+      guildSettings.modules.messageLog = messageLogEnabled;
+      logger.debug(`Ustawiono modules.messageLog=${messageLogEnabled} (typ: ${typeof messageLogEnabled})`);
     }
     
-    // Obsługa pozostałych modułów
-    if (req.body['modules.reactionRoles'] !== undefined) {
-      guildSettings.modules.reactionRoles = safelyConvertToBoolean(req.body['modules.reactionRoles']);
-      logger.debug(`Ustawiono modules.reactionRoles=${guildSettings.modules.reactionRoles}`);
+    // Obsługa reactionRoles
+    if (req.body.reactionRoles !== undefined) {
+      const reactionRolesEnabled = safelyConvertToBoolean(req.body.reactionRoles);
+      // Upewnij się, że obiekt modules istnieje przed przypisaniem
+      if (!guildSettings.modules) guildSettings.modules = {};
+      guildSettings.modules.reactionRoles = reactionRolesEnabled;
+      logger.debug(`Ustawiono modules.reactionRoles=${reactionRolesEnabled} (typ: ${typeof reactionRolesEnabled})`);
     }
     
-    if (req.body.notificationsEnabled !== undefined) {
-      guildSettings.modules.notifications = safelyConvertToBoolean(req.body.notificationsEnabled);
+    // Obsługa notifications
+    if (req.body.notifications !== undefined || req.body.notificationsEnabled !== undefined) {
+      const notificationsEnabled = safelyConvertToBoolean(
+        req.body.notifications !== undefined ? req.body.notifications : req.body.notificationsEnabled
+      );
+      // Upewnij się, że obiekt modules istnieje przed przypisaniem
+      if (!guildSettings.modules) guildSettings.modules = {};
+      guildSettings.modules.notifications = notificationsEnabled;
+      logger.debug(`Ustawiono modules.notifications=${notificationsEnabled} (typ: ${typeof notificationsEnabled})`);
     }
     
     // Obsługa logDeletedOnly
     if (req.body.logDeletedOnly !== undefined) {
       guildSettings.logDeletedOnly = safelyConvertToBoolean(req.body.logDeletedOnly);
-      logger.debug(`Ustawiono logDeletedOnly=${guildSettings.logDeletedOnly} z wartości ${req.body.logDeletedOnly} (typ: ${typeof req.body.logDeletedOnly})`);
+      logger.debug(`Ustawiono logDeletedOnly=${guildSettings.logDeletedOnly} (typ: ${typeof guildSettings.logDeletedOnly})`);
     }
     
-    // Zapisz zmiany
+    // DODAJ TU DODATKOWE SPRAWDZENIA DEBUGOWANIA
+    logger.debug("Stan modułów przed zapisem:", JSON.stringify(guildSettings.modules));
+    logger.debug("Pełne ustawienia przed zapisem:", JSON.stringify(guildSettings.toObject()));
+    
+    // Dodaj sprawdzenie czy obiekt jest valid przed zapisem
+    const validationError = guildSettings.validateSync();
+    if (validationError) {
+      logger.error(`Błąd walidacji modelu: ${JSON.stringify(validationError)}`);
+      return res.status(400).json({
+        success: false,
+        error: 'Nieprawidłowe dane: ' + validationError.message
+      });
+    }
+    
+    // Zapisz zmiany - używając metody markModified dla zagnieżdżonych obiektów
+    guildSettings.markModified('modules');
     await guildSettings.save();
+    
+    // Zweryfikuj zapisane dane
+    const verifiedSettings = await Guild.findOne({ guildId: guildId });
+    logger.debug(`Zweryfikowane dane po zapisie: ${JSON.stringify(verifiedSettings)}`);
     
     // Loguj finalne ustawienia
     logger.info(`Zaktualizowano ustawienia serwera ${guildId}`);
-    logger.debug(`Stan modułów po aktualizacji: ${JSON.stringify(guildSettings.modules)}`);
+    logger.debug(`Stan modułów po aktualizacji: ${JSON.stringify(verifiedSettings?.modules)}`);
     
     res.json({
       success: true,
@@ -742,7 +774,7 @@ router.post('/guilds/:guildId/settings', hasGuildPermission, async (req, res) =>
     logger.error(`Błąd podczas aktualizacji ustawień: ${error.stack}`);
     res.status(500).json({
       success: false,
-      error: 'Wystąpił błąd podczas aktualizacji ustawień'
+      error: 'Wystąpił błąd podczas aktualizacji ustawień: ' + error.message
     });
   }
 });
@@ -843,19 +875,37 @@ router.get('/guilds/:guildId/toggle-message-log/:state', hasGuildPermission, asy
       guildSettings = new Guild({
         guildId,
         modules: {
-          messageLog: false
-        }
+          messageLog: false,
+          reactionRoles: true,
+          notifications: true
+        },
+        logDeletedOnly: false
       });
+      logger.info(`Utworzono nowe ustawienia dla serwera ${guildId}`);
     }
     
     // Upewnij się, że struktura modułów istnieje
     if (!guildSettings.modules) {
-      guildSettings.modules = {};
+      guildSettings.modules = {
+        messageLog: false,
+        reactionRoles: true,
+        notifications: true
+      };
+      logger.info(`Zainicjalizowano brakującą strukturę modułów dla serwera ${guildId}`);
     }
     
-    // Ustaw wartość
+    // KLUCZOWA POPRAWKA: Bezpośrednia aktualizacja pola messageLog w obiekcie modules
     guildSettings.modules.messageLog = enabled;
+    
+    // Oznacz obiekt modules jako zmodyfikowany dla mongoose
+    guildSettings.markModified('modules');
+    
+    // Zapisz zmiany
     await guildSettings.save();
+    
+    // Sprawdź czy ustawienia zostały zapisane prawidłowo
+    const updatedSettings = await Guild.findOne({ guildId });
+    logger.debug(`Sprawdzenie po zapisie - messageLog=${updatedSettings.modules?.messageLog}`);
     
     res.json({
       success: true,
@@ -870,7 +920,7 @@ router.get('/guilds/:guildId/toggle-message-log/:state', hasGuildPermission, asy
     logger.error(`Błąd podczas przełączania logowania wiadomości: ${error.stack}`);
     res.status(500).json({
       success: false,
-      error: 'Wystąpił błąd podczas zmiany ustawień'
+      error: 'Wystąpił błąd podczas zmiany ustawień: ' + error.message
     });
   }
 });
@@ -1961,4 +2011,5 @@ router.get('/guilds/:guildId/giveaways/:messageId/details', hasGuildPermission, 
     });
   }
 });
+
 module.exports = router;

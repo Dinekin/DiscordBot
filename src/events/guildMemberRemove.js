@@ -1,12 +1,32 @@
-// Dodaj ten plik jako src/events/guildMemberRemove.js
 const { Events, EmbedBuilder, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
+const UserRole = require('../models/UserRole');
 const logger = require('../utils/logger');
 
 module.exports = {
   name: Events.GuildMemberRemove,
   async execute(member) {
     try {
+      // Najpierw zapisujemy role użytkownika
+      const roles = member.roles.cache
+        .filter(role => role.id !== member.guild.id) // Filtruj @everyone
+        .map(role => role.id);
+      
+      // Zapisz role w bazie danych
+      if (roles.length > 0) {
+        await UserRole.findOneAndUpdate(
+          { guildId: member.guild.id, userId: member.id },
+          { 
+            roles: roles,
+            nickname: member.nickname,
+            leftAt: new Date()
+          },
+          { upsert: true, new: true }
+        );
+        
+        logger.info(`Zapisano ${roles.length} ról dla użytkownika ${member.user.tag} (${member.id}) na serwerze ${member.guild.name}`);
+      }
+      
       // Sprawdź czy funkcja logowania wiadomości jest włączona na serwerze
       const guildSettings = await Guild.findOne({ guildId: member.guild?.id });
       

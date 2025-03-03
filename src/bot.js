@@ -4,6 +4,7 @@ const path = require('path');
 const { connectToDatabase } = require('./utils/database');
 const { setupGiveawaysManager } = require('./utils/giveawayManager');
 const logger = require('./utils/logger');
+const { checkExpiredRoles } = require('./utils/checkExpiredRoles');
 
 // Konfiguracja klienta Discord z odpowiednimi uprawnieniami
 const client = new Client({
@@ -110,6 +111,15 @@ function listRegisteredEvents() {
     logger.info(`- ${event}: ${listenerCount} listener(s)`);
   });
 }
+
+const ROLE_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minut w milisekundach
+setInterval(() => {
+  checkExpiredRoles(client).catch(error => {
+    logger.error(`Błąd podczas sprawdzania wygasłych ról: ${error.message}`);
+  });
+}, ROLE_CHECK_INTERVAL);
+
+logger.info(`Uruchomiono automatyczne sprawdzanie wygasłych ról co ${ROLE_CHECK_INTERVAL / 60000} minut`);
 
 // W funkcji startBot, po załadowaniu komend i eventów, ale przed logowaniem do Discorda
 async function startBot() {

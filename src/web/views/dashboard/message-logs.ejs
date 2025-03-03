@@ -2050,41 +2050,56 @@ async function searchLogsWithPage(guildId, page, params) {
     // Zapisywanie ustawień
     // ==================
     
-    async function saveSettings(guildId) {
-      // Pobierz wartości z formularza
-      const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
-      const messageLogChannel = document.getElementById('messageLogChannel').value;
-      const logDeletedOnly = document.getElementById('logDeletedOnly').value === 'true';
-      
-      // Przygotuj dane
-      const data = {
-        messageLog: messageLogEnabled,
-        messageLogChannel: messageLogChannel,
-        logDeletedOnly: logDeletedOnly
-      };
-      
-      try {
-        const response = await fetch(`/api/guilds/${guildId}/settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data)
-        });
-        
-        const responseData = await response.json();
-        
-        if (responseData.success) {
-          alert('Ustawienia zostały zapisane!');
-          window.location.reload();
-        } else {
-          alert(`Błąd: ${responseData.error || 'Nieznany błąd podczas zapisywania'}`);
-        }
-      } catch (error) {
-        console.error('Błąd podczas zapisywania ustawień:', error);
-        alert('Wystąpił błąd podczas zapisywania ustawień');
-      }
+// Funkcja do zapisywania ustawień - zastąp w pliku src/web/views/dashboard/message-logs.ejs
+async function saveSettings(guildId) {
+  try {
+    // Pobierz wartości z formularza
+    const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
+    const messageLogChannel = document.getElementById('messageLogChannel').value;
+    const logDeletedOnly = document.getElementById('logDeletedOnly').value === 'true';
+    
+    console.log('Wartości formularza:');
+    console.log('- messageLogEnabled:', messageLogEnabled);
+    console.log('- messageLogChannel:', messageLogChannel);
+    console.log('- logDeletedOnly:', logDeletedOnly);
+    
+    // Przygotuj dane
+    const data = {
+      messageLog: messageLogEnabled,
+      'modules.messageLog': messageLogEnabled,  // Podwójne wysłanie dla pewności
+      messageLogChannel: messageLogChannel,
+      logDeletedOnly: logDeletedOnly
+    };
+    
+    console.log('Wysyłanie danych:', JSON.stringify(data));
+    
+    const response = await fetch(`/api/guilds/${guildId}/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    });
+    
+    console.log('Status odpowiedzi:', response.status);
+    
+    const responseData = await response.json();
+    console.log('Odpowiedź serwera:', JSON.stringify(responseData));
+    
+    if (responseData.success) {
+      // Wyświetl komunikat o sukcesie i odśwież stronę
+      alert('Ustawienia zostały zapisane!');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      alert(`Błąd: ${responseData.error || 'Nieznany błąd podczas zapisywania'}`);
     }
+  } catch (error) {
+    console.error('Błąd podczas zapisywania ustawień:', error);
+    alert('Wystąpił błąd podczas zapisywania ustawień');
+  }
+}
 
     // Załaduj statystyki po załadowaniu strony
     document.addEventListener('DOMContentLoaded', function() {
