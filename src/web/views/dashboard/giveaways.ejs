@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konkursy - <%= guild.name %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/dark-mode.css">
+  <script src="/js/saved-style.js"></script>
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+
+  <div class="container mt-4">
+    <div class="row">
+      <%- include('../partials/guild-sidebar', { path: '/dashboard/guild/' + guild.id + '/giveaways' }) %>
+
+      <div class="col-md-9">
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <h2 class="card-title">Konkursy (Giveaways)</h2>
+            <p class="card-text">Zarządzaj konkursami na twoim serwerze Discord.</p>
+
+            <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#createGiveawayModal">
+              <i class="fas fa-plus"></i> Utwórz nowy konkurs
+            </button>
+            
+            <div class="d-flex justify-content-between mb-3">
+              <div>
+                <button type="button" class="btn btn-outline-secondary" onclick="refreshGiveaways()">
+                  <i class="fas fa-sync-alt"></i> Odśwież
+                </button>
+              </div>
+              <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary active" id="activeGiveawaysBtn" onclick="showActive()">
+                  Aktywne
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="endedGiveawaysBtn" onclick="showEnded()">
+                  Zakończone
+                </button>
+              </div>
+            </div>
+            
+            <div id="giveawaysContainer">
+              <div class="text-center p-5">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Ładowanie...</span>
+                </div>
+                <p class="mt-3">Ładowanie konkursów...</p>
+              </div>
+            </div>
+            
+            <div id="noGiveaways" class="alert alert-info d-none">
+              <i class="fas fa-info-circle me-2"></i> Brak konkursów do wyświetlenia.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal do tworzenia konkursu -->
+  <div class="modal fade" id="createGiveawayModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fas fa-gift me-2"></i>Utwórz nowy konkurs</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="createGiveawayForm">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="channelId" class="form-label">Kanał</label>
+                <select class="form-select" id="channelId" name="channelId" required>
+                  <option value="">Wybierz kanał...</option>
+                  <% channels.forEach(channel => { %>
+                    <option value="<%= channel.id %>">#<%= channel.name %></option>
+                  <% }); %>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="winnerCount" class="form-label">Liczba zwycięzców</label>
+                <input type="number" class="form-control" id="winnerCount" name="winnerCount" min="1" max="10" value="1" required>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="prize" class="form-label">Nagroda</label>
+              <input type="text" class="form-control" id="prize" name="prize" required>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="duration" class="form-label">Czas trwania</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" id="duration" name="duration" placeholder="np. 1d, 12h, 30m" required>
+                  <span class="input-group-text" id="durationHelp">
+                    <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" 
+                      title="Format: 1m (minuta), 1h (godzina), 1d (dzień)"></i>
+                  </span>
+                </div>
+                <div class="form-text">Przykłady: 30s, 10m, 2h, 1d</div>
+              </div>
+              <div class="col-md-6">
+                <label for="color" class="form-label">Kolor</label>
+                <input type="color" class="form-control form-control-color w-100" id="color" name="color" value="#3498db">
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label for="thumbnail" class="form-label">Miniaturka (opcjonalnie)</label>
+              <input type="url" class="form-control" id="thumbnail" name="thumbnail" placeholder="URL miniaturki">
+            </div>
+            
+            <div class="mb-3">
+              <label for="image" class="form-label">Obraz (opcjonalnie)</label>
+              <input type="url" class="form-control" id="image" name="image" placeholder="URL obrazu">
+            </div>
+            
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="isDrop" name="isDrop">
+              <label class="form-check-label" for="isDrop">
+                Tryb Drop (bez czasu oczekiwania)
+              </label>
+              <div id="dropInfo" class="form-text d-none text-warning">
+                <i class="fas fa-exclamation-triangle"></i> W trybie Drop, konkurs zakończy się natychmiast po zdobyciu wystarczającej liczby reakcji.
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-primary" onclick="createGiveaway('<%= guild.id %>')">
+            <i class="fas fa-gift me-1"></i> Utwórz konkurs
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal szczegółów konkursu -->
+  <div class="modal fade" id="giveawayDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fas fa-gift me-2"></i>Szczegóły konkursu</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="giveawayDetailsContent">
+            <!-- Zawartość zostanie wypełniona dynamicznie -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+          <div id="giveawayActionButtons">
+            <!-- Przyciski akcji zostaną dodane dynamicznie -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/dark-mode.js"></script>
+  <script>
+    // Globalne zmienne
+    let currentGiveaways = [];
+    let currentFilter = 'active';
+    let currentGiveaway = null;
+    
+    // Inicjalizacja tooltipów
+    document.addEventListener('DOMContentLoaded', function() {
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+      
+      // Pokaż/ukryj informację o trybie Drop
+      document.getElementById('isDrop').addEventListener('change', function() {
+        const dropInfo = document.getElementById('dropInfo');
+        dropInfo.classList.toggle('d-none', !this.checked);
+        
+        // Jeśli Drop jest zaznaczony, ukryj pole czasu trwania
+        const durationField = document.getElementById('duration');
+        const durationGroup = durationField.closest('.row');
+        if (this.checked) {
+          durationField.value = '1m'; // Minimalna wartość dla API
+          durationGroup.classList.add('d-none');
+        } else {
+          durationField.value = '';
+          durationGroup.classList.remove('d-none');
+        }
+      });
+      
+      // Załaduj konkursy przy starcie
+      loadGiveaways('<%= guild.id %>');
+    });
+    
+// Funkcja do ładowania konkursów
+async function loadGiveaways(guildId) {
+  try {
+    // Użyj endpointu dla podstawowych informacji
+    const response = await fetch(`/api/guilds/${guildId}/giveaways/basic`);
+    const data = await response.json();
+    
+    if (data.success) {
+      currentGiveaways = data.giveaways;
+      displayGiveaways();
+    } else {
+      showError(data.error || 'Wystąpił błąd podczas ładowania konkursów');
+    }
+  } catch (error) {
+    console.error('Błąd podczas ładowania konkursów:', error);
+    showError('Wystąpił błąd podczas ładowania konkursów');
+  }
+}
+
+// Wyświetlanie szczegółów konkursu
+async function showGiveawayDetails(messageId) {
+  try {
+    const guildId = '<%= guild.id %>';
+    const response = await fetch(`/api/guilds/${guildId}/giveaways/${messageId}/details`);
+    const data = await response.json();
+    
+    if (data.success) {
+      currentGiveaway = data.giveaway;
+      
+      // Reszta kodu pozostaje bez zmian...
+      const modal = new bootstrap.Modal(document.getElementById('giveawayDetailsModal'));
+      const content = document.getElementById('giveawayDetailsContent');
+      const actionButtons = document.getElementById('giveawayActionButtons');
+      
+      // ... wypełnianie szczegółów ...
+      
+      modal.show();
+    } else {
+      showError(data.error || 'Nie można pobrać szczegółów konkursu');
+    }
+  } catch (error) {
+    console.error('Błąd podczas pobierania szczegółów konkursu:', error);
+    showError('Wystąpił błąd podczas pobierania szczegółów konkursu');
+  }
+}
+    
+    // Funkcja do odświeżania listy konkursów
+    function refreshGiveaways() {
+      const guildId = '<%= guild.id %>';
+      const container = document.getElementById('giveawaysContainer');
+      
+      container.innerHTML = `
+        <div class="text-center p-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Ładowanie...</span>
+          </div>
+          <p class="mt-3">Odświeżanie konkursów...</p>
+        </div>
+      `;
+      
+      loadGiveaways(guildId);
+    }
+    
+    // Filtrowanie konkursów - aktywne
+    function showActive() {
+      document.getElementById('activeGiveawaysBtn').classList.add('active');
+      document.getElementById('endedGiveawaysBtn').classList.remove('active');
+      currentFilter = 'active';
+      displayGiveaways();
+    }
+    
+    // Filtrowanie konkursów - zakończone
+    function showEnded() {
+      document.getElementById('activeGiveawaysBtn').classList.remove('active');
+      document.getElementById('endedGiveawaysBtn').classList.add('active');
+      currentFilter = 'ended';
+      displayGiveaways();
+    }
+    
+    // Wyświetlanie konkursów
+    function displayGiveaways() {
+      const container = document.getElementById('giveawaysContainer');
+      const noGiveaways = document.getElementById('noGiveaways');
+      
+      // Filtruj konkursy
+      const filteredGiveaways = currentGiveaways.filter(giveaway => {
+        return currentFilter === 'active' ? !giveaway.ended : giveaway.ended;
+      });
+      
+      if (filteredGiveaways.length === 0) {
+        container.innerHTML = '';
+        noGiveaways.classList.remove('d-none');
+        noGiveaways.textContent = currentFilter === 'active' 
+          ? 'Brak aktywnych konkursów. Kliknij przycisk "Utwórz nowy konkurs", aby rozpocząć.'
+          : 'Brak zakończonych konkursów.';
+        return;
+      }
+      
+      noGiveaways.classList.add('d-none');
+      
+      // Generuj karty konkursów
+      let html = '<div class="row">';
+      
+      filteredGiveaways.forEach(giveaway => {
+        const isActive = !giveaway.ended;
+        const endAt = new Date(giveaway.endAt);
+        const now = new Date();
+        const timeLeft = Math.max(0, endAt - now);
+        
+        // Format czasu pozostałego
+        let timeLeftText = '';
+        if (isActive) {
+          if (giveaway.isDrop) {
+            timeLeftText = '<span class="badge bg-success">Drop - zakończy się po zebraniu wystarczającej liczby uczestników</span>';
+          } else {
+            const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (days > 0) {
+              timeLeftText = `${days}d ${hours}h ${minutes}m`;
+            } else if (hours > 0) {
+              timeLeftText = `${hours}h ${minutes}m`;
+            } else {
+              timeLeftText = `${minutes}m`;
+            }
+          }
+        }
+        
+        // Ustal kolor paska statusu
+        let statusBadge, statusClass;
+        if (isActive) {
+          if (timeLeft < 300000) { // less than 5 minutes
+            statusBadge = '<span class="badge bg-warning">Kończy się</span>';
+            statusClass = 'border-warning';
+          } else {
+            statusBadge = '<span class="badge bg-success">Aktywny</span>';
+            statusClass = 'border-success';
+          }
+        } else {
+          statusBadge = '<span class="badge bg-secondary">Zakończony</span>';
+          statusClass = 'border-secondary';
+        }
+        
+        // Jeśli konkurs jest wstrzymany
+        if (isActive && giveaway.pauseOptions && giveaway.pauseOptions.isPaused) {
+          statusBadge = '<span class="badge bg-info">Wstrzymany</span>';
+          statusClass = 'border-info';
+        }
+        
+        html += `
+          <div class="col-lg-6 mb-4">
+            <div class="card h-100 ${statusClass}" style="border-left-width: 5px;">
+              <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                  <h5 class="mb-0">${giveaway.prize}</h5>
+                </div>
+                <div>
+                  ${statusBadge}
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="mb-2">
+                  <strong>Kanał:</strong> 
+                  <a href="https://discord.com/channels/${giveaway.guildId}/${giveaway.channelId}/${giveaway.messageId}" target="_blank" class="text-decoration-none">
+                    #<%= channels.find(c => c.id === '${giveaway.channelId}')?.name || 'nieznany-kanał' %>
+                    <i class="fas fa-external-link-alt ms-1 small"></i>
+                  </a>
+                </div>
+                
+                <div class="mb-2">
+                  <strong>Zwycięzców:</strong> ${giveaway.winnerCount}
+                </div>
+                
+                <div class="mb-2">
+                  <strong>${isActive ? 'Zakończy się:' : 'Zakończył się:'}</strong>
+                  <span class="ms-1">
+                    <span title="${new Date(giveaway.endAt).toLocaleString()}">
+                      ${isActive ? 'za ' + timeLeftText : new Date(giveaway.endAt).toLocaleString()}
+                    </span>
+                  </span>
+                </div>
+                
+                ${giveaway.winnerIds && giveaway.winnerIds.length > 0 ? `
+                  <div class="mb-2">
+                    <strong>Zwycięzcy:</strong> ${giveaway.winnerIds.length} osób
+                  </div>
+                ` : ''}
+              </div>
+              <div class="card-footer bg-transparent">
+                <button class="btn btn-sm btn-primary" onclick="showGiveawayDetails('${giveaway.messageId}')">
+                  <i class="fas fa-eye me-1"></i> Szczegóły
+                </button>
+                
+                ${isActive ? `
+                  <button class="btn btn-sm btn-danger" onclick="endGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+                    <i class="fas fa-stop-circle me-1"></i> Zakończ
+                  </button>
+                  
+                  ${giveaway.pauseOptions && giveaway.pauseOptions.isPaused ? `
+                    <button class="btn btn-sm btn-success" onclick="resumeGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+                      <i class="fas fa-play me-1"></i> Wznów
+                    </button>
+                  ` : `
+                    <button class="btn btn-sm btn-warning" onclick="pauseGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+                      <i class="fas fa-pause me-1"></i> Wstrzymaj
+                    </button>
+                  `}
+                ` : `
+                  <button class="btn btn-sm btn-info" onclick="rerollGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+                    <i class="fas fa-sync me-1"></i> Losuj ponownie
+                  </button>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      container.innerHTML = html;
+    }
+    
+    // Wyświetlanie szczegółów konkursu
+    async function showGiveawayDetails(messageId) {
+      const giveaway = currentGiveaways.find(g => g.messageId === messageId);
+      if (!giveaway) return;
+      
+      currentGiveaway = giveaway;
+      const modal = new bootstrap.Modal(document.getElementById('giveawayDetailsModal'));
+      const content = document.getElementById('giveawayDetailsContent');
+      const actionButtons = document.getElementById('giveawayActionButtons');
+      
+      // Generuj zawartość
+      const isActive = !giveaway.ended;
+      const endAt = new Date(giveaway.endAt);
+      const startAt = new Date(giveaway.startAt);
+      
+      // Status
+      let statusBadge;
+      if (isActive) {
+        if (giveaway.pauseOptions && giveaway.pauseOptions.isPaused) {
+          statusBadge = '<span class="badge bg-info p-2">Wstrzymany</span>';
+        } else if (endAt - new Date() < 300000) { // less than 5 minutes
+          statusBadge = '<span class="badge bg-warning p-2">Kończy się</span>';
+        } else {
+          statusBadge = '<span class="badge bg-success p-2">Aktywny</span>';
+        }
+      } else {
+        statusBadge = '<span class="badge bg-secondary p-2">Zakończony</span>';
+      }
+      
+      // Pobierz zwycięzców jeśli konkurs jest zakończony
+      let winnersHtml = '';
+      if (!isActive && giveaway.winnerIds && giveaway.winnerIds.length > 0) {
+        winnersHtml = `
+          <div class="card mt-3 mb-3">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Zwycięzcy</h5>
+            </div>
+            <div class="card-body">
+              <ul class="list-group">
+                ${giveaway.winnerIds.map((id, index) => `
+                  <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                      <span class="badge bg-primary rounded-pill me-2">${index + 1}</span>
+                      <span class="user-id">${id}</span>
+                    </div>
+                    <span class="badge bg-secondary">ID: ${id}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          </div>
+        `;
+      }
+      
+      content.innerHTML = `
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informacje</h5>
+              </div>
+              <div class="card-body">
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <th style="width: 120px;">Status:</th>
+                    <td>${statusBadge}</td>
+                  </tr>
+                  <tr>
+                    <th>Nagroda:</th>
+                    <td>${giveaway.prize}</td>
+                  </tr>
+                  <tr>
+                    <th>Kanał:</th>
+                    <td>
+                      <a href="https://discord.com/channels/${giveaway.guildId}/${giveaway.channelId}/${giveaway.messageId}" target="_blank" class="text-decoration-none">
+                        #<%= channels.find(c => c.id === '${giveaway.channelId}')?.name || 'nieznany-kanał' %>
+                        <i class="fas fa-external-link-alt ms-1 small"></i>
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Zwycięzców:</th>
+                    <td>${giveaway.winnerCount}</td>
+                  </tr>
+                  <tr>
+                    <th>ID Wiadomości:</th>
+                    <td><code>${giveaway.messageId}</code></td>
+                  </tr>
+                  ${giveaway.isDrop ? `
+                    <tr>
+                      <th>Typ:</th>
+                      <td><span class="badge bg-success p-2">Drop</span></td>
+                    </tr>
+                  ` : ''}
+                </table>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-6">
+            <div class="card mb-3">
+              <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Czas</h5>
+              </div>
+              <div class="card-body">
+                <table class="table table-sm table-borderless">
+                  <tr>
+                    <th style="width: 120px;">Rozpoczęto:</th>
+                    <td>${startAt.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <th>Zakończenie:</th>
+                    <td>${endAt.toLocaleString()}</td>
+                  </tr>
+                  <tr>
+                    <th>Czas trwania:</th>
+                    <td>${formatDuration(giveaway.endAt - giveaway.startAt)}</td>
+                  </tr>
+                  ${isActive && !giveaway.isDrop ? `
+                    <tr>
+                      <th>Pozostało:</th>
+                      <td>${formatDuration(Math.max(0, endAt - new Date()))}</td>
+                    </tr>
+                  ` : ''}
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        ${winnersHtml}
+        
+        ${giveaway.thumbnail || giveaway.image ? `
+          <div class="card mb-3">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-image me-2"></i>Media</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                ${giveaway.thumbnail ? `
+                  <div class="col-md-6 mb-3">
+                    <div class="card">
+                      <div class="card-header py-1 px-2">Miniaturka</div>
+                      <div class="card-body p-0 text-center">
+                        <img src="${giveaway.thumbnail}" alt="Thumbnail" class="img-fluid" style="max-height:200px;">
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+                
+                ${giveaway.image ? `
+                  <div class="col-md-6 mb-3">
+                    <div class="card">
+                      <div class="card-header py-1 px-2">Obraz</div>
+                      <div class="card-body p-0 text-center">
+                        <img src="${giveaway.image}" alt="Image" class="img-fluid" style="max-height:200px;">
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        ` : ''}
+      `;
+      
+      // Przyciski akcji
+      actionButtons.innerHTML = '';
+      
+      if (isActive) {
+        actionButtons.innerHTML += `
+          <button type="button" class="btn btn-danger" onclick="endGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+            <i class="fas fa-stop-circle me-1"></i> Zakończ konkurs
+          </button>
+          
+          ${giveaway.pauseOptions && giveaway.pauseOptions.isPaused ? `
+            <button type="button" class="btn btn-success" onclick="resumeGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+              <i class="fas fa-play me-1"></i> Wznów konkurs
+            </button>
+          ` : `
+            <button type="button" class="btn btn-warning" onclick="pauseGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+              <i class="fas fa-pause me-1"></i> Wstrzymaj konkurs
+            </button>
+          `}
+        `;
+      } else {
+        actionButtons.innerHTML += `
+          <button type="button" class="btn btn-info" onclick="rerollGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+            <i class="fas fa-sync me-1"></i> Losuj ponownie
+          </button>
+        `;
+      }
+      
+      // Zawsze dodaj przycisk usunięcia
+      actionButtons.innerHTML += `
+        <button type="button" class="btn btn-outline-danger" onclick="deleteGiveaway('<%= guild.id %>', '${giveaway.messageId}')">
+          <i class="fas fa-trash me-1"></i> Usuń konkurs
+        </button>
+      `;
+      
+      modal.show();
+    }
+    
+    // Tworzenie nowego konkursu
+    async function createGiveaway(guildId) {
+      // Pobierz dane z formularza
+      const form = document.getElementById('createGiveawayForm');
+      const formData = new FormData(form);
+      
+      const channelId = formData.get('channelId');
+      const prize = formData.get('prize');
+      const duration = formData.get('duration');
+      const winnerCount = parseInt(formData.get('winnerCount'));
+      const thumbnail = formData.get('thumbnail');
+      const image = formData.get('image');
+      const color = formData.get('color').replace('#', '');
+      const isDrop = document.getElementById('isDrop').checked;
+      
+      // Walidacja
+      if (!channelId || !prize || (!isDrop && !duration) || winnerCount < 1) {
+        showError('Proszę wypełnić wszystkie wymagane pola');
+        return;
+      }
+      
+      try {
+        // Pokaż loader
+        const modal = bootstrap.Modal.getInstance(document.getElementById('createGiveawayModal'));
+        modal._element.querySelector('.modal-footer').innerHTML = `
+          <div class="text-center w-100">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Tworzenie konkursu...</span>
+            </div>
+            <p class="mb-0 mt-2">Tworzenie konkursu...</p>
+          </div>
+        `;
+        
+        // Wyślij żądanie
+        const response = await fetch(`/api/guilds/${guildId}/giveaways`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channelId,
+            prize,
+            duration,
+            winnerCount,
+            thumbnail,
+            image,
+            color,
+            isDrop
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Zamknij modal i odśwież listę
+          modal.hide();
+          showSuccess('Konkurs został utworzony pomyślnie!');
+          refreshGiveaways();
+          
+          // Resetuj formularz
+          form.reset();
+        } else {
+          // Pokaż błąd
+          modal.hide();
+          showError(data.error || 'Wystąpił błąd podczas tworzenia konkursu');
+        }
+      } catch (error) {
+        console.error('Błąd podczas tworzenia konkursu:', error);
+        bootstrap.Modal.getInstance(document.getElementById('createGiveawayModal')).hide();
+        showError('Wystąpił błąd podczas tworzenia konkursu');
+      }
+    }
+    
+    // Funkcja do zakończenia konkursu
+    async function endGiveaway(guildId, messageId) {
+      if (!confirm('Czy na pewno chcesz zakończyć ten konkurs? Ta akcja jest nieodwracalna.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/giveaways/${messageId}/end`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Konkurs został zakończony!');
+          
+          // Zamknij modal szczegółów jeśli otwarty
+          const detailsModal = bootstrap.Modal.getInstance(document.getElementById('giveawayDetailsModal'));
+          if (detailsModal) {
+            detailsModal.hide();
+          }
+          
+          refreshGiveaways();
+        } else {
+          showError(data.error || 'Wystąpił błąd podczas kończenia konkursu');
+        }
+      } catch (error) {
+        console.error('Błąd podczas kończenia konkursu:', error);
+        showError('Wystąpił błąd podczas kończenia konkursu');
+      }
+    }
+    
+    // Funkcja do ponownego losowania zwycięzców
+    async function rerollGiveaway(guildId, messageId) {
+      const newWinners = prompt('Podaj liczbę zwycięzców do wylosowania ponownie (opcjonalnie):');
+      const winnerCount = parseInt(newWinners);
+      
+      try {
+        const url = `/api/guilds/${guildId}/giveaways/${messageId}/reroll`;
+        const options = {
+          method: 'POST'
+        };
+        
+        // Jeśli podano liczbę zwycięzców, dodaj ją do zapytania
+        if (!isNaN(winnerCount) && winnerCount > 0) {
+          options.headers = {
+            'Content-Type': 'application/json',
+          };
+          options.body = JSON.stringify({ winnerCount });
+        }
+        
+        const response = await fetch(url, options);
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Zwycięzcy zostali wylosowani ponownie!');
+          
+          // Zamknij modal szczegółów jeśli otwarty
+          const detailsModal = bootstrap.Modal.getInstance(document.getElementById('giveawayDetailsModal'));
+          if (detailsModal) {
+            detailsModal.hide();
+          }
+          
+          refreshGiveaways();
+        } else {
+          showError(data.error || 'Wystąpił błąd podczas ponownego losowania');
+        }
+      } catch (error) {
+        console.error('Błąd podczas ponownego losowania:', error);
+        showError('Wystąpił błąd podczas ponownego losowania');
+      }
+    }
+    
+    // Funkcja do wstrzymania konkursu
+    async function pauseGiveaway(guildId, messageId) {
+      if (!confirm('Czy na pewno chcesz wstrzymać ten konkurs?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/giveaways/${messageId}/pause`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Konkurs został wstrzymany!');
+          
+          // Zamknij modal szczegółów jeśli otwarty
+          const detailsModal = bootstrap.Modal.getInstance(document.getElementById('giveawayDetailsModal'));
+          if (detailsModal) {
+            detailsModal.hide();
+          }
+          
+          refreshGiveaways();
+        } else {
+          showError(data.error || 'Wystąpił błąd podczas wstrzymywania konkursu');
+        }
+      } catch (error) {
+        console.error('Błąd podczas wstrzymywania konkursu:', error);
+        showError('Wystąpił błąd podczas wstrzymywania konkursu');
+      }
+    }
+    
+    // Funkcja do wznowienia konkursu
+    async function resumeGiveaway(guildId, messageId) {
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/giveaways/${messageId}/resume`, {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Konkurs został wznowiony!');
+          
+          // Zamknij modal szczegółów jeśli otwarty
+          const detailsModal = bootstrap.Modal.getInstance(document.getElementById('giveawayDetailsModal'));
+          if (detailsModal) {
+            detailsModal.hide();
+          }
+          
+          refreshGiveaways();
+        } else {
+          showError(data.error || 'Wystąpił błąd podczas wznawiania konkursu');
+        }
+      } catch (error) {
+        console.error('Błąd podczas wznawiania konkursu:', error);
+        showError('Wystąpił błąd podczas wznawiania konkursu');
+      }
+    }
+    
+    // Funkcja do usuwania konkursu
+    async function deleteGiveaway(guildId, messageId) {
+      if (!confirm('Czy na pewno chcesz usunąć ten konkurs? Ta akcja jest nieodwracalna.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/giveaways/${messageId}`, {
+          method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showSuccess('Konkurs został usunięty!');
+          
+          // Zamknij modal szczegółów jeśli otwarty
+          const detailsModal = bootstrap.Modal.getInstance(document.getElementById('giveawayDetailsModal'));
+          if (detailsModal) {
+            detailsModal.hide();
+          }
+          
+          refreshGiveaways();
+        } else {
+          showError(data.error || 'Wystąpił błąd podczas usuwania konkursu');
+        }
+      } catch (error) {
+        console.error('Błąd podczas usuwania konkursu:', error);
+        showError('Wystąpił błąd podczas usuwania konkursu');
+      }
+    }
+    
+    // Funkcje pomocnicze
+    function formatDuration(ms) {
+      const seconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      
+      if (days > 0) {
+        return `${days} ${days === 1 ? 'dzień' : 'dni'}, ${hours % 24} ${formatHours(hours % 24)}`;
+      } else if (hours > 0) {
+        return `${hours} ${formatHours(hours)}, ${minutes % 60} ${formatMinutes(minutes % 60)}`;
+      } else if (minutes > 0) {
+        return `${minutes} ${formatMinutes(minutes)}, ${seconds % 60} ${formatSeconds(seconds % 60)}`;
+      } else {
+        return `${seconds} ${formatSeconds(seconds)}`;
+      }
+    }
+    
+    function formatHours(hours) {
+      if (hours === 1) return 'godzina';
+      if (hours >= 2 && hours <= 4) return 'godziny';
+      return 'godzin';
+    }
+    
+    function formatMinutes(minutes) {
+      if (minutes === 1) return 'minuta';
+      if (minutes >= 2 && minutes <= 4) return 'minuty';
+      return 'minut';
+    }
+    
+    function formatSeconds(seconds) {
+      if (seconds === 1) return 'sekunda';
+      if (seconds >= 2 && seconds <= 4) return 'sekundy';
+      return 'sekund';
+    }
+    
+    // Funkcja wyświetlająca błąd
+    function showError(message) {
+      const toast = document.createElement('div');
+      toast.className = 'position-fixed bottom-0 end-0 p-3';
+      toast.style.zIndex = '11';
+      toast.innerHTML = `
+        <div class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="toast-header">
+            <strong class="me-auto">Błąd</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            ${message}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(toast);
+      const toastEl = new bootstrap.Toast(toast.querySelector('.toast'));
+      toastEl.show();
+      
+      toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+      });
+    }
+    
+    // Funkcja wyświetlająca sukces
+    function showSuccess(message) {
+      const toast = document.createElement('div');
+      toast.className = 'position-fixed bottom-0 end-0 p-3';
+      toast.style.zIndex = '11';
+      toast.innerHTML = `
+        <div class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="toast-header">
+            <strong class="me-auto">Sukces</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+          <div class="toast-body">
+            ${message}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(toast);
+      const toastEl = new bootstrap.Toast(toast.querySelector('.toast'));
+      toastEl.show();
+      
+      toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+      });
+    }
+  </script>
+</body>
+</html>

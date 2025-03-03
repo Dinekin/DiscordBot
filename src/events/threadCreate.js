@@ -1,4 +1,4 @@
-// Dodaj ten plik jako src/events/threadCreate.js
+// Plik: src/events/threadCreate.js
 const { Events, EmbedBuilder } = require('discord.js');
 const Guild = require('../models/Guild');
 const logger = require('../utils/logger');
@@ -76,4 +76,4 @@ function getThreadTypeText(type) {
     case 13: return 'Ogłoszenie (ANNOUNCEMENT_THREAD)';
     default: return `Nieznany (${type})`;
   }
-}c
+}

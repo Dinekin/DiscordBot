@@ -180,4 +180,27 @@ router.get('/guild/:guildId/message-logs', hasGuildPermission, async (req, res) 
   }
 });
 
+// Dodaj tę trasę do modułu router w pliku src/web/routes/dashboard.js
+router.get('/guild/:guildId/giveaways', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  // Pobierz dane serwera z Discorda
+  const guild = client.guilds.cache.get(guildId);
+  
+  if (!guild) {
+    return res.redirect('/dashboard');
+  }
+  
+  // Pobierz listę kanałów tekstowych
+  const textChannels = guild.channels.cache
+    .filter(c => c.type === 0) // 0 = kanał tekstowy
+    .map(c => ({ id: c.id, name: c.name }));
+  
+  res.render('dashboard/giveaways', {
+    user: req.user,
+    guild: guild,
+    channels: textChannels
+  });
+});
+
 module.exports = router;

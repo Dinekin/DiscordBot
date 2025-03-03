@@ -1,11 +1,16 @@
-// Dodaj ten plik jako src/utils/giveawayManager.js
+// Plik: src/utils/giveawayManager.js
 const { GiveawaysManager } = require('discord-giveaways');
 const logger = require('./logger');
-const { client } = require('../bot');
 const Giveaway = require('../models/Giveaway');
 
 // Inicjalizacja menedżera giveaway'ów z niestandardowym przechowywaniem danych (MongoDB)
-function setupGiveawaysManager() {
+function setupGiveawaysManager(client) {  // Dodaj parametr client
+    if (!client) {
+        throw new Error("Client jest wymagany do inicjalizacji GiveawaysManager!");
+    }
+    
+    logger.debug("Inicjalizacja GiveawaysManager z klientem Discord");
+    
     const GiveawayManagerWithOwnDatabase = class extends GiveawaysManager {
         // Zapisywanie giveaway w bazie danych
         async saveGiveaway(messageId, giveawayData) {

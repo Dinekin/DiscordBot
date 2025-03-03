@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js'
 const fs = require('fs');
 const path = require('path');
 const { connectToDatabase } = require('./utils/database');
+const { setupGiveawaysManager } = require('./utils/giveawayManager');
 const logger = require('./utils/logger');
 
 // Konfiguracja klienta Discord z odpowiednimi uprawnieniami
@@ -110,7 +111,7 @@ function listRegisteredEvents() {
   });
 }
 
-// Funkcja startująca bota
+// W funkcji startBot, po załadowaniu komend i eventów, ale przed logowaniem do Discorda
 async function startBot() {
   try {
     // Połączenie z bazą danych
@@ -127,11 +128,17 @@ async function startBot() {
     logger.info('Łączenie z API Discorda...');
     await client.login(process.env.DISCORD_TOKEN);
     
+    // Inicjalizacja managera giveaway po zalogowaniu do Discorda
+    const { setupGiveawaysManager } = require('./utils/giveawayManager');
+    client.giveawaysManager = setupGiveawaysManager(client);
+    logger.info('Menedżer giveaway został zainicjalizowany');
+    
     logger.info(`Bot został uruchomiony pomyślnie i obsługuje ${client.guilds.cache.size} serwerów`);
   } catch (error) {
     logger.error(`Błąd podczas uruchamiania bota: ${error.stack}`);
     process.exit(1);
   }
 }
+
 
 module.exports = { startBot, client };

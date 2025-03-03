@@ -1478,4 +1478,487 @@ router.get('/guilds/:guildId/message-logs/:logId', hasGuildPermission, async (re
   }
 });
 
+// Pobieranie listy konkursów
+router.get('/guilds/:guildId/giveaways', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Pobierz wszystkie konkursy z serwera
+    const giveaways = giveawaysManager.giveaways.filter(g => 
+      g.guildId === guildId
+    );
+    
+    res.json({
+      success: true,
+      giveaways: giveaways
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania konkursów: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas pobierania listy konkursów'
+    });
+  }
+});
+
+// Tworzenie nowego konkursu
+router.post('/guilds/:guildId/giveaways', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  const { 
+    channelId, 
+    prize, 
+    duration, 
+    winnerCount,
+    thumbnail = null,
+    image = null,
+    color = '3498db',
+    isDrop = false
+  } = req.body;
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Sprawdź czy kanał istnieje
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({
+        success: false,
+        error: 'Serwer nie został znaleziony'
+      });
+    }
+    
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) {
+      return res.status(404).json({
+        success: false,
+        error: 'Kanał nie został znaleziony'
+      });
+    }
+    
+    // Konwersja czasu trwania na milisekundy (tylko jeśli nie jest to drop)
+    let msDuration = 60000; // Minimalna wartość (1 minuta)
+    if (!isDrop) {
+      const ms = require('ms');
+      msDuration = ms(duration);
+      
+      if (!msDuration) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nieprawidłowy format czasu trwania. Przykłady: 1h, 1d, 1w'
+        });
+      }
+    }
+    
+    // Opcje konkursu
+    const options = {
+      duration: msDuration,
+      winnerCount: parseInt(winnerCount),
+      prize,
+      hostedBy: req.user,
+      messages: {
+        giveaway: '🎉 **KONKURS** 🎉',
+        giveawayEnded: '🎉 **KONKURS ZAKOŃCZONY** 🎉',
+        title: '{this.prize}',
+        drawing: 'Losowanie za: {timestamp}',
+        dropMessage: 'Bądź pierwszym, który zareaguje z 🎉!',
+        inviteToParticipate: 'Zareaguj z 🎉, aby wziąć udział!',
+        winMessage: 'Gratulacje, {winners}! Wygrywasz **{this.prize}**!',
+        embedFooter: '{this.winnerCount} zwycięzca(ów)',
+        noWinner: 'Konkurs anulowany, brak ważnych zgłoszeń.',
+        hostedBy: 'Organizator: {this.hostedBy}',
+        winners: 'Zwycięzca(y):',
+        endedAt: 'Zakończony'
+      },
+      embedColor: `#${color}`,
+      isDrop
+    };
+    
+    // Dodaj opcjonalne miniaturki/obrazki
+    if (thumbnail) options.thumbnail = thumbnail;
+    if (image) options.image = image;
+    
+    // Utwórz konkurs
+    const giveaway = await giveawaysManager.start(channel, options);
+    
+    res.json({
+      success: true,
+      message: `Konkurs został utworzony w kanale #${channel.name}!`,
+      giveaway: {
+        messageId: giveaway.messageId,
+        channelId: giveaway.channelId,
+        prize: giveaway.prize
+      }
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas tworzenia konkursu: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas tworzenia konkursu'
+    });
+  }
+});
+
+// Zakończenie konkursu
+router.post('/guilds/:guildId/giveaways/:messageId/end', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Znajdź konkurs
+    const giveaway = giveawaysManager.giveaways.find(g => 
+      g.messageId === messageId && g.guildId === guildId
+    );
+    
+    if (!giveaway) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono konkursu o podanym ID'
+      });
+    }
+    
+    if (giveaway.ended) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ten konkurs już się zakończył'
+      });
+    }
+    
+    // Zakończ konkurs
+    await giveawaysManager.end(messageId);
+    
+    res.json({
+      success: true,
+      message: 'Konkurs został zakończony!'
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas kończenia konkursu: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas kończenia konkursu'
+    });
+  }
+});
+
+// Ponowne losowanie zwycięzców
+router.post('/guilds/:guildId/giveaways/:messageId/reroll', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId } = req.params;
+  const { winnerCount } = req.body || {};
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Znajdź konkurs
+    const giveaway = giveawaysManager.giveaways.find(g => 
+      g.messageId === messageId && g.guildId === guildId
+    );
+    
+    if (!giveaway) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono konkursu o podanym ID'
+      });
+    }
+    
+    if (!giveaway.ended) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nie można ponownie losować zwycięzców dla konkursu, który się jeszcze nie zakończył'
+      });
+    }
+    
+    // Opcje ponownego losowania
+    const options = {
+      messages: {
+        congrat: 'Nowy zwycięzca(y): {winners}! Gratulacje, wygrywasz **{this.prize}**!',
+        error: 'Nie znaleziono ważnych zgłoszeń, nie można wylosować nowych zwycięzców!'
+      }
+    };
+    
+    // Jeśli podano liczbę zwycięzców, dodaj ją do opcji
+    if (winnerCount && !isNaN(winnerCount) && winnerCount > 0) {
+      options.winnerCount = parseInt(winnerCount);
+    }
+    
+    // Wykonaj ponowne losowanie
+    await giveawaysManager.reroll(messageId, options);
+    
+    res.json({
+      success: true,
+      message: 'Zwycięzcy zostali ponownie wylosowani!'
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas ponownego losowania zwycięzców: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas ponownego losowania zwycięzców'
+    });
+  }
+});
+
+// Wstrzymanie konkursu
+router.post('/guilds/:guildId/giveaways/:messageId/pause', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Znajdź konkurs
+    const giveaway = giveawaysManager.giveaways.find(g => 
+      g.messageId === messageId && g.guildId === guildId
+    );
+    
+    if (!giveaway) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono konkursu o podanym ID'
+      });
+    }
+    
+    if (giveaway.ended) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nie można wstrzymać zakończonego konkursu'
+      });
+    }
+    
+    if (giveaway.pauseOptions?.isPaused) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ten konkurs jest już wstrzymany'
+      });
+    }
+    
+    // Wstrzymaj konkurs
+    await giveawaysManager.pause(messageId, {
+      content: '⚠️ **KONKURS WSTRZYMANY** ⚠️',
+      unPauseAfter: null
+    });
+    
+    res.json({
+      success: true,
+      message: 'Konkurs został wstrzymany!'
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas wstrzymywania konkursu: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas wstrzymywania konkursu'
+    });
+  }
+});
+
+// Wznowienie konkursu
+router.post('/guilds/:guildId/giveaways/:messageId/resume', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Znajdź konkurs
+    const giveaway = giveawaysManager.giveaways.find(g => 
+      g.messageId === messageId && g.guildId === guildId
+    );
+    
+    if (!giveaway) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono konkursu o podanym ID'
+      });
+    }
+    
+    if (giveaway.ended) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nie można wznowić zakończonego konkursu'
+      });
+    }
+    
+    if (!giveaway.pauseOptions?.isPaused) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ten konkurs nie jest wstrzymany'
+      });
+    }
+    
+    // Wznów konkurs
+    await giveawaysManager.unpause(messageId);
+    
+    res.json({
+      success: true,
+      message: 'Konkurs został wznowiony!'
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas wznawiania konkursu: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas wznawiania konkursu'
+    });
+  }
+});
+
+// Pobieranie listy konkursów
+router.get('/guilds/:guildId/giveaways', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Pobierz dane surowe z bazy danych zamiast przez menedżera
+    const Giveaway = require('../../models/Giveaway');
+    const giveaways = await Giveaway.find({ guildId: guildId });
+    
+    res.json({
+      success: true,
+      giveaways: giveaways
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania konkursów: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas pobierania listy konkursów'
+    });
+  }
+});
+
+router.post('/guilds/:guildId/giveaways/:messageId/end', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    const giveawaysManager = client.giveawaysManager;
+    
+    if (!giveawaysManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'Menedżer konkursów nie jest zainicjalizowany'
+      });
+    }
+    
+    // Zakończ konkurs
+    await giveawaysManager.end(messageId);
+    
+    res.json({
+      success: true,
+      message: 'Konkurs został zakończony!'
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas kończenia konkursu: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas kończenia konkursu'
+    });
+  }
+});
+
+// Pobieranie listy konkursów - tylko podstawowe informacje
+router.get('/guilds/:guildId/giveaways/basic', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  try {
+    // Pobierz bezpośrednio z bazy tylko niezbędne pola
+    const Giveaway = require('../../models/Giveaway');
+    const giveaways = await Giveaway.find(
+      { guildId: guildId },
+      'messageId channelId prize winnerCount startAt endAt ended isDrop pauseOptions.isPaused'
+    );
+    
+    res.json({
+      success: true,
+      giveaways: giveaways
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania podstawowych informacji o konkursach: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas pobierania listy konkursów'
+    });
+  }
+});
+
+// Pobieranie szczegółów pojedynczego konkursu
+router.get('/guilds/:guildId/giveaways/:messageId/details', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId } = req.params;
+  
+  try {
+    const Giveaway = require('../../models/Giveaway');
+    const giveaway = await Giveaway.findOne({ guildId, messageId });
+    
+    if (!giveaway) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono konkursu o podanym ID'
+      });
+    }
+    
+    res.json({
+      success: true,
+      giveaway: giveaway
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania szczegółów konkursu: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas pobierania szczegółów konkursu'
+    });
+  }
+});
 module.exports = router;
