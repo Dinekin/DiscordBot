@@ -65,22 +65,28 @@
                 </div>
                 <div class="card-body">
                   <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="reactionRolesModule" name="modules.reactionRoles" <%= settings.modules && settings.modules.reactionRoles ? 'checked' : '' %>>
+                    <!-- WAŻNE: Używamy checkboxów zamiast hidden inputs dla prawidłowej obsługi boolean -->
+                    <input class="form-check-input" type="checkbox" id="reactionRolesModule" 
+                           <%= settings.modules && settings.modules.reactionRoles ? 'checked' : '' %>>
                     <label class="form-check-label" for="reactionRolesModule">Role reakcji</label>
                     <div class="form-text">Włącz lub wyłącz moduł ról przez reakcje.</div>
                   </div>
-
+              
                   <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="notificationsModule" name="modules.notifications" <%= settings.modules && settings.modules.notifications ? 'checked' : '' %>>
+                    <input class="form-check-input" type="checkbox" id="notificationsModule" 
+                           <%= settings.modules && settings.modules.notifications ? 'checked' : '' %>>
                     <label class="form-check-label" for="notificationsModule">Powiadomienia</label>
                     <div class="form-text">Włącz lub wyłącz powiadomienia o zmianach ról.</div>
                   </div>
                   
                   <div class="form-check form-switch mt-3">
-                    <input class="form-check-input" type="checkbox" id="messageLogModule" name="modules.messageLog" <%= settings.modules && settings.modules.messageLog ? 'checked' : '' %>>
+                    <input class="form-check-input" type="checkbox" id="messageLogModule" 
+                           <%= settings.modules && settings.modules.messageLog ? 'checked' : '' %>>
                     <label class="form-check-label" for="messageLogModule">Logi wiadomości</label>
                     <div class="form-text">Włącz lub wyłącz logowanie wiadomości (tworzenie, edycja, usuwanie).</div>
                   </div>
+                </div>
+              </div>
 
               <div class="d-grid">
                 <button type="button" class="btn btn-primary" onclick="saveSettings('<%= guild.id %>')">
@@ -96,55 +102,63 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
   <script>
-  async function saveSettings(guildId) {
-  // Pobieramy wartości bezpośrednio z elementów formularza
-  const prefix = document.getElementById('prefix').value;
-  const welcomeChannel = document.getElementById('welcomeChannel').value;
-  const notificationChannel = document.getElementById('notificationChannel').value;
-  const language = document.getElementById('language').value;
+    // Funkcja do zapisywania ustawień
+    async function saveSettings(guildId) {
+      // Pobierz wartości z formularza
+      const prefix = document.getElementById('prefix').value;
+      const welcomeChannel = document.getElementById('welcomeChannel').value;
+      const notificationChannel = document.getElementById('notificationChannel').value;
+      const language = document.getElementById('language').value;
+      
+      // Pobierz wartości checkboxów
+      const reactionRolesEnabled = document.getElementById('reactionRolesModule').checked;
+      const notificationsEnabled = document.getElementById('notificationsModule').checked;
+      const messageLogEnabled = document.getElementById('messageLogModule').checked;
+      
+      console.log('Wartości formularza:');
+      console.log('- messageLogEnabled:', messageLogEnabled);
+      console.log('- reactionRolesEnabled:', reactionRolesEnabled);
+      console.log('- notificationsEnabled:', notificationsEnabled);
+      
+      // Utwórz obiekt z danymi
+      const data = {
+        prefix: prefix,
+        welcomeChannel: welcomeChannel,
+        notificationChannel: notificationChannel,
+        language: language,
+        
+        // Kluczowe: wysyłamy wartości boolean bezpośrednio, nie jako stringi
+        messageLog: messageLogEnabled,
+        reactionRoles: reactionRolesEnabled,
+        notifications: notificationsEnabled
+      };
+      
+      console.log('Wysyłanie danych:', data);
+      
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/settings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
   
-  // Ważne: pobieramy surowe wartości checked z checkboxów (true/false)
-  const reactionRolesEnabled = document.getElementById('reactionRolesModule').checked;
-  const notificationsEnabled = document.getElementById('notificationsModule').checked;
-  const messageLogEnabled = document.getElementById('messageLogModule').checked;
+        const responseData = await response.json();
+        console.log('Odpowiedź serwera:', responseData);
   
-  // Tworzymy czysty obiekt danych (bez FormData)
-  const settings = {
-    prefix: prefix,
-    welcomeChannel: welcomeChannel,
-    notificationChannel: notificationChannel,
-    language: language,
-    messageLog: messageLogEnabled, // Dodajemy bezpośrednią wartość dla messageLog
-    logDeletedOnly: document.getElementById('logDeletedOnly') ? 
-                    document.getElementById('logDeletedOnly').checked : false
-  };
-  
-  // Dodajemy logi aby pomóc w debugowaniu
-  console.log('Wysyłane dane ustawień:', settings);
-  console.log('Stan checkboxa messageLog:', messageLogEnabled);
-  
-  try {
-    const response = await fetch(`/api/guilds/${guildId}/settings`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(settings)
-    });
-
-    const data = await response.json();
-    console.log('Odpowiedź serwera:', data);
-
-    if (data.success) {
-      alert('Ustawienia zostały zapisane!');
-      // Odświeżamy stronę, aby zobaczyć zmiany
-      window.location.reload();
-    } else {
-      alert(`Błąd: ${data.error}`);
+        if (responseData.success) {
+          // Pokaż komunikat o sukcesie
+          alert('Ustawienia zostały pomyślnie zapisane!');
+          
+          // Odśwież stronę
+          window.location.reload();
+        } else {
+          alert('Błąd: ' + (responseData.error || 'Nieznany błąd podczas zapisywania ustawień'));
+        }
+      } catch (error) {
+        console.error('Błąd podczas zapisywania ustawień:', error);
+        alert('Wystąpił błąd podczas zapisywania ustawień. Sprawdź konsolę przeglądarki dla szczegółów.');
+      }
     }
-  } catch (error) {
-    console.error('Błąd podczas zapisywania ustawień:', error);
-    alert('Wystąpił błąd podczas zapisywania ustawień. Sprawdź konsolę.');
-  }
-}
-<script/>
+  </script> 

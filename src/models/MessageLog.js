@@ -1,3 +1,6 @@
+// Zaktualizuj model MessageLog, aby obsługiwał informacje o moderacji
+// Plik: src/models/MessageLog.js
+
 const mongoose = require('mongoose');
 
 // Schemat reakcji
@@ -20,6 +23,113 @@ const StickerSchema = new mongoose.Schema({
   url: String,            // URL naklejki (jeśli dostępny)
   packId: String,         // ID paczki naklejek (jeśli dostępny)
   packName: String        // Nazwa paczki naklejek (jeśli dostępna)
+}, { _id: false });
+
+// Schemat dla logowania akcji moderacyjnych
+const ModActionSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['ban', 'unban', 'kick', 'timeout', 'remove_timeout', 'warn'],
+    required: true
+  },
+  targetId: String,       // ID użytkownika, który jest celem akcji
+  targetTag: String,      // Tag użytkownika (np. Username#1234)
+  moderatorId: String,    // ID moderatora, który wykonał akcję
+  moderatorTag: String,   // Tag moderatora
+  reason: String,         // Powód akcji
+  duration: String,       // Czas trwania (dla timeoutów, banów tymczasowych)
+  expiresAt: Date,        // Data wygaśnięcia (dla timeoutów, banów tymczasowych)
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Schemat dla logowania zmian nicku
+const NicknameChangeSchema = new mongoose.Schema({
+  userId: String,         // ID użytkownika
+  userTag: String,        // Tag użytkownika
+  oldNickname: String,    // Poprzedni pseudonim
+  newNickname: String,    // Nowy pseudonim
+  changedById: String,    // ID osoby zmieniającej (null jeśli sam użytkownik)
+  changedByTag: String,   // Tag osoby zmieniającej
+  reason: String,         // Powód zmiany (jeśli podano)
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Schemat dla logowania przypisania/usunięcia roli
+const RoleChangeSchema = new mongoose.Schema({
+  userId: String,         // ID użytkownika
+  userTag: String,        // Tag użytkownika
+  roleId: String,         // ID roli
+  roleName: String,       // Nazwa roli
+  type: {
+    type: String,
+    enum: ['add', 'remove'],
+    required: true
+  },
+  changedById: String,    // ID osoby zmieniającej
+  changedByTag: String,   // Tag osoby zmieniającej
+  reason: String,         // Powód zmiany (jeśli podano)
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Schemat dla logowania kanałów i forów
+const ChannelLogSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['create', 'delete', 'update'],
+    required: true
+  },
+  channelId: String,      // ID kanału
+  channelName: String,    // Nazwa kanału
+  channelType: String,    // Typ kanału
+  moderatorId: String,    // ID moderatora wykonującego akcję
+  moderatorTag: String,   // Tag moderatora
+  reason: String,         // Powód akcji
+  changes: [{             // Lista zmian (dla update)
+    field: String,        // Nazwa pola
+    oldValue: String,     // Stara wartość
+    newValue: String      // Nowa wartość
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
+// Schemat dla logowania nitek/wątków
+const ThreadLogSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['create', 'delete', 'update', 'archive', 'unarchive'],
+    required: true
+  },
+  threadId: String,       // ID nitki
+  threadName: String,     // Nazwa nitki
+  parentId: String,       // ID kanału nadrzędnego
+  parentName: String,     // Nazwa kanału nadrzędnego
+  authorId: String,       // ID autora nitki
+  authorTag: String,      // Tag autora
+  moderatorId: String,    // ID moderatora wykonującego akcję (jeśli inna niż autor)
+  moderatorTag: String,   // Tag moderatora
+  isForumPost: Boolean,   // Czy nitka jest postem forum
+  tags: [String],         // Tagi aplikowane do postu forum
+  changes: [{             // Lista zmian (dla update)
+    field: String,        // Nazwa pola
+    oldValue: String,     // Stara wartość
+    newValue: String      // Nowa wartość
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
 }, { _id: false });
 
 // Główny schemat logów wiadomości
@@ -133,7 +243,24 @@ const MessageLogSchema = new mongoose.Schema({
   deletedAt: {
     type: Date,
     default: null
-  }
+  },
+  
+  // Nowe pola dla rozszerzonych funkcji logowania
+  
+  // Logi akcji moderacyjnych
+  modActions: [ModActionSchema],
+  
+  // Logi zmian nicku
+  nicknameChanges: [NicknameChangeSchema],
+  
+  // Logi zmian ról
+  roleChanges: [RoleChangeSchema],
+  
+  // Logi kanałów
+  channelLogs: [ChannelLogSchema],
+  
+  // Logi nitek/wątków
+  threadLogs: [ThreadLogSchema]
 }, { timestamps: true });
 
 // Złożony indeks dla szybszego wyszukiwania

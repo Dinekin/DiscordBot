@@ -146,7 +146,6 @@
                 </div>
               </form>
             </div>
-
             <div class="mb-4">
               <h5>Wyszukiwanie wiadomości</h5>
               <form id="searchForm" class="row g-3">
@@ -465,48 +464,6 @@
       userIdInput.value = user.id;
       userSearchInput.value = user.displayName;
       userSearchResults.classList.remove('show');
-    }
-    
-    // POPRAWIONA funkcja do zapisywania ustawień
-    async function saveSettings(guildId) {
-      const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
-      const messageLogChannel = document.getElementById('messageLogChannel').value;
-      // Jawna konwersja do boolean dla bezpieczeństwa
-      const logDeletedOnly = document.getElementById('logDeletedOnly').value === 'true';
-
-      try {
-        // Dodajemy logowanie aby zobaczyć, co wysyłamy
-        console.log('Wysyłanie ustawień:', {
-          messageLogChannel: messageLogChannel,
-          'modules.messageLog': messageLogEnabled,
-          logDeletedOnly: logDeletedOnly
-        });
-        
-        const response = await fetch(`/api/guilds/${guildId}/settings`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messageLogChannel: messageLogChannel,
-            messageLog: messageLogEnabled,
-            logDeletedOnly: logDeletedOnly
-          })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-          alert('Ustawienia zostały zapisane!');
-          // Odśwież stronę po zapisaniu ustawień
-          window.location.reload();
-        } else {
-          alert(`Błąd: ${data.error}`);
-        }
-      } catch (error) {
-        console.error('Błąd:', error);
-        alert('Wystąpił błąd podczas zapisywania ustawień.');
-      }
     }
     
     // Wyszukiwanie logów
@@ -1043,6 +1000,54 @@
       
       return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
+
+      // Funkcja zapisywania ustawień musi być dostępna globalnie
+  function saveSettings(guildId) {
+    // Pobierz wartości z formularza - konwertuj stringi 'true'/'false' na boolean
+    const messageLogEnabled = document.getElementById('messageLogEnabled').value === 'true';
+    const messageLogChannel = document.getElementById('messageLogChannel').value;
+    const logDeletedOnly = document.getElementById('logDeletedOnly').value === 'true';
+
+    // Logowanie zebranych wartości
+    console.log('Wartości z formularza:');
+    console.log('- messageLogEnabled:', messageLogEnabled, typeof messageLogEnabled);
+    console.log('- messageLogChannel:', messageLogChannel);
+    console.log('- logDeletedOnly:', logDeletedOnly, typeof logDeletedOnly);
+
+    // Przygotuj dane w formacie JSON
+    const data = {
+      messageLog: messageLogEnabled,        // Używamy tej wartości (boolean)
+      messageLogChannel: messageLogChannel,
+      logDeletedOnly: logDeletedOnly        // Używamy tej wartości (boolean)
+    };
+    
+    console.log('Wysyłane dane:', data);
+    
+    // Wysłanie danych do API
+    fetch(`/api/guilds/${guildId}/settings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(responseData => {
+      console.log('Odpowiedź serwera:', responseData);
+
+      if (responseData.success) {
+        alert('Ustawienia zostały zapisane!');
+        // Odśwież stronę aby zobaczyć zmiany
+        window.location.reload();
+      } else {
+        alert(`Błąd: ${responseData.error || 'Nieznany błąd podczas zapisywania'}`);
+      }
+    })
+    .catch(error => {
+      console.error('Błąd podczas zapisywania ustawień:', error);
+      alert('Wystąpił błąd podczas zapisywania ustawień. Sprawdź konsolę przeglądarki.');
+    });
+  }
   </script>
 </body>
 </html>

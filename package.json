@@ -1,6 +1,6 @@
 {
   "name": "discord-reaction-roles-bot",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Bot Discord do zarządzania rolami poprzez reakcje z konfiguracją webową",
   "main": "index.js",
   "scripts": {
