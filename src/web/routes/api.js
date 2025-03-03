@@ -385,6 +385,106 @@ router.get('/guilds/:guildId/toggle-message-log/:state', hasGuildPermission, asy
   }
 });
 
+// Endpoint do pobierania statystyk logów wiadomości
+router.get('/guilds/:guildId/message-logs/stats', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  try {
+    // Pobierz statystyki z bazy danych
+    const totalMessages = await MessageLog.countDocuments({ guildId });
+    const deletedMessages = await MessageLog.countDocuments({ guildId, deletedAt: { $ne: null } });
+    const editedMessages = await MessageLog.countDocuments({ guildId, editedAt: { $ne: null } });
+    
+    // Oblicz liczbę załączników
+    const logsWithAttachments = await MessageLog.find({ 
+      guildId, 
+      'attachments.0': { $exists: true } 
+    });
+    
+    let attachmentsCount = 0;
+    for (const log of logsWithAttachments) {
+      attachmentsCount += log.attachments.length;
+    }
+    
+    res.json({
+      success: true,
+      stats: {
+        totalMessages,
+        deletedMessages,
+        editedMessages,
+        attachmentsCount
+      }
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania statystyk logów: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas pobierania statystyk logów'
+    });
+  }
+});
+
+// Endpoint do usuwania reakcji z wiadomości
+router.delete('/guilds/:guildId/messages/:messageId/reactions/:emojiName', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId, emojiName } = req.params;
+  const emojiId = req.query.id;
+  
+  try {
+    // Znajdź wiadomość w logach
+    const messageLog = await MessageLog.findOne({ guildId, messageId });
+    
+    if (!messageLog) {
+      return res.status(404).json({ success: false, error: 'Wiadomość nie została znaleziona' });
+    }
+    
+    // Znajdź reakcję do usunięcia
+    const reactionIndex = messageLog.reactions.findIndex(r => 
+      (emojiId && r.id === emojiId) || (!emojiId && r.name === emojiName)
+    );
+    
+    if (reactionIndex === -1) {
+      return res.status(404).json({ success: false, error: 'Reakcja nie została znaleziona' });
+    }
+    
+    // Usuń reakcję
+    messageLog.reactions.splice(reactionIndex, 1);
+    await messageLog.save();
+    
+    // Spróbuj usunąć reakcję na Discordzie
+    try {
+      const guild = client.guilds.cache.get(guildId);
+      if (guild) {
+        const channel = guild.channels.cache.get(messageLog.channelId);
+        if (channel) {
+          const message = await channel.messages.fetch(messageId).catch(() => null);
+          if (message) {
+            // Znajdź odpowiednią reakcję
+            const emojiToRemove = emojiId ? `${emojiName}:${emojiId}` : emojiName;
+            const reaction = message.reactions.cache.get(emojiToRemove);
+            if (reaction) {
+              await reaction.remove();
+            }
+          }
+        }
+      }
+    } catch (discordError) {
+      logger.warn(`Nie można usunąć reakcji na Discordzie: ${discordError.message}`);
+      // Kontynuuj, reakcja została usunięta z bazy danych
+    }
+    
+    res.json({
+      success: true,
+      message: 'Reakcja została usunięta'
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas usuwania reakcji: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas usuwania reakcji'
+    });
+  }
+});
+
 
 router.post('/guilds/:guildId/reaction-roles/:messageId/reset', hasGuildPermission, async (req, res) => {
   const { guildId, messageId } = req.params;

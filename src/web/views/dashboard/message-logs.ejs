@@ -1872,48 +1872,84 @@
       }
     }
 
-    // ==================
-    // Statystyki logów
-    // ==================
-    
-    async function loadStatistics(guildId) {
-      try {
-        // Pokaż wskaźniki ładowania w sekcji statystyk
-        document.getElementById('statMessages').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
-        document.getElementById('statDeleted').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
-        document.getElementById('statEdited').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
-        document.getElementById('statAttachments').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
-        
-        const response = await fetch(`/api/guilds/${guildId}/message-logs/stats`);
-        const data = await response.json();
-        
-        if (data.success) {
-          // Aktualizuj statystyki
-          document.getElementById('statMessages').textContent = data.stats.totalMessages.toLocaleString();
-          document.getElementById('statDeleted').textContent = data.stats.deletedMessages.toLocaleString();
-          document.getElementById('statEdited').textContent = data.stats.editedMessages.toLocaleString();
-          document.getElementById('statAttachments').textContent = data.stats.attachmentsCount.toLocaleString();
-        } else {
-          // Pokaż błąd
-          document.getElementById('statMessages').textContent = '-';
-          document.getElementById('statDeleted').textContent = '-';
-          document.getElementById('statEdited').textContent = '-';
-          document.getElementById('statAttachments').textContent = '-';
-          
-          alert(`Błąd: ${data.error || 'Nie można pobrać statystyk'}`);
-        }
-      } catch (error) {
-        console.error('Błąd:', error);
-        
-        document.getElementById('statMessages').textContent = '-';
-        document.getElementById('statDeleted').textContent = '-';
-        document.getElementById('statEdited').textContent = '-';
-        document.getElementById('statAttachments').textContent = '-';
-        
-        alert('Wystąpił błąd podczas pobierania statystyk');
-      }
-    }
+        // ==================
+        // Statystyki logów
+        // ==================
 
+        async function loadStatistics(guildId) {
+          try {
+            // Pokaż wskaźniki ładowania w sekcji statystyk
+            document.getElementById('statMessages').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            document.getElementById('statDeleted').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            document.getElementById('statEdited').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            document.getElementById('statAttachments').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            
+            const response = await fetch(`/api/guilds/${guildId}/message-logs/stats`);
+            const data = await response.json();
+            
+            if (data.success) {
+              // Aktualizuj statystyki
+              document.getElementById('statMessages').textContent = data.stats.totalMessages.toLocaleString();
+              document.getElementById('statDeleted').textContent = data.stats.deletedMessages.toLocaleString();
+              document.getElementById('statEdited').textContent = data.stats.editedMessages.toLocaleString();
+              document.getElementById('statAttachments').textContent = data.stats.attachmentsCount.toLocaleString();
+            } else {
+              // Pokaż błąd
+              document.getElementById('statMessages').textContent = '-';
+              document.getElementById('statDeleted').textContent = '-';
+              document.getElementById('statEdited').textContent = '-';
+              document.getElementById('statAttachments').textContent = '-';
+              
+              alert(`Błąd: ${data.error || 'Nie można pobrać statystyk'}`);
+            }
+          } catch (error) {
+            console.error('Błąd:', error);
+            
+            document.getElementById('statMessages').textContent = '-';
+            document.getElementById('statDeleted').textContent = '-';
+            document.getElementById('statEdited').textContent = '-';
+            document.getElementById('statAttachments').textContent = '-';
+            
+            alert('Wystąpił błąd podczas pobierania statystyk');
+          }
+        }
+
+        // ==================
+        // Obsługa reakcji
+        // ==================
+
+        async function removeReaction(guildId, messageId, emojiName, emojiId) {
+          if (!confirm(`Czy na pewno chcesz usunąć reakcję "${emojiName}" z wiadomości?`)) {
+            return;
+          }
+          
+          try {
+            const queryParams = emojiId ? `?id=${emojiId}` : '';
+            const response = await fetch(`/api/guilds/${guildId}/messages/${messageId}/reactions/${encodeURIComponent(emojiName)}${queryParams}`, {
+              method: 'DELETE'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              alert('Reakcja została usunięta.');
+              // Odśwież widok szczegółów
+              if (currentLogId) {
+                showLogDetails(currentLogId);
+              }
+            } else {
+              alert(`Błąd: ${data.error}`);
+            }
+          } catch (error) {
+            console.error('Błąd:', error);
+            alert('Wystąpił błąd podczas usuwania reakcji.');
+          }
+        }
+
+        // Załaduj statystyki po załadowaniu strony
+        document.addEventListener('DOMContentLoaded', function() {
+          loadStatistics('<%= guild.id %>');
+        });
     // ==================
     // Zapisywanie ustawień
     // ==================
