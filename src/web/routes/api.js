@@ -1041,7 +1041,8 @@ router.delete('/guilds/:guildId/reaction-roles/:messageId', hasGuildPermission, 
 // Pobieranie logów wiadomości
 router.get('/guilds/:guildId/message-logs', hasGuildPermission, async (req, res) => {
   const guildId = req.params.guildId;
-  const { userId, userQuery, channelId, status, page = 1, limit = 10 } = req.query;
+  const { userId, userQuery, channelId, status, logType, contentSearch, 
+          dateRange, hasAttachments, hasReactions, page = 1, limit = 10 } = req.query;
   
   try {
     // Buduj filtr wyszukiwania
@@ -1058,17 +1059,17 @@ router.get('/guilds/:guildId/message-logs', hasGuildPermission, async (req, res)
       if (guild) {
         try {
           // Pobierz użytkowników, którzy pasują do zapytania
-          await guild.members.fetch();
-          const members = guild.members.cache.filter(member => 
+          const members = await guild.members.fetch();
+          const matchingMembers = members.filter(member => 
             member.user.username.toLowerCase().includes(userQuery.toLowerCase()) ||
             (member.nickname && member.nickname.toLowerCase().includes(userQuery.toLowerCase())) ||
             member.user.tag.toLowerCase().includes(userQuery.toLowerCase()) ||
             member.id.includes(userQuery)
           );
           
-          if (members.size > 0) {
+          if (matchingMembers.size > 0) {
             // Jeśli znaleziono użytkowników, stwórz tablicę ich ID
-            const userIds = members.map(member => member.id);
+            const userIds = matchingMembers.map(member => member.id);
             
             // Użyj operatora $in do filtrowania po wielu ID
             if (userIds.length === 1) {
@@ -1086,6 +1087,7 @@ router.get('/guilds/:guildId/message-logs', hasGuildPermission, async (req, res)
               logs: [],
               page: parseInt(page),
               totalPages: 0,
+              totalDocs: 0,
               channels: {},
               users: {}
             });
@@ -1096,6 +1098,105 @@ router.get('/guilds/:guildId/message-logs', hasGuildPermission, async (req, res)
         }
       }
     }
+    
+    // Filtruj po kanale
+    if (channelId) {
+      filter.channelId = channelId;
+    }
+    
+    // Filtruj po statusie
+    if (status) {
+      if (status === 'deleted') {
+        filter.deletedAt = { $ne: null };
+      } else if (status === 'edited') {
+        filter.editedAt = { $ne: null };
+      } else if (status === 'created') {
+        filter.deletedAt = null;
+        filter.editedAt = null;
+      }
+    }
+    
+    // Filtruj po typie logu
+    if (logType && logType !== 'all') {
+      if (logType === 'message') {
+        // Zwykłe wiadomości - nie mają specjalnych pól
+        filter.modActions = { $size: 0 };
+        filter.channelLogs = { $size: 0 };
+        filter.threadLogs = { $size: 0 };
+        filter.nicknameChanges = { $size: 0 };
+        filter.roleChanges = { $size: 0 };
+      } else if (logType === 'member') {
+        // Logi użytkowników - mają akcje moderacyjne lub zmiany nicku/roli
+        filter.$or = [
+          { modActions: { $exists: true, $ne: [] } },
+          { nicknameChanges: { $exists: true, $ne: [] } },
+          { roleChanges: { $exists: true, $ne: [] } }
+        ];
+      } else if (logType === 'channel') {
+        // Logi kanałów
+        filter.channelLogs = { $exists: true, $ne: [] };
+      } else if (logType === 'thread') {
+        // Logi wątków
+        filter.threadLogs = { $exists: true, $ne: [] };
+      } else if (logType === 'role') {
+        // Logi ról
+        filter.roleChanges = { $exists: true, $ne: [] };
+      }
+    }
+    
+    // Filtruj po treści
+    if (contentSearch) {
+      // Użyj indeksu tekstowego, jeśli istnieje, lub prostego wyrażenia regularnego
+      filter.content = { $regex: contentSearch, $options: 'i' };
+    }
+    
+    // Filtruj po zakresie dat
+    if (dateRange) {
+      const now = new Date();
+      let startDate;
+      
+      if (dateRange === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (dateRange === 'yesterday') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        filter.createdAt = { $gte: startDate, $lt: endDate };
+      } else if (dateRange === 'week') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      } else if (dateRange === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      }
+      
+      if (startDate && dateRange !== 'yesterday') {
+        filter.createdAt = { $gte: startDate };
+      }
+    }
+    
+    // Filtruj po załącznikach
+    if (hasAttachments) {
+      if (hasAttachments === 'yes') {
+        filter['attachments.0'] = { $exists: true };
+      } else if (hasAttachments === 'no') {
+        filter.$or = [
+          { attachments: { $exists: false } },
+          { attachments: { $size: 0 } }
+        ];
+      }
+    }
+    
+    // Filtruj po reakcjach
+    if (hasReactions) {
+      if (hasReactions === 'yes') {
+        filter['reactions.0'] = { $exists: true };
+      } else if (hasReactions === 'no') {
+        filter.$or = [
+          { reactions: { $exists: false } },
+          { reactions: { $size: 0 } }
+        ];
+      }
+    }
+    
+    logger.debug(`Filtr wyszukiwania logów: ${JSON.stringify(filter)}`);
 
     // Pobieranie informacji o użytkownikach, którzy dodali reakcję
 router.get('/guilds/:guildId/messages/:messageId/reactions/:emojiName/users', hasGuildPermission, async (req, res) => {
@@ -1284,11 +1385,13 @@ router.get('/guilds/:guildId/messages/:messageId/reactions/:emojiName/users', ha
       const uniqueUserIds = [...new Set(logs.map(log => log.authorId))];
       for (const userId of uniqueUserIds) {
         try {
-          const user = await guild.members.fetch(userId).then(member => member.user);
-          users[userId] = {
-            username: user.tag,
-            avatar: user.displayAvatarURL({ dynamic: true })
-          };
+          const member = await guild.members.fetch(userId).catch(() => null);
+          if (member) {
+            users[userId] = {
+              username: member.user.tag,
+              avatar: member.user.displayAvatarURL({ dynamic: true })
+            };
+          }
         } catch (error) {
           // Użytkownik mógł opuścić serwer
           logger.debug(`Nie można znaleźć użytkownika ${userId}: ${error.message}`);
@@ -1302,6 +1405,7 @@ router.get('/guilds/:guildId/messages/:messageId/reactions/:emojiName/users', ha
       logs,
       page: parseInt(page),
       totalPages,
+      totalDocs,
       channels,
       users
     });

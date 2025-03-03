@@ -467,19 +467,62 @@
     // Przełączanie filtrów zaawansowanych
     function toggleAdvancedFilters() {
       const filtersSection = document.getElementById('advancedFilters');
-      if (filtersSection.style.display === 'none' || !filtersSection.style.display) {
-        filtersSection.style.display = 'block';
-      } else {
-        filtersSection.style.display = 'none';
+      if (filtersSection) {
+        if (filtersSection.style.display === 'none' || !filtersSection.style.display) {
+          filtersSection.style.display = 'block';
+          localStorage.setItem('showAdvancedFilters', 'true');
+        } else {
+          filtersSection.style.display = 'none';
+          localStorage.setItem('showAdvancedFilters', 'false');
+        }
       }
     }
-    
-    // Resetowanie formularza wyszukiwania
-    function resetSearchForm() {
-      document.getElementById('searchForm').reset();
-      document.getElementById('userSearch').value = '';
-      document.getElementById('userId').value = '';
+
+    // Funkcja do inicjalizacji stanu filtrów zaawansowanych przy ładowaniu strony
+    function initAdvancedFilters() {
+      const filtersSection = document.getElementById('advancedFilters');
+      if (filtersSection) {
+        const showFilters = localStorage.getItem('showAdvancedFilters') === 'true';
+        filtersSection.style.display = showFilters ? 'block' : 'none';
+      }
     }
+
+    // Wywołaj inicjalizację po załadowaniu strony
+    document.addEventListener('DOMContentLoaded', function() {
+      initAdvancedFilters();
+      loadStatistics('<%= guild.id %>');
+    });
+// Resetowanie formularza wyszukiwania
+function resetSearchForm() {
+  // Resetuj podstawowe pola
+  document.getElementById('userSearch').value = '';
+  document.getElementById('userId').value = '';
+  document.getElementById('channelId').value = '';
+  document.getElementById('logType').value = 'all';
+  document.getElementById('status').value = '';
+  
+  // Resetuj zaawansowane filtry jeśli istnieją
+  if (document.getElementById('contentSearch')) {
+    document.getElementById('contentSearch').value = '';
+  }
+  if (document.getElementById('dateRange')) {
+    document.getElementById('dateRange').value = '';
+  }
+  if (document.getElementById('hasAttachments')) {
+    document.getElementById('hasAttachments').value = '';
+  }
+  if (document.getElementById('hasReactions')) {
+    document.getElementById('hasReactions').value = '';
+  }
+  
+  // Ukryj wyniki wyszukiwania
+  document.getElementById('searchResults').classList.add('d-none');
+  
+  // Wyczyść parametry ostatniego wyszukiwania
+  lastSearchParams = {};
+  
+  console.log('Formularz wyszukiwania został zresetowany');
+}
     
     // Formatowanie rozmiaru pliku
     function formatFileSize(bytes) {
@@ -639,62 +682,112 @@
       searchLogsWithPage(guildId, currentPage, lastSearchParams);
     }
     
-    async function searchLogsWithPage(guildId, page, params) {
-      try {
-        // Pokaż wskaźnik ładowania
-        document.getElementById('resultsContainer').innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Wyszukiwanie logów...</p></div>';
-        document.getElementById('searchResults').classList.remove('d-none');
-        document.getElementById('noResults').classList.add('d-none');
-        
-        const queryParams = new URLSearchParams();
-        queryParams.append('page', page);
-        
-        if (params.userId) {
-          queryParams.append('userId', params.userId);
-        } else if (params.userInput) {
-          queryParams.append('userQuery', params.userInput.trim());
-        }
-        
-        if (params.channelId) queryParams.append('channelId', params.channelId);
-        if (params.logType && params.logType !== 'all') queryParams.append('logType', params.logType);
-        if (params.status) queryParams.append('status', params.status);
-        if (params.contentSearch) queryParams.append('content', params.contentSearch);
-        if (params.dateRange) queryParams.append('dateRange', params.dateRange);
-        if (params.hasAttachments) queryParams.append('hasAttachments', params.hasAttachments);
-        if (params.hasReactions) queryParams.append('hasReactions', params.hasReactions);
-        
-        const response = await fetch(`/api/guilds/${guildId}/message-logs?${queryParams.toString()}`);
-        const data = await response.json();
-        
-        if (data.success) {
-          displayResults(data.logs, data.page, data.totalPages, data.channels, data.users);
-          
-          // Aktualizuj globalne zmienne
-          currentPage = data.page;
-          totalPages = data.totalPages;
-          
-          // Aktualizuj licznik wyników
-          const resultsCount = document.getElementById('resultsCount');
-          resultsCount.textContent = `${data.totalDocs || data.logs.length} wyników`;
-        } else {
-          // Pokaż błąd
-          document.getElementById('resultsContainer').innerHTML = `
-            <div class="alert alert-danger">
-              <i class="fas fa-exclamation-circle me-2"></i>
-              Błąd: ${data.error || 'Wystąpił błąd podczas wyszukiwania'}
-            </div>
-          `;
-        }
-      } catch (error) {
-        console.error('Błąd:', error);
-        document.getElementById('resultsContainer').innerHTML = `
-          <div class="alert alert-danger">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            Wystąpił błąd podczas wyszukiwania logów
-          </div>
-        `;
-      }
+// ==================
+// Wyszukiwanie i wyświetlanie logów
+// ==================
+
+async function searchLogs(guildId) {
+  // Pobierz wszystkie wartości z formularza
+  const userId = document.getElementById('userId').value;
+  const userInput = document.getElementById('userSearch').value;
+  const channelId = document.getElementById('channelId').value;
+  const logType = document.getElementById('logType').value;
+  const status = document.getElementById('status').value;
+  
+  // Pobierz wartości z filtrów zaawansowanych
+  const contentSearch = document.getElementById('contentSearch')?.value;
+  const dateRange = document.getElementById('dateRange')?.value;
+  const hasAttachments = document.getElementById('hasAttachments')?.value;
+  const hasReactions = document.getElementById('hasReactions')?.value;
+  
+  // Zapisz parametry wyszukiwania do użycia przy zmianie strony
+  lastSearchParams = {
+    userId,
+    userInput,
+    channelId,
+    logType,
+    status,
+    contentSearch,
+    dateRange,
+    hasAttachments,
+    hasReactions
+  };
+  
+  console.log("Parametry wyszukiwania:", lastSearchParams);
+  
+  // Zresetuj stronę przy nowym wyszukiwaniu
+  currentPage = 1;
+  
+  // Wywołaj wyszukiwanie z aktualnymi parametrami
+  searchLogsWithPage(guildId, currentPage, lastSearchParams);
+}
+
+async function searchLogsWithPage(guildId, page, params) {
+  try {
+    // Pokaż wskaźnik ładowania
+    document.getElementById('resultsContainer').innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Wyszukiwanie logów...</p></div>';
+    document.getElementById('searchResults').classList.remove('d-none');
+    document.getElementById('noResults').classList.add('d-none');
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page);
+    
+    // Dodaj parametry tylko jeśli nie są puste
+    if (params.userId) {
+      queryParams.append('userId', params.userId);
+    } else if (params.userInput && params.userInput.trim()) {
+      queryParams.append('userQuery', params.userInput.trim());
     }
+    
+    if (params.channelId) queryParams.append('channelId', params.channelId);
+    if (params.logType && params.logType !== 'all') queryParams.append('logType', params.logType);
+    if (params.status) queryParams.append('status', params.status);
+    
+    // Dodaj parametry z filtrów zaawansowanych
+    if (params.contentSearch) queryParams.append('contentSearch', params.contentSearch);
+    if (params.dateRange) queryParams.append('dateRange', params.dateRange);
+    if (params.hasAttachments) queryParams.append('hasAttachments', params.hasAttachments);
+    if (params.hasReactions) queryParams.append('hasReactions', params.hasReactions);
+    
+    // Dodaj limit logów na stronę
+    queryParams.append('limit', '10');
+    
+    console.log("URL wyszukiwania:", `/api/guilds/${guildId}/message-logs?${queryParams.toString()}`);
+    
+    const response = await fetch(`/api/guilds/${guildId}/message-logs?${queryParams.toString()}`);
+    const data = await response.json();
+    
+    console.log("Otrzymane dane:", data);
+    
+    if (data.success) {
+      displayResults(data.logs, data.page, data.totalPages, data.channels, data.users);
+      
+      // Aktualizuj globalne zmienne
+      currentPage = data.page;
+      totalPages = data.totalPages;
+      
+      // Aktualizuj licznik wyników
+      const resultsCount = document.getElementById('resultsCount');
+      resultsCount.textContent = `${data.totalDocs || data.logs.length} wyników`;
+    } else {
+      // Pokaż błąd
+      document.getElementById('resultsContainer').innerHTML = `
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-circle me-2"></i>
+          Błąd: ${data.error || 'Wystąpił błąd podczas wyszukiwania'}
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Błąd:', error);
+    document.getElementById('resultsContainer').innerHTML = `
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-circle me-2"></i>
+        Wystąpił błąd podczas wyszukiwania logów
+      </div>
+    `;
+  }
+}c
     
     function displayResults(logs, page, totalPages, channels, users) {
       const resultsContainer = document.getElementById('resultsContainer');
