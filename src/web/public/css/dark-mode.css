@@ -1,9 +1,10 @@
-/* Add this to src/web/public/css/dark-mode.css */
+/* Ulepszony tryb ciemny - eliminacja białych tł i poprawa kontrastu */
 
-/* Dark mode overrides */
+/* Podstawowe zmienne kolorów dla trybu ciemnego */
 [data-bs-theme="dark"] {
     --bs-body-bg: #121212;
-    --bs-body-color: #0a0909;
+    --bs-body-color: #e0e0e0;
+    --bs-body-text-color: #e0e0e0;
     --bs-border-color: #414141;
     --bs-card-bg: #1e1e1e;
     --bs-card-cap-bg: #2c2c2c;
@@ -12,139 +13,245 @@
     --bs-primary-text-emphasis: #6ea8fe;
     --bs-secondary-text-emphasis: #a7acb1;
     --bs-emphasis-color: #fff;
-  }
-  
-  /* Override Bootstrap components in dark mode */
-  [data-bs-theme="dark"] .card {
+}
+
+/* Podstawowe elementy stron */
+[data-bs-theme="dark"] body {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+/* Nawigacja */
+[data-bs-theme="dark"] .navbar-light {
+    background-color: var(--bs-tertiary-bg) !important;
+}
+
+[data-bs-theme="dark"] .dropdown-menu {
     background-color: var(--bs-card-bg);
     border-color: var(--bs-border-color);
-  }
-  
-  [data-bs-theme="dark"] .card-header {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .dropdown-item {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover {
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
+
+/* Stopka */
+[data-bs-theme="dark"] footer.bg-light {
+    background-color: var(--bs-card-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
+/* Karty i ich nagłówki */
+[data-bs-theme="dark"] .card {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .card-header {
     background-color: var(--bs-card-cap-bg);
     border-color: var(--bs-border-color);
-  }
-  
-  [data-bs-theme="dark"] .list-group-item {
+}
+
+/* Elementu listy grupowej */
+[data-bs-theme="dark"] .list-group-item {
     background-color: var(--bs-card-bg);
     border-color: var(--bs-border-color);
     color: var(--bs-body-color);
-  }
-  
-  [data-bs-theme="dark"] .list-group-item.active {
+}
+
+[data-bs-theme="dark"] .list-group-item.active {
     background-color: var(--bs-primary);
     border-color: var(--bs-primary);
-    color: rgb(12, 10, 10);
-  }
-  
-  [data-bs-theme="dark"] .table {
+    color: #fff;
+}
+
+/* Tabele */
+[data-bs-theme="dark"] .table {
     color: var(--bs-body-color);
     border-color: var(--bs-border-color);
-  }
-  
-  [data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+}
+
+[data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
     background-color: rgba(255, 255, 255, 0.05);
     color: var(--bs-body-color);
-  }
-  
-  [data-bs-theme="dark"] .modal-content {
+}
+
+[data-bs-theme="dark"] .table-hover tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--bs-body-color);
+}
+
+/* Modale */
+[data-bs-theme="dark"] .modal-content {
     background-color: var(--bs-card-bg);
     border-color: var(--bs-border-color);
-  }
-  
-  [data-bs-theme="dark"] .dropdown-menu {
-    background-color: var(--bs-card-bg);
-    border-color: var(--bs-border-color);
-  }
-  
-  [data-bs-theme="dark"] .dropdown-item {
     color: var(--bs-body-color);
-  }
-  
-  [data-bs-theme="dark"] .dropdown-item:hover {
-    background-color: var(--bs-tertiary-bg);
-  }
-  
-  [data-bs-theme="dark"] .form-control, 
-  [data-bs-theme="dark"] .form-select {
+}
+
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer {
+    border-color: var(--bs-border-color);
+}
+
+/* Formularze i kontrolki */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select {
     background-color: var(--bs-tertiary-bg);
     border-color: var(--bs-border-color);
     color: var(--bs-body-color);
-  }
-  
-  [data-bs-theme="dark"] .form-control:focus, 
-  [data-bs-theme="dark"] .form-select:focus {
+}
+
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
     border-color: var(--bs-primary);
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-  }
-  
-  [data-bs-theme="dark"] .form-check-input {
+}
+
+[data-bs-theme="dark"] .form-check-input {
     background-color: var(--bs-tertiary-bg);
     border-color: var(--bs-border-color);
-  }
-  
-  [data-bs-theme="dark"] .form-text {
+}
+
+[data-bs-theme="dark"] .form-text {
     color: var(--bs-secondary-text-emphasis);
-  }
-  
-  /* Custom component styles */
-  [data-bs-theme="dark"] .server-card:hover {
-    background-color: var(--bs-tertiary-bg);
-  }
-  
-  [data-bs-theme="dark"] .server-icon-placeholder {
-    background-color: #555;
-  }
-  
-  [data-bs-theme="dark"] footer.bg-light {
-    background-color: var(--bs-card-bg) !important;
-  }
-  
-  /* Give dark mode alerts better visibility */
-  [data-bs-theme="dark"] .alert-info {
-    background-color: rgba(13, 202, 240, 0.15);
+}
+
+[data-bs-theme="dark"] .input-group-text {
+    background-color: var(--bs-secondary-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+/* Alerty - poprawiony kontrast */
+[data-bs-theme="dark"] .alert-info {
+    background-color: rgba(13, 202, 240, 0.2);
     border-color: rgba(13, 202, 240, 0.4);
     color: #54dafa;
-  }
-  
-  [data-bs-theme="dark"] .alert-warning {
-    background-color: rgba(255, 193, 7, 0.15);
+}
+
+[data-bs-theme="dark"] .alert-warning {
+    background-color: rgba(255, 193, 7, 0.2);
     border-color: rgba(255, 193, 7, 0.4);
     color: #ffda6a;
-  }
-  
-  [data-bs-theme="dark"] .alert-danger {
-    background-color: rgba(220, 53, 69, 0.15);
+}
+
+[data-bs-theme="dark"] .alert-danger {
+    background-color: rgba(220, 53, 69, 0.2);
     border-color: rgba(220, 53, 69, 0.4);
     color: #ea868f;
-  }
-  
-  [data-bs-theme="dark"] .alert-success {
-    background-color: rgba(25, 135, 84, 0.15);
+}
+
+[data-bs-theme="dark"] .alert-success {
+    background-color: rgba(25, 135, 84, 0.2);
     border-color: rgba(25, 135, 84, 0.4);
     color: #75b798;
-  }
-  
-  /* Dark mode badge colors */
-  [data-bs-theme="dark"] .badge.bg-light {
+}
+
+[data-bs-theme="dark"] .alert-light {
+    background-color: rgba(248, 249, 250, 0.2);
+    border-color: rgba(248, 249, 250, 0.4);
+    color: #f8f9fa;
+}
+
+[data-bs-theme="dark"] .alert-dark {
+    background-color: rgba(33, 37, 41, 0.2);
+    border-color: rgba(33, 37, 41, 0.4);
+    color: #c6c7c8;
+}
+
+/* Etykiety i plakietki */
+[data-bs-theme="dark"] .badge.bg-light {
     background-color: #444 !important;
     color: #fff !important;
-  }
-  
-  /* Improve code element visibility */
-  [data-bs-theme="dark"] code {
+}
+
+[data-bs-theme="dark"] .badge.bg-secondary {
+    background-color: #6c757d !important;
+    color: #fff !important;
+}
+
+/* Kod */
+[data-bs-theme="dark"] code {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 0.2em 0.4em;
     border-radius: 3px;
     color: #f8f9fa;
-  }
-  
-  /* Dark mode log highlights */
-  [data-bs-theme="dark"] .log-highlight {
-    background-color: rgba(255, 193, 7, 0.2);
-  }
-  
-  /* Make background elements subtle */
-  [data-bs-theme="dark"] .bg-light {
+}
+
+/* Przyciski */
+[data-bs-theme="dark"] .btn-outline-secondary {
+    color: #adb5bd;
+    border-color: #6c757d;
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary:hover {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+    color: #8bb9fe;
+    border-color: #0d6efd;
+}
+
+/* Tła */
+[data-bs-theme="dark"] .bg-light {
     background-color: var(--bs-secondary-bg) !important;
-  }
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="dark"] .bg-white {
+    background-color: var(--bs-card-bg) !important;
+}
+
+/* Tekst */
+[data-bs-theme="dark"] .text-dark {
+    color: #e0e0e0 !important;
+}
+
+[data-bs-theme="dark"] .text-muted {
+    color: #adb5bd !important;
+}
+
+/* Komponenty niestandardowe */
+[data-bs-theme="dark"] .server-card:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+[data-bs-theme="dark"] .server-icon-placeholder {
+    background-color: #555;
+}
+
+/* Wyróżnienie loga */
+[data-bs-theme="dark"] .log-highlight {
+    background-color: rgba(255, 193, 7, 0.2);
+}
+
+/* Poprawka dla modali wyszukiwania */
+[data-bs-theme="dark"] #userSearchResults .dropdown-item:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
+/* Styl dla kart logów */
+[data-bs-theme="dark"] .log-card {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+}
+
+/* Poprawki dla wyszukiwania logów */
+[data-bs-theme="dark"] #advancedFilters {
+    background-color: var(--bs-card-bg);
+}
+
+/* Poprawki dla szczegółów logów */
+[data-bs-theme="dark"] .p-3.bg-light.border.rounded {
+    background-color: var(--bs-tertiary-bg) !important;
+    border-color: var(--bs-border-color) !important;
+}
