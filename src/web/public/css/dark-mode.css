@@ -255,3 +255,7 @@
     background-color: var(--bs-tertiary-bg) !important;
     border-color: var(--bs-border-color) !important;
 }
+
+:root {
+    transition: color 0.3s, background-color 0.3s;
+  }
