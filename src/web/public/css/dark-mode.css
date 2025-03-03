@@ -1,0 +1,150 @@
+/* Add this to src/web/public/css/dark-mode.css */
+
+/* Dark mode overrides */
+[data-bs-theme="dark"] {
+    --bs-body-bg: #121212;
+    --bs-body-color: #0a0909;
+    --bs-border-color: #414141;
+    --bs-card-bg: #1e1e1e;
+    --bs-card-cap-bg: #2c2c2c;
+    --bs-secondary-bg: #2c2c2c;
+    --bs-tertiary-bg: #3a3a3a;
+    --bs-primary-text-emphasis: #6ea8fe;
+    --bs-secondary-text-emphasis: #a7acb1;
+    --bs-emphasis-color: #fff;
+  }
+  
+  /* Override Bootstrap components in dark mode */
+  [data-bs-theme="dark"] .card {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+  }
+  
+  [data-bs-theme="dark"] .card-header {
+    background-color: var(--bs-card-cap-bg);
+    border-color: var(--bs-border-color);
+  }
+  
+  [data-bs-theme="dark"] .list-group-item {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+  }
+  
+  [data-bs-theme="dark"] .list-group-item.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: rgb(12, 10, 10);
+  }
+  
+  [data-bs-theme="dark"] .table {
+    color: var(--bs-body-color);
+    border-color: var(--bs-border-color);
+  }
+  
+  [data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--bs-body-color);
+  }
+  
+  [data-bs-theme="dark"] .modal-content {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+  }
+  
+  [data-bs-theme="dark"] .dropdown-menu {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-border-color);
+  }
+  
+  [data-bs-theme="dark"] .dropdown-item {
+    color: var(--bs-body-color);
+  }
+  
+  [data-bs-theme="dark"] .dropdown-item:hover {
+    background-color: var(--bs-tertiary-bg);
+  }
+  
+  [data-bs-theme="dark"] .form-control, 
+  [data-bs-theme="dark"] .form-select {
+    background-color: var(--bs-tertiary-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+  }
+  
+  [data-bs-theme="dark"] .form-control:focus, 
+  [data-bs-theme="dark"] .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  }
+  
+  [data-bs-theme="dark"] .form-check-input {
+    background-color: var(--bs-tertiary-bg);
+    border-color: var(--bs-border-color);
+  }
+  
+  [data-bs-theme="dark"] .form-text {
+    color: var(--bs-secondary-text-emphasis);
+  }
+  
+  /* Custom component styles */
+  [data-bs-theme="dark"] .server-card:hover {
+    background-color: var(--bs-tertiary-bg);
+  }
+  
+  [data-bs-theme="dark"] .server-icon-placeholder {
+    background-color: #555;
+  }
+  
+  [data-bs-theme="dark"] footer.bg-light {
+    background-color: var(--bs-card-bg) !important;
+  }
+  
+  /* Give dark mode alerts better visibility */
+  [data-bs-theme="dark"] .alert-info {
+    background-color: rgba(13, 202, 240, 0.15);
+    border-color: rgba(13, 202, 240, 0.4);
+    color: #54dafa;
+  }
+  
+  [data-bs-theme="dark"] .alert-warning {
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.4);
+    color: #ffda6a;
+  }
+  
+  [data-bs-theme="dark"] .alert-danger {
+    background-color: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.4);
+    color: #ea868f;
+  }
+  
+  [data-bs-theme="dark"] .alert-success {
+    background-color: rgba(25, 135, 84, 0.15);
+    border-color: rgba(25, 135, 84, 0.4);
+    color: #75b798;
+  }
+  
+  /* Dark mode badge colors */
+  [data-bs-theme="dark"] .badge.bg-light {
+    background-color: #444 !important;
+    color: #fff !important;
+  }
+  
+  /* Improve code element visibility */
+  [data-bs-theme="dark"] code {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    color: #f8f9fa;
+  }
+  
+  /* Dark mode log highlights */
+  [data-bs-theme="dark"] .log-highlight {
+    background-color: rgba(255, 193, 7, 0.2);
+  }
+  
+  /* Make background elements subtle */
+  [data-bs-theme="dark"] .bg-light {
+    background-color: var(--bs-secondary-bg) !important;
+  }
