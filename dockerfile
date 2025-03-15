@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:23-alpine
 
 # Dodaj etykiety do obrazu
 LABEL maintainer="Discord Bot Maintainer"
