@@ -66,7 +66,6 @@ function isAuthenticated(req, res, next) {
   res.redirect('/login');
 }
 
-
 // Middleware do sprawdzania uprawnień na serwerze
 function hasGuildPermission(req, res, next) {
   if (!req.params.guildId) {
@@ -106,10 +105,10 @@ app.use('/api', isAuthenticated, require('./routes/api'));
 app.get('/', (req, res) => {
   res.render('index', { 
     user: req.user,
-    botUser: client.user
+    botUser: client.user,
+    checkServerAccess: checkServerAccess
   });
 });
-
 // Obsługa błędów 404
 app.use((req, res, next) => {
   res.status(404).render('error', {

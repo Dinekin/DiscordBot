@@ -11,13 +11,6 @@
 <body>
   <%- include('partials/navbar') %>
   
-  <div class="container mt-4">
-    <div class="row">
-      <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h2 class="card-title">Twoje serwery</h2>
-            
             <div class="row mt-4">
               <% if (guilds && guilds.length > 0) { %>
                 <% guilds.forEach(guild => { %>
@@ -51,7 +44,7 @@
               <% } else { %>
                 <div class="col-12">
                   <div class="alert alert-info">
-                    Nie masz dostępu do żadnych serwerów lub nie jesteś administratorem na żadnym serwerze.
+                    Nie masz dostępu do żadnych serwerów lub nie jesteś administratorem ani moderatorem na żadnym serwerze.
                   </div>
                 </div>
               <% } %>

@@ -1,4 +1,3 @@
-<!-- Dodaj nowy link do src/web/views/partials/guild-sidebar.ejs -->
 <div class="col-md-3 mb-4">
     <div class="card shadow-sm">
     <div class="card-body text-center">
@@ -11,6 +10,26 @@
             <% } %>
             <h5 class="mb-0"><%= guild.name %></h5>
             <p class="text-muted"><small><%= guild.memberCount %> członków</small></p>
+            
+            <% if (typeof userPermissions !== 'undefined') { %>
+            <div class="mt-2 text-start">
+                <small>Twoje uprawnienia:</small>
+                <ul class="list-unstyled ms-2">
+                    <% if (userPermissions.isAdmin) { %>
+                        <li><i class="fas fa-check-circle text-success"></i> Administrator</li>
+                    <% } %>
+                    <% if (userPermissions.canManageGuild) { %>
+                        <li><i class="fas fa-check-circle text-success"></i> Zarządzanie serwerem</li>
+                    <% } %>
+                    <% if (userPermissions.canManageRoles) { %>
+                        <li><i class="fas fa-check-circle text-success"></i> Zarządzanie rolami</li>
+                    <% } %>
+                    <% if (userPermissions.canManageMessages) { %>
+                        <li><i class="fas fa-check-circle text-success"></i> Zarządzanie wiadomościami</li>
+                    <% } %>
+                </ul>
+            </div>
+            <% } %>
             </div>
             <div class="list-group list-group-flush">
             <a href="/dashboard/guild/<%= guild.id %>" class="list-group-item list-group-item-action <%= path.includes('/guild/' + guild.id) && !path.includes('/settings') && !path.includes('/reaction-roles') && !path.includes('/message-logs') && !path.includes('/giveaways') && !path.includes('/livefeed') ? 'active' : '' %>">

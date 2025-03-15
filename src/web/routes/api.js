@@ -7,6 +7,20 @@ const MessageLog = require('../../models/MessageLog');
 const { EmbedBuilder } = require('discord.js');
 const logger = require('../../utils/logger');
 
+const MOD_PERMISSIONS = {
+  ADMIN: 0x8,             // ADMINISTRATOR
+  MANAGE_GUILD: 0x20,     // MANAGE_GUILD
+  MANAGE_ROLES: 0x10000000, // MANAGE_ROLES
+  MANAGE_MESSAGES: 0x2000 // MANAGE_MESSAGES
+};
+
+function hasModeratorPermission(userPermissions) {
+  return (userPermissions & MOD_PERMISSIONS.ADMIN) === MOD_PERMISSIONS.ADMIN ||
+         (userPermissions & MOD_PERMISSIONS.MANAGE_GUILD) === MOD_PERMISSIONS.MANAGE_GUILD ||
+         (userPermissions & MOD_PERMISSIONS.MANAGE_ROLES) === MOD_PERMISSIONS.MANAGE_ROLES ||
+         (userPermissions & MOD_PERMISSIONS.MANAGE_MESSAGES) === MOD_PERMISSIONS.MANAGE_MESSAGES;
+}
+
 // Middleware do sprawdzania uprawnień na serwerze
 function hasGuildPermission(req, res, next) {
   if (!req.params.guildId) {
@@ -19,19 +33,8 @@ function hasGuildPermission(req, res, next) {
     return res.status(403).json({ error: 'Nie masz dostępu do tego serwera' });
   }
   
-  // Uprawnienia moderatora i administratora
-  // 0x8 - ADMINISTRATOR
-  // 0x20 - MANAGE_GUILD
-  // 0x10000000 - MANAGE_ROLES
-  // 0x2000 - MANAGE_MESSAGES
-  const hasAdminPermission = (guild.permissions & 0x8) === 0x8; // Administrator
-  const hasManageGuildPermission = (guild.permissions & 0x20) === 0x20; // Manage Guild
-  const hasManageRolesPermission = (guild.permissions & 0x10000000) === 0x10000000; // Manage Roles
-  const hasManageMessagesPermission = (guild.permissions & 0x2000) === 0x2000; // Manage Messages
-  
-  // Użytkownik potrzebuje przynajmniej jednego z tych uprawnień
-  const hasPermission = hasAdminPermission || hasManageGuildPermission || 
-                        hasManageRolesPermission || hasManageMessagesPermission;
+  // Sprawdź czy użytkownik ma uprawnienia moderatora
+  const hasPermission = hasModeratorPermission(guild.permissions);
   
   if (!hasPermission) {
     return res.status(403).json({ error: 'Nie masz wystarczających uprawnień na tym serwerze' });
@@ -39,10 +42,10 @@ function hasGuildPermission(req, res, next) {
   
   // Dodaj informacje o uprawnieniach do obiektu req
   req.userPermissions = {
-    isAdmin: hasAdminPermission,
-    canManageGuild: hasManageGuildPermission,
-    canManageRoles: hasManageRolesPermission,
-    canManageMessages: hasManageMessagesPermission
+    isAdmin: (guild.permissions & MOD_PERMISSIONS.ADMIN) === MOD_PERMISSIONS.ADMIN,
+    canManageGuild: (guild.permissions & MOD_PERMISSIONS.MANAGE_GUILD) === MOD_PERMISSIONS.MANAGE_GUILD,
+    canManageRoles: (guild.permissions & MOD_PERMISSIONS.MANAGE_ROLES) === MOD_PERMISSIONS.MANAGE_ROLES,
+    canManageMessages: (guild.permissions & MOD_PERMISSIONS.MANAGE_MESSAGES) === MOD_PERMISSIONS.MANAGE_MESSAGES
   };
   
   next();
