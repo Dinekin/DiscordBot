@@ -144,9 +144,16 @@ module.exports = function(app) {
       // Jeśli użytkownik jest administratorem, zawsze ma wszystkie uprawnienia
       if ((guild.permissions & 0x8) === 0x8) return true;
       
-      // W przeciwnym razie sprawdź konkretne uprawnienia
-      const permValue = permissionMap[permission] || 0;
-      return (guild.permissions & permValue) === permValue;
+      // Jeśli żądane jest konkretne uprawnienie
+      if (permission && permissionMap[permission]) {
+        const permValue = permissionMap[permission];
+        return (guild.permissions & permValue) === permValue;
+      }
+      
+      // Sprawdź, czy użytkownik ma jakiekolwiek uprawnienia moderatora
+      return (guild.permissions & 0x20) === 0x20 ||          // MANAGE_GUILD
+             (guild.permissions & 0x10000000) === 0x10000000 || // MANAGE_ROLES
+             (guild.permissions & 0x2000) === 0x2000;         // MANAGE_MESSAGES
     };
     
     // Formatowanie koloru hex

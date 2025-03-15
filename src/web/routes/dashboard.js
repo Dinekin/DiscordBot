@@ -18,12 +18,31 @@ function hasGuildPermission(req, res, next) {
     return res.redirect('/dashboard');
   }
   
-  // Sprawdź, czy użytkownik ma uprawnienia administratora
-  const hasPermission = (guild.permissions & 0x8) === 0x8;
+  // Uprawnienia moderatora i administratora
+  // 0x8 - ADMINISTRATOR
+  // 0x20 - MANAGE_GUILD
+  // 0x10000000 - MANAGE_ROLES
+  // 0x2000 - MANAGE_MESSAGES
+  const hasAdminPermission = (guild.permissions & 0x8) === 0x8; // Administrator
+  const hasManageGuildPermission = (guild.permissions & 0x20) === 0x20; // Manage Guild
+  const hasManageRolesPermission = (guild.permissions & 0x10000000) === 0x10000000; // Manage Roles
+  const hasManageMessagesPermission = (guild.permissions & 0x2000) === 0x2000; // Manage Messages
+  
+  // Użytkownik potrzebuje przynajmniej jednego z tych uprawnień
+  const hasPermission = hasAdminPermission || hasManageGuildPermission || 
+                        hasManageRolesPermission || hasManageMessagesPermission;
   
   if (!hasPermission) {
     return res.redirect('/dashboard');
   }
+  
+  // Dodaj informacje o uprawnieniach do obiektu req
+  req.userPermissions = {
+    isAdmin: hasAdminPermission,
+    canManageGuild: hasManageGuildPermission,
+    canManageRoles: hasManageRolesPermission,
+    canManageMessages: hasManageMessagesPermission
+  };
   
   next();
 }

@@ -8,7 +8,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('ban')
     .setDescription('Banuje użytkownika z serwera')
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addUserOption(option =>
       option.setName('user')
         .setDescription('Użytkownik do zbanowania')

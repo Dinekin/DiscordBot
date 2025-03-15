@@ -7,7 +7,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('temprole')
     .setDescription('Zarządza rolami czasowymi użytkowników')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addSubcommand(subcommand =>
       subcommand
         .setName('add')

@@ -8,7 +8,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('timeout')
     .setDescription('Wycisza użytkownika na określony czas')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addUserOption(option =>
       option.setName('user')
         .setDescription('Użytkownik do wyciszenia')

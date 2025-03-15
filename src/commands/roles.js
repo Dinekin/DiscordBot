@@ -6,7 +6,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('roles')
     .setDescription('Zarządza zapisanymi rolami użytkowników')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addSubcommand(subcommand =>
       subcommand
         .setName('list')

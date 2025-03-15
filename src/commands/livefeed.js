@@ -6,7 +6,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('livefeed')
     .setDescription('Zarządzanie automatycznymi wiadomościami (live feed)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setDefaultMemberPermissions(
+        PermissionFlagsBits.Administrator | 
+        PermissionFlagsBits.ManageGuild | 
+        PermissionFlagsBits.ManageRoles | 
+        PermissionFlagsBits.ManageMessages
+    )
     .addSubcommand(subcommand =>
       subcommand
         .setName('create')

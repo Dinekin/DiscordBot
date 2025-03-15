@@ -7,7 +7,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('messagelog')
     .setDescription('Zarządzaj lub przeglądaj logi wiadomości')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addSubcommand(subcommand =>
       subcommand
         .setName('search')

@@ -8,7 +8,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('unban')
     .setDescription('Zdejmuje bana użytkownikowi')
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addStringOption(option =>
       option.setName('userid')
         .setDescription('ID użytkownika do odbanowania')

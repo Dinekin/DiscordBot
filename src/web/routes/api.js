@@ -19,15 +19,64 @@ function hasGuildPermission(req, res, next) {
     return res.status(403).json({ error: 'Nie masz dostępu do tego serwera' });
   }
   
-  // Sprawdź, czy użytkownik ma uprawnienia administratora
-  const hasPermission = (guild.permissions & 0x8) === 0x8;
+  // Uprawnienia moderatora i administratora
+  // 0x8 - ADMINISTRATOR
+  // 0x20 - MANAGE_GUILD
+  // 0x10000000 - MANAGE_ROLES
+  // 0x2000 - MANAGE_MESSAGES
+  const hasAdminPermission = (guild.permissions & 0x8) === 0x8; // Administrator
+  const hasManageGuildPermission = (guild.permissions & 0x20) === 0x20; // Manage Guild
+  const hasManageRolesPermission = (guild.permissions & 0x10000000) === 0x10000000; // Manage Roles
+  const hasManageMessagesPermission = (guild.permissions & 0x2000) === 0x2000; // Manage Messages
+  
+  // Użytkownik potrzebuje przynajmniej jednego z tych uprawnień
+  const hasPermission = hasAdminPermission || hasManageGuildPermission || 
+                        hasManageRolesPermission || hasManageMessagesPermission;
   
   if (!hasPermission) {
     return res.status(403).json({ error: 'Nie masz wystarczających uprawnień na tym serwerze' });
   }
   
+  // Dodaj informacje o uprawnieniach do obiektu req
+  req.userPermissions = {
+    isAdmin: hasAdminPermission,
+    canManageGuild: hasManageGuildPermission,
+    canManageRoles: hasManageRolesPermission,
+    canManageMessages: hasManageMessagesPermission
+  };
+  
   next();
 }
+
+router.get('/', async (req, res) => {
+  // Filtruj serwery, gdzie użytkownik ma uprawnienia administratora lub moderatora
+  const ADMIN_PERMISSION = 0x8;          // ADMINISTRATOR
+  const MANAGE_GUILD = 0x20;             // MANAGE_GUILD
+  const MANAGE_ROLES = 0x10000000;       // MANAGE_ROLES
+  const MANAGE_MESSAGES = 0x2000;        // MANAGE_MESSAGES
+  
+  const allowedGuilds = req.user.guilds.filter(g => {
+    // Sprawdź, czy użytkownik ma któreś z wymaganych uprawnień
+    return (g.permissions & ADMIN_PERMISSION) === ADMIN_PERMISSION ||
+           (g.permissions & MANAGE_GUILD) === MANAGE_GUILD ||
+           (g.permissions & MANAGE_ROLES) === MANAGE_ROLES ||
+           (g.permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
+  });
+  
+  // Sprawdź, które serwery mają bota
+  const botGuilds = client.guilds.cache.map(g => g.id);
+  
+  // Oznacz serwery, na których jest bot
+  const guilds = allowedGuilds.map(g => ({
+    ...g,
+    hasBot: botGuilds.includes(g.id)
+  }));
+  
+  res.render('dashboard/index', {
+    user: req.user,
+    guilds: guilds
+  });
+});
 
 // Endpoint do włączania/wyłączania logowania wiadomości
 router.get('/guilds/:guildId/toggle-message-log/:state', hasGuildPermission, async (req, res) => {

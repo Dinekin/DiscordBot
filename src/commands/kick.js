@@ -8,7 +8,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('kick')
     .setDescription('Wyrzuca użytkownika z serwera')
-    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addUserOption(option =>
       option.setName('user')
         .setDescription('Użytkownik do wyrzucenia')

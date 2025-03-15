@@ -79,10 +79,18 @@ function hasGuildPermission(req, res, next) {
     return res.status(403).send('Nie masz dostępu do tego serwera');
   }
   
-  // Sprawdź, czy użytkownik ma uprawnienia administratora
-  const hasPermission = (guild.permissions & 0x8) === 0x8;
+  // Uprawnienia moderatora i administratora
+  // 0x8 - ADMINISTRATOR
+  // 0x20 - MANAGE_GUILD
+  // 0x10000000 - MANAGE_ROLES
+  // 0x2000 - MANAGE_MESSAGES
+  const hasAdminPermission = (guild.permissions & 0x8) === 0x8;
+  const hasModPermissions = 
+    (guild.permissions & 0x20) === 0x20 ||
+    (guild.permissions & 0x10000000) === 0x10000000 ||
+    (guild.permissions & 0x2000) === 0x2000;
   
-  if (!hasPermission) {
+  if (!hasAdminPermission && !hasModPermissions) {
     return res.status(403).send('Nie masz wystarczających uprawnień na tym serwerze');
   }
   

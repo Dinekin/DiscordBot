@@ -7,7 +7,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('modlogs')
     .setDescription('Wyświetla logi moderacyjne użytkownika')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addUserOption(option =>
       option.setName('user')
         .setDescription('Użytkownik, którego logi chcesz zobaczyć')

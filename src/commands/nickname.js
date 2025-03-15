@@ -9,7 +9,12 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('nickname')
     .setDescription('Zmienia pseudonim użytkownika')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames)
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
     .addUserOption(option =>
       option.setName('user')
         .setDescription('Użytkownik, któremu chcesz zmienić pseudonim')
