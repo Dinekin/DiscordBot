@@ -252,6 +252,16 @@ router.post('/guilds/:guildId/settings', hasGuildPermission, async (req, res) =>
     
     // UWAGA: Kluczowa poprawka - prawidłowa konwersja i przypisanie do zagnieżdżonych pól
     
+    // Dodaj obsługę ustawień przywracania ról
+    if (req.body.restoreRoles !== undefined) {
+      guildSettings.restoreRoles = safelyConvertToBoolean(req.body.restoreRoles);
+      logger.debug(`Ustawiono restoreRoles na ${guildSettings.restoreRoles}`);
+    }
+
+    if (req.body.roleExpiryDays !== undefined) {
+      guildSettings.roleExpiryDays = parseInt(req.body.roleExpiryDays, 10) || 0;
+      logger.debug(`Ustawiono roleExpiryDays na ${guildSettings.roleExpiryDays}`);
+    }
     // Funkcja do bezpiecznej konwersji na wartość boolean
     function safelyConvertToBoolean(value) {
       if (typeof value === 'boolean') return value;

@@ -13,7 +13,7 @@ module.exports = {
                 userId: member.id
             });
             
-            if (userRoleData && userRoleData.roles.length > 0) {
+            if (shouldRestoreRoles && userRoleData && userRoleData.roles.length > 0) {
                 // Przygotuj role do przywrócenia
                 const rolesToRestore = userRoleData.roles.filter(roleId => {
                     const role = member.guild.roles.cache.get(roleId);

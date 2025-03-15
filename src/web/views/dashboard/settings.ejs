@@ -138,11 +138,14 @@ async function saveSettings(guildId) {
   const reactionRolesEnabled = document.getElementById('reactionRolesModule').checked;
   const notificationsEnabled = document.getElementById('notificationsModule').checked;
   const messageLogEnabled = document.getElementById('messageLogModule').checked;
+  const restoreRoles = document.getElementById('restoreRolesOption').checked;
+  const roleExpiryDays = document.getElementById('roleExpiryDays').value;
   
   console.log('Wartości formularza:');
   console.log('- messageLogEnabled:', messageLogEnabled);
   console.log('- reactionRolesEnabled:', reactionRolesEnabled);
   console.log('- notificationsEnabled:', notificationsEnabled);
+  
   
   // Utwórz obiekt z danymi
   const data = {
@@ -150,6 +153,8 @@ async function saveSettings(guildId) {
     welcomeChannel: welcomeChannel,
     notificationChannel: notificationChannel,
     language: language,
+    restoreRoles: restoreRoles,
+    roleExpiryDays: roleExpiryDays,
     
     // Pełne nazwy pól dla bezpośredniego przypisania
     messageLog: messageLogEnabled,

@@ -23,6 +23,15 @@ const GuildSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  restoreRoles: {
+    type: Boolean,
+    default: true
+  },
+  
+  roleExpiryDays: {
+    type: Number,
+    default: 0
+  },
   prefix: {
     type: String,
     default: '!'

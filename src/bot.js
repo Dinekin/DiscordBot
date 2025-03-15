@@ -5,6 +5,7 @@ const { connectToDatabase } = require('./utils/database');
 const { setupGiveawaysManager } = require('./utils/giveawayManager');
 const logger = require('./utils/logger');
 const { checkExpiredRoles } = require('./utils/checkExpiredRoles');
+const { LiveFeedManager } = require('./utils/liveFeedManager');
 
 // Konfiguracja klienta Discord z odpowiednimi uprawnieniami
 const client = new Client({
@@ -142,6 +143,9 @@ async function startBot() {
     const { setupGiveawaysManager } = require('./utils/giveawayManager');
     client.giveawaysManager = setupGiveawaysManager(client);
     logger.info('Menedżer giveaway został zainicjalizowany');
+
+    client.liveFeedManager = await new LiveFeedManager(client).init();
+    logger.info('Menedżer Live Feed został zainicjalizowany');
     
     logger.info(`Bot został uruchomiony pomyślnie i obsługuje ${client.guilds.cache.size} serwerów`);
   } catch (error) {
