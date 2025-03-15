@@ -180,6 +180,51 @@ router.get('/guild/:guildId/message-logs', hasGuildPermission, async (req, res) 
   }
 });
 
+router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  // Pobierz dane serwera z Discorda
+  const guild = client.guilds.cache.get(guildId);
+  
+  if (!guild) {
+    return res.redirect('/dashboard');
+  }
+  
+  try {
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).render('error', {
+        user: req.user,
+        statusCode: 500,
+        message: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz wszystkie feedy dla tego serwera
+    const feeds = await client.liveFeedManager.getGuildFeeds(guildId);
+    
+    // Pobierz listę kanałów tekstowych
+    const textChannels = guild.channels.cache
+      .filter(c => c.type === 0) // 0 = kanał tekstowy
+      .map(c => ({ id: c.id, name: c.name }));
+    
+    // Renderuj widok
+    res.render('dashboard/livefeed', {
+      user: req.user,
+      guild: guild,
+      feeds: feeds,
+      channels: textChannels
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania strony livefeed: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania strony Live Feed'
+    });
+  }
+});
+
 // Dodaj tę trasę do modułu router w pliku src/web/routes/dashboard.js
 router.get('/guild/:guildId/giveaways', hasGuildPermission, async (req, res) => {
   const guildId = req.params.guildId;

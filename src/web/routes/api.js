@@ -2022,4 +2022,599 @@ router.get('/guilds/:guildId/giveaways/:messageId/details', hasGuildPermission, 
   }
 });
 
+// Dodaj te trasy do pliku src/web/routes/api.js
+
+// Pobieranie listy wszystkich harmonogramów LiveFeed dla serwera
+router.get('/guilds/:guildId/livefeeds', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz wszystkie feedy dla tego serwera
+    const feeds = await client.liveFeedManager.getGuildFeeds(guildId);
+    
+    res.json({
+      success: true,
+      feeds: feeds
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania harmonogramów LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas pobierania harmonogramów LiveFeed'
+    });
+  }
+});
+
+// Pobieranie konkretnego harmonogramu
+router.get('/guilds/:guildId/livefeeds/:feedId', hasGuildPermission, async (req, res) => {
+  const { guildId, feedId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz feed
+    const feed = await client.liveFeedManager.getFeed(feedId);
+    
+    if (!feed) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono harmonogramu o podanym ID'
+      });
+    }
+    
+    // Sprawdź czy feed należy do tego serwera
+    if (feed.guildId !== guildId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ten harmonogram nie należy do tego serwera'
+      });
+    }
+    
+    res.json({
+      success: true,
+      feed: feed
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania harmonogramu LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas pobierania harmonogramu LiveFeed'
+    });
+  }
+});
+
+// Tworzenie nowego harmonogramu
+router.post('/guilds/:guildId/livefeeds', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  const { 
+    channelId, 
+    name, 
+    message, 
+    minute, 
+    hour, 
+    day, 
+    month, 
+    weekday, 
+    embed, 
+    color 
+  } = req.body;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Sprawdź czy kanał istnieje
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({
+        success: false,
+        error: 'Serwer nie został znaleziony'
+      });
+    }
+    
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) {
+      return res.status(404).json({
+        success: false,
+        error: 'Kanał nie został znaleziony'
+      });
+    }
+    
+    // Sprawdź czy kanał jest tekstowy
+    if (channel.type !== 0) { // 0 = kanał tekstowy
+      return res.status(400).json({
+        success: false,
+        error: 'Live Feed można utworzyć tylko dla kanału tekstowego'
+      });
+    }
+    
+    // Funkcja walidacyjna
+    function validateCronValue(value, min, max) {
+      if (value === '*') return true;
+      
+      if (value.includes(',')) {
+        const parts = value.split(',').map(p => p.trim());
+        return parts.every(part => {
+          const num = parseInt(part);
+          return !isNaN(num) && num >= min && num <= max;
+        });
+      }
+      
+      const num = parseInt(value);
+      return !isNaN(num) && num >= min && num <= max;
+    }
+    
+    // Walidacja wartości
+    if (!validateCronValue(minute || '*', 0, 59) || 
+        !validateCronValue(hour || '*', 0, 23) || 
+        !validateCronValue(day || '*', 1, 31) || 
+        !validateCronValue(month || '*', 1, 12) || 
+        !validateCronValue(weekday || '*', 0, 6)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nieprawidłowe wartości harmonogramu! Minuty (0-59), godziny (0-23), dni (1-31), miesiące (1-12), dni tygodnia (0-6).'
+      });
+    }
+    
+    // Przygotuj dane
+    const feedData = {
+      guildId: guildId,
+      channelId: channelId,
+      name: name,
+      message: message,
+      schedule: {
+        minute: minute || '*',
+        hour: hour || '*',
+        dayOfMonth: day || '*',
+        month: month || '*',
+        dayOfWeek: weekday || '*'
+      },
+      embed: embed === 'true' || embed === true,
+      embedColor: color || '#3498db',
+      createdBy: req.user.id
+    };
+    
+    // Dodaj feed
+    const newFeed = await client.liveFeedManager.addFeed(feedData);
+    
+    res.json({
+      success: true,
+      message: 'Harmonogram Live Feed został utworzony pomyślnie',
+      feed: newFeed
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas tworzenia harmonogramu LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas tworzenia harmonogramu LiveFeed'
+    });
+  }
+});
+
+// Aktualizacja harmonogramu
+router.put('/guilds/:guildId/livefeeds/:feedId', hasGuildPermission, async (req, res) => {
+  const { guildId, feedId } = req.params;
+  const { 
+    channelId, 
+    name, 
+    message, 
+    minute, 
+    hour, 
+    day, 
+    month, 
+    weekday, 
+    embed, 
+    color 
+  } = req.body;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz feed
+    const feed = await client.liveFeedManager.getFeed(feedId);
+    
+    if (!feed) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono harmonogramu o podanym ID'
+      });
+    }
+    
+    // Sprawdź czy feed należy do tego serwera
+    if (feed.guildId !== guildId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ten harmonogram nie należy do tego serwera'
+      });
+    }
+    
+    // Przygotuj dane do aktualizacji
+    const updateData = {};
+    
+    // Kanał
+    if (channelId) {
+      const guild = client.guilds.cache.get(guildId);
+      const channel = guild.channels.cache.get(channelId);
+      
+      if (!channel) {
+        return res.status(404).json({
+          success: false,
+          error: 'Kanał nie został znaleziony'
+        });
+      }
+      
+      if (channel.type !== 0) { // 0 = kanał tekstowy
+        return res.status(400).json({
+          success: false,
+          error: 'Live Feed można utworzyć tylko dla kanału tekstowego'
+        });
+      }
+      
+      updateData.channelId = channelId;
+    }
+    
+    // Funkcja walidacyjna
+    function validateCronValue(value, min, max) {
+      if (value === '*') return true;
+      
+      if (value.includes(',')) {
+        const parts = value.split(',').map(p => p.trim());
+        return parts.every(part => {
+          const num = parseInt(part);
+          return !isNaN(num) && num >= min && num <= max;
+        });
+      }
+      
+      const num = parseInt(value);
+      return !isNaN(num) && num >= min && num <= max;
+    }
+    
+    // Pozostałe pola
+    if (name) updateData.name = name;
+    if (message) updateData.message = message;
+    
+    // Parametry harmonogramu
+    const schedule = {};
+    let hasScheduleChanges = false;
+    
+    if (minute !== undefined) {
+      if (!validateCronValue(minute, 0, 59)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nieprawidłowa wartość minuty (0-59)'
+        });
+      }
+      schedule.minute = minute;
+      hasScheduleChanges = true;
+    }
+    
+    if (hour !== undefined) {
+      if (!validateCronValue(hour, 0, 23)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nieprawidłowa wartość godziny (0-23)'
+        });
+      }
+      schedule.hour = hour;
+      hasScheduleChanges = true;
+    }
+    
+    if (day !== undefined) {
+      if (!validateCronValue(day, 1, 31)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nieprawidłowa wartość dnia miesiąca (1-31)'
+        });
+      }
+      schedule.dayOfMonth = day;
+      hasScheduleChanges = true;
+    }
+    
+    if (month !== undefined) {
+      if (!validateCronValue(month, 1, 12)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nieprawidłowa wartość miesiąca (1-12)'
+        });
+      }
+      schedule.month = month;
+      hasScheduleChanges = true;
+    }
+    
+    if (weekday !== undefined) {
+      if (!validateCronValue(weekday, 0, 6)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Nieprawidłowa wartość dnia tygodnia (0-6, gdzie 0=niedziela)'
+        });
+      }
+      schedule.dayOfWeek = weekday;
+      hasScheduleChanges = true;
+    }
+    
+    if (hasScheduleChanges) {
+      updateData.schedule = schedule;
+    }
+    
+    // Embed
+    if (embed !== undefined) {
+      updateData.embed = embed === 'true' || embed === true;
+    }
+    
+    // Kolor
+    if (color) updateData.embedColor = color;
+    
+    // Sprawdź czy są jakieś zmiany
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nie wprowadzono żadnych zmian do harmonogramu'
+      });
+    }
+    
+    // Aktualizuj feed
+    const updatedFeed = await client.liveFeedManager.updateFeed(feedId, updateData);
+    
+    res.json({
+      success: true,
+      message: 'Harmonogram Live Feed został zaktualizowany pomyślnie',
+      feed: updatedFeed
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas aktualizacji harmonogramu LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas aktualizacji harmonogramu LiveFeed'
+    });
+  }
+});
+
+// Usuwanie harmonogramu
+router.delete('/guilds/:guildId/livefeeds/:feedId', hasGuildPermission, async (req, res) => {
+  const { guildId, feedId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz feed
+    const feed = await client.liveFeedManager.getFeed(feedId);
+    
+    if (!feed) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono harmonogramu o podanym ID'
+      });
+    }
+    
+    // Sprawdź czy feed należy do tego serwera
+    if (feed.guildId !== guildId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ten harmonogram nie należy do tego serwera'
+      });
+    }
+    
+    // Zapisz nazwę do odpowiedzi
+    const feedName = feed.name;
+    
+    // Usuń feed
+    await client.liveFeedManager.deleteFeed(feedId);
+    
+    res.json({
+      success: true,
+      message: `Harmonogram "${feedName}" został pomyślnie usunięty`
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas usuwania harmonogramu LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas usuwania harmonogramu LiveFeed'
+    });
+  }
+});
+
+// Wstrzymanie harmonogramu
+router.post('/guilds/:guildId/livefeeds/:feedId/pause', hasGuildPermission, async (req, res) => {
+  const { guildId, feedId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz feed
+    const feed = await client.liveFeedManager.getFeed(feedId);
+    
+    if (!feed) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono harmonogramu o podanym ID'
+      });
+    }
+    
+    // Sprawdź czy feed należy do tego serwera
+    if (feed.guildId !== guildId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ten harmonogram nie należy do tego serwera'
+      });
+    }
+    
+    // Sprawdź czy feed nie jest już wstrzymany
+    if (!feed.isActive) {
+      return res.status(400).json({
+        success: false,
+        error: `Harmonogram "${feed.name}" jest już wstrzymany`
+      });
+    }
+    
+    // Wstrzymaj feed
+    await client.liveFeedManager.updateFeed(feedId, { isActive: false });
+    
+    res.json({
+      success: true,
+      message: `Harmonogram "${feed.name}" został wstrzymany`
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas wstrzymywania harmonogramu LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas wstrzymywania harmonogramu LiveFeed'
+    });
+  }
+});
+
+// Wznowienie harmonogramu
+router.post('/guilds/:guildId/livefeeds/:feedId/resume', hasGuildPermission, async (req, res) => {
+  const { guildId, feedId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz feed
+    const feed = await client.liveFeedManager.getFeed(feedId);
+    
+    if (!feed) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono harmonogramu o podanym ID'
+      });
+    }
+    
+    // Sprawdź czy feed należy do tego serwera
+    if (feed.guildId !== guildId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ten harmonogram nie należy do tego serwera'
+      });
+    }
+    
+    // Sprawdź czy feed nie jest już aktywny
+    if (feed.isActive) {
+      return res.status(400).json({
+        success: false,
+        error: `Harmonogram "${feed.name}" jest już aktywny`
+      });
+    }
+    
+    // Wznów feed
+    await client.liveFeedManager.updateFeed(feedId, { isActive: true });
+    
+    res.json({
+      success: true,
+      message: `Harmonogram "${feed.name}" został wznowiony`
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas wznawiania harmonogramu LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas wznawiania harmonogramu LiveFeed'
+    });
+  }
+});
+
+// Testowanie harmonogramu
+router.post('/guilds/:guildId/livefeeds/:feedId/test', hasGuildPermission, async (req, res) => {
+  const { guildId, feedId } = req.params;
+  
+  try {
+    const { client } = require('../../bot');
+    
+    // Sprawdź czy manager LiveFeed jest dostępny
+    if (!client.liveFeedManager) {
+      return res.status(500).json({
+        success: false,
+        error: 'System Live Feed nie jest jeszcze zainicjalizowany.'
+      });
+    }
+    
+    // Pobierz feed
+    const feed = await client.liveFeedManager.getFeed(feedId);
+    
+    if (!feed) {
+      return res.status(404).json({
+        success: false,
+        error: 'Nie znaleziono harmonogramu o podanym ID'
+      });
+    }
+    
+    // Sprawdź czy feed należy do tego serwera
+    if (feed.guildId !== guildId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Ten harmonogram nie należy do tego serwera'
+      });
+    }
+    
+    // Wykonaj feed
+    await client.liveFeedManager.executeFeed(feed);
+    
+    res.json({
+      success: true,
+      message: `Testowa wiadomość z harmonogramu "${feed.name}" została wysłana do kanału`
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas testowania harmonogramu LiveFeed: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas testowania harmonogramu LiveFeed'
+    });
+  }
+});
+
 module.exports = router;

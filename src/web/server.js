@@ -6,8 +6,10 @@ const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 const path = require('path');
 const { client } = require('../bot');
+const setupHelpers = require('./helpers');
 
 const app = express();
+setupHelpers(app)
 
 // Middleware
 app.use(express.json());
@@ -63,6 +65,7 @@ function isAuthenticated(req, res, next) {
   }
   res.redirect('/login');
 }
+
 
 // Middleware do sprawdzania uprawnień na serwerze
 function hasGuildPermission(req, res, next) {

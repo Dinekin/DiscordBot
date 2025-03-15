@@ -1,3 +1,4 @@
+<!-- Dodaj nowy link do src/web/views/partials/guild-sidebar.ejs -->
 <div class="col-md-3 mb-4">
     <div class="card shadow-sm">
     <div class="card-body text-center">
@@ -12,7 +13,7 @@
             <p class="text-muted"><small><%= guild.memberCount %> członków</small></p>
             </div>
             <div class="list-group list-group-flush">
-            <a href="/dashboard/guild/<%= guild.id %>" class="list-group-item list-group-item-action <%= path.includes('/guild/' + guild.id) && !path.includes('/settings') && !path.includes('/reaction-roles') && !path.includes('/message-logs') && !path.includes('/giveaways') ? 'active' : '' %>">
+            <a href="/dashboard/guild/<%= guild.id %>" class="list-group-item list-group-item-action <%= path.includes('/guild/' + guild.id) && !path.includes('/settings') && !path.includes('/reaction-roles') && !path.includes('/message-logs') && !path.includes('/giveaways') && !path.includes('/livefeed') ? 'active' : '' %>">
             <i class="fas fa-tachometer-alt me-2"></i> Panel główny
             </a>
             <a href="/dashboard/guild/<%= guild.id %>/settings" class="list-group-item list-group-item-action <%= path.includes('/settings') ? 'active' : '' %>">
@@ -23,6 +24,9 @@
             </a>
             <a href="/dashboard/guild/<%= guild.id %>/message-logs" class="list-group-item list-group-item-action <%= path.includes('/message-logs') ? 'active' : '' %>">
             <i class="fas fa-history me-2"></i> Logi wiadomości
+            </a>
+            <a href="/dashboard/guild/<%= guild.id %>/livefeed" class="list-group-item list-group-item-action <%= path.includes('/livefeed') ? 'active' : '' %>">
+            <i class="fas fa-bullhorn me-2"></i> Live Feed
             </a>
             <a href="/dashboard/guild/<%= guild.id %>/giveaways" class="list-group-item list-group-item-action <%= path.includes('/giveaways') ? 'active' : '' %>">
             <i class="fas fa-gift me-2"></i> Konkursy
