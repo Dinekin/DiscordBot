@@ -13,103 +13,92 @@ const MOD_PERMISSIONS = {
   MANAGE_MESSAGES: 0x2000 // MANAGE_MESSAGES
 };
 
-function hasModeratorPermission(userPermissions) {
-  return (userPermissions & MOD_PERMISSIONS.ADMIN) === MOD_PERMISSIONS.ADMIN ||
-         (userPermissions & MOD_PERMISSIONS.MANAGE_GUILD) === MOD_PERMISSIONS.MANAGE_GUILD ||
-         (userPermissions & MOD_PERMISSIONS.MANAGE_ROLES) === MOD_PERMISSIONS.MANAGE_ROLES ||
-         (userPermissions & MOD_PERMISSIONS.MANAGE_MESSAGES) === MOD_PERMISSIONS.MANAGE_MESSAGES;
-}
-
-
 // Middleware do sprawdzania uprawnień na serwerze
 function hasGuildPermission(req, res, next) {
-  if (!req.params.guildId) {
-    return res.redirect('/dashboard');
-  }
-  
-  const guild = req.user.guilds.find(g => g.id === req.params.guildId);
-  
-  if (!guild) {
-    return res.redirect('/dashboard');
-  }
-  
-  // Sprawdź czy użytkownik ma uprawnienia moderatora
-  const hasPermission = hasModeratorPermission(guild.permissions);
-  
-  if (!hasPermission) {
-    // Zapisz komunikat błędu w sesji (opcjonalnie)
-    if (req.session) {
-      req.session.flashMessage = {
-        type: 'danger',
-        content: 'Nie masz wystarczających uprawnień na tym serwerze.'
-      };
+  try {
+    if (!req.params.guildId) {
+      return res.redirect('/dashboard');
     }
+    
+    const guild = req.user.guilds.find(g => g.id === req.params.guildId);
+    
+    if (!guild) {
+      return res.redirect('/dashboard');
+    }
+    
+    // Uprawnienia moderatora i administratora
+    const ADMIN = 0x8;              // ADMINISTRATOR
+    const MANAGE_GUILD = 0x20;      // MANAGE_GUILD
+    const MANAGE_ROLES = 0x10000000; // MANAGE_ROLES
+    const MANAGE_MESSAGES = 0x2000;  // MANAGE_MESSAGES
+    
+    // Sprawdź czy użytkownik ma uprawnienia moderatora
+    const hasPermission = 
+      (guild.permissions & ADMIN) === ADMIN ||
+      (guild.permissions & MANAGE_GUILD) === MANAGE_GUILD ||
+      (guild.permissions & MANAGE_ROLES) === MANAGE_ROLES ||
+      (guild.permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
+    
+    if (!hasPermission) {
+      return res.redirect('/dashboard');
+    }
+    
+    // Dodaj informacje o uprawnieniach do obiektu req
+    req.userPermissions = {
+      isAdmin: (guild.permissions & ADMIN) === ADMIN,
+      canManageGuild: (guild.permissions & MANAGE_GUILD) === MANAGE_GUILD,
+      canManageRoles: (guild.permissions & MANAGE_ROLES) === MANAGE_ROLES,
+      canManageMessages: (guild.permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES
+    };
+    
+    next();
+  } catch (error) {
+    logger.error(`Błąd w middleware hasGuildPermission: ${error.stack}`);
     return res.redirect('/dashboard');
   }
-  
-  // Dodaj informacje o uprawnieniach do obiektu req
-  req.userPermissions = {
-    isAdmin: (guild.permissions & MOD_PERMISSIONS.ADMIN) === MOD_PERMISSIONS.ADMIN,
-    canManageGuild: (guild.permissions & MOD_PERMISSIONS.MANAGE_GUILD) === MOD_PERMISSIONS.MANAGE_GUILD,
-    canManageRoles: (guild.permissions & MOD_PERMISSIONS.MANAGE_ROLES) === MOD_PERMISSIONS.MANAGE_ROLES,
-    canManageMessages: (guild.permissions & MOD_PERMISSIONS.MANAGE_MESSAGES) === MOD_PERMISSIONS.MANAGE_MESSAGES
-  };
-  
-  next();
 }
 
 // Lista serwerów
 router.get('/', async (req, res) => {
-  // Filtruj serwery, gdzie użytkownik ma uprawnienia administratora lub moderatora
-  const allowedGuilds = req.user.guilds.filter(g => hasModeratorPermission(g.permissions));
-  
-  // Sprawdź, które serwery mają bota
-  const botGuilds = client.guilds.cache.map(g => g.id);
-  
-  // Oznacz serwery, na których jest bot
-  const guilds = allowedGuilds.map(g => ({
-    ...g,
-    hasBot: botGuilds.includes(g.id)
-  }));
-  
-  res.render('dashboard/index', {
-    user: req.user,
-    guilds: guilds,
-    hasModeratorPermission: hasModeratorPermission
-  });
-});
-
-// Panel zarządzania serwerem
-router.get('/guild/:guildId', hasGuildPermission, async (req, res) => {
-  const guildId = req.params.guildId;
-  
-  // Pobierz dane serwera z bazy danych
-  let guildSettings = await Guild.findOne({ guildId: guildId });
-  
-  // Jeśli nie ma w bazie, stwórz nowy rekord
-  if (!guildSettings) {
-    guildSettings = await Guild.create({
-      guildId: guildId
-    });
-  }
-  
-  // Pobierz dane serwera z Discorda
-  const guild = client.guilds.cache.get(guildId);
-  
-  if (!guild) {
-    return res.render('dashboard/not-in-guild', {
+  try {
+    // Definicje upawnień moderatora
+    const ADMIN_PERMISSION = 0x8;          // ADMINISTRATOR
+    const MANAGE_GUILD = 0x20;             // MANAGE_GUILD
+    const MANAGE_ROLES = 0x10000000;       // MANAGE_ROLES
+    const MANAGE_MESSAGES = 0x2000;        // MANAGE_MESSAGES
+    
+    // Funkcja pomocnicza do sprawdzania uprawnień moderatora
+    function hasModPerms(permissions) {
+      return (permissions & ADMIN_PERMISSION) === ADMIN_PERMISSION ||
+             (permissions & MANAGE_GUILD) === MANAGE_GUILD ||
+             (permissions & MANAGE_ROLES) === MANAGE_ROLES ||
+             (permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
+    }
+    
+    // Filtruj serwery, gdzie użytkownik ma uprawnienia administratora lub moderatora
+    const allowedGuilds = req.user.guilds.filter(g => hasModPerms(g.permissions));
+    
+    // Sprawdź, które serwery mają bota
+    const botGuilds = client.guilds.cache.map(g => g.id);
+    
+    // Oznacz serwery, na których jest bot
+    const guilds = allowedGuilds.map(g => ({
+      ...g,
+      hasBot: botGuilds.includes(g.id)
+    }));
+    
+    res.render('dashboard/index', {
       user: req.user,
-      guild: req.user.guilds.find(g => g.id === guildId)
+      guilds: guilds
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania strony głównej dashboard: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania panelu'
     });
   }
-  
-  // Renderuj panel zarządzania
-  res.render('dashboard/guild', {
-    user: req.user,
-    guild: guild,
-    settings: guildSettings,
-    userPermissions: req.userPermissions
-  });
 });
 
 // Konfiguracja ogólna serwera
