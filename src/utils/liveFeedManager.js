@@ -139,6 +139,7 @@ class LiveFeedManager {
     
     return result;
   }
+
   // Wykonaj pojedynczy feed
   async executeFeed(feed) {
     try {

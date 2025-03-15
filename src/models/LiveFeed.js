@@ -1,6 +1,8 @@
 // src/models/LiveFeed.js
 const mongoose = require('mongoose');
+const logger = require('../utils/logger');
 
+// Definiujemy zmienną LiveFeedSchema w kontekście globalnym dla pliku
 const LiveFeedSchema = new mongoose.Schema({
   guildId: {
     type: String,
@@ -101,100 +103,105 @@ LiveFeedSchema.methods.calculateNextRun = function() {
       : this.schedule.dayOfWeek.split(',').map(d => parseInt(d.trim()));
     
     // Funkcja pomocnicza do znalezienia następnej dozwolonej wartości
-    function findNext(current, allowed, max, rollover = false) {
+    function findNext(current, allowed, max) {
       // Znajdź pierwszą wartość większą od current
-      const next = allowed.find(v => v > current);
-      if (next !== undefined) return next;
-      
+      for (let i = 0; i < allowed.length; i++) {
+        if (allowed[i] > current) {
+          return allowed[i];
+        }
+      }
       // Jeśli nie znaleziono, zwróć pierwszą wartość z tablicy (przejdź do następnego cyklu)
-      return rollover && allowed.length > 0 ? allowed[0] : null;
+      return allowed.length > 0 ? allowed[0] : null;
     }
     
-    // Najpierw sprawdź, czy obecna minuta jest dozwolona
+    // Pobierz aktualne wartości czasu
     let currentMinute = now.getMinutes();
     let currentHour = now.getHours();
     let currentDay = now.getDate();
     let currentMonth = now.getMonth() + 1; // +1 bo JS ma miesiące 0-11
+    let currentDayOfWeek = now.getDay(); // 0-6, gdzie 0 to niedziela
     
     // Znajdź następną dozwoloną minutę
-    let nextMinute = findNext(currentMinute, allowedMinutes, 59, true);
+    let nextMinute = findNext(currentMinute, allowedMinutes, 59);
     
-    // Jeśli nie znaleziono następnej minuty w bieżącej godzinie
     if (nextMinute === null || nextMinute <= currentMinute) {
-      // Przejdź do następnej godziny
-      nextMinute = allowedMinutes[0] || 0;
+      // Jeśli nie znaleziono następnej minuty w bieżącej godzinie (musimy przejść do następnej godziny)
+      nextMinute = allowedMinutes[0];
       currentHour++;
-    }
-    
-    // Znajdź następną dozwoloną godzinę
-    let nextHour = currentHour;
-    if (currentHour >= 24 || !allowedHours.includes(currentHour)) {
-      nextHour = findNext(currentHour % 24, allowedHours, 23, true);
-      if (nextHour === null || nextHour <= currentHour % 24) {
-        // Przejdź do następnego dnia
-        nextHour = allowedHours[0] || 0;
-        currentDay++;
+      
+      // Sprawdź czy ta godzina jest dozwolona
+      if (currentHour >= 24 || !allowedHours.includes(currentHour % 24)) {
+        // Znajdź następną dozwoloną godzinę
+        let nextHour = findNext(currentHour % 24, allowedHours, 23);
+        
+        if (nextHour === null || nextHour < currentHour % 24) {
+          // Jeśli nie znaleziono w obecnym dniu, przechodzimy do następnego dnia
+          nextHour = allowedHours[0];
+          nextRun.setDate(nextRun.getDate() + 1);
+        }
+        
+        nextRun.setHours(nextHour);
+        nextRun.setMinutes(allowedMinutes[0]);
+      } else {
+        // Ustaw na następną godzinę i pierwszą dozwoloną minutę
+        nextRun.setHours(currentHour);
+        nextRun.setMinutes(allowedMinutes[0]);
       }
+    } else {
+      // Ustaw minutę, a godzina zostaje ta sama
+      nextRun.setMinutes(nextMinute);
     }
     
-    // Ustaw obliczone wartości
-    nextRun.setMinutes(nextMinute);
-    nextRun.setHours(nextHour);
-    
-    // Sprawdź czy dzień/miesiąc/dzień tygodnia też są zgodne z harmonogramem
-    // (Dla uproszczenia pomijamy pełną weryfikację dni/miesięcy)
-    
-    // Jeśli obliczony czas jest w przeszłości, dodaj jeden dzień
+    // Dodatkowe sprawdzenie: jeśli obliczony czas jest w przeszłości, dodaj jeszcze minutę
     if (nextRun <= now) {
-      nextRun.setDate(nextRun.getDate() + 1);
+      nextRun = new Date(nextRun.getTime() + 60000); // +1 minuta
     }
     
     // Zapisz obliczony następny czas uruchomienia
     this.nextRun = nextRun;
     
-    // Dodaj log debugowania
-    console.log(`Obliczono następny czas uruchomienia dla "${this.name}": ${nextRun.toISOString()}`);
-    console.log(`Harmonogram: ${this.schedule.minute} ${this.schedule.hour} ${this.schedule.dayOfMonth} ${this.schedule.month} ${this.schedule.dayOfWeek}`);
+    logger.info(`Obliczono następny czas uruchomienia dla "${this.name}": ${nextRun.toISOString()}`);
+    logger.debug(`Harmonogram: ${this.schedule.minute} ${this.schedule.hour} ${this.schedule.dayOfMonth} ${this.schedule.month} ${this.schedule.dayOfWeek}`);
     
     return this.nextRun;
-  };
-  
+};
+
 // Metoda do sprawdzania, czy feed powinien zostać uruchomiony
 LiveFeedSchema.methods.shouldRun = function(currentTime) {
   // Sprawdza czy bieżący czas pasuje do harmonogramu
   const date = currentTime || new Date();
   
-  // Sprawdź minutę
-  if (this.schedule.minute !== '*') {
-    const minutes = this.schedule.minute.split(',').map(m => parseInt(m.trim()));
-    if (!minutes.includes(date.getMinutes())) return false;
+  // Funkcja do sprawdzania czy wartość pasuje do wzorca CRON
+  function matchesCronPattern(value, pattern) {
+    if (pattern === '*') return true;
+    
+    // Obsługa wielu wartości oddzielonych przecinkiem
+    if (pattern.includes(',')) {
+      const values = pattern.split(',').map(v => parseInt(v.trim()));
+      return values.includes(value);
+    }
+    
+    // Dopasowanie pojedynczej wartości
+    return parseInt(pattern) === value;
   }
+  
+  // Sprawdź minutę
+  if (!matchesCronPattern(date.getMinutes(), this.schedule.minute)) return false;
   
   // Sprawdź godzinę
-  if (this.schedule.hour !== '*') {
-    const hours = this.schedule.hour.split(',').map(h => parseInt(h.trim()));
-    if (!hours.includes(date.getHours())) return false;
-  }
+  if (!matchesCronPattern(date.getHours(), this.schedule.hour)) return false;
   
   // Sprawdź dzień miesiąca
-  if (this.schedule.dayOfMonth !== '*') {
-    const days = this.schedule.dayOfMonth.split(',').map(d => parseInt(d.trim()));
-    if (!days.includes(date.getDate())) return false;
-  }
+  if (!matchesCronPattern(date.getDate(), this.schedule.dayOfMonth)) return false;
   
   // Sprawdź miesiąc (JavaScript używa miesięcy 0-11, więc dodajemy 1)
-  if (this.schedule.month !== '*') {
-    const months = this.schedule.month.split(',').map(m => parseInt(m.trim()));
-    if (!months.includes(date.getMonth() + 1)) return false;
-  }
+  if (!matchesCronPattern(date.getMonth() + 1, this.schedule.month)) return false;
   
   // Sprawdź dzień tygodnia
-  if (this.schedule.dayOfWeek !== '*') {
-    const daysOfWeek = this.schedule.dayOfWeek.split(',').map(d => parseInt(d.trim()));
-    if (!daysOfWeek.includes(date.getDay())) return false;
-  }
+  if (!matchesCronPattern(date.getDay(), this.schedule.dayOfWeek)) return false;
   
   return true;
 };
 
+// Na końcu pliku eksportujemy model
 module.exports = mongoose.model('LiveFeed', LiveFeedSchema);
