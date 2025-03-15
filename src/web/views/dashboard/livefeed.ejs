@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -77,13 +76,19 @@
                     <p>
                       <i class="fas fa-clock me-2 text-muted"></i>
                       <strong>Ostatnie uruchomienie:</strong> 
-                      <%= feed.lastRun ? `<span title="${new Date(feed.lastRun).toLocaleString()}">${timeAgo(feed.lastRun)}</span>` : 'Nigdy' %>
-                    </p>
+                      <% if (feed.nextRun) { %>
+                        <span title="<%= new Date(feed.nextRun).toLocaleString() %>"><%= timeAgo(feed.lastRun) %></span>
+                      <% } else { %>
+                        Nieznane
+                      <% } %>
                     <p>
                       <i class="fas fa-calendar-check me-2 text-muted"></i>
                       <strong>Następne uruchomienie:</strong> 
-                      <%= feed.nextRun ? `<span title="${new Date(feed.nextRun).toLocaleString()}">${timeAgo(feed.nextRun)}</span>` : 'Nieznane' %>
-                    </p>
+                      <% if (feed.nextRun) { %>
+                        <span title="<%= new Date(feed.nextRun).toLocaleString() %>"><%= timeAgo(feed.nextRun) %></span>
+                      <% } else { %>
+                        Nieznane
+                      <% } %>
                     <p>
                       <i class="fas fa-toggle-on me-2 text-muted"></i>
                       <strong>Status:</strong> 
@@ -151,60 +156,436 @@
               <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
               <div class="form-text">Wpisz treść wiadomości, która będzie wysyłana zgodnie z harmonogramem.</div>
             </div>
-                          <div class="card mb-3">
-                <div class="card-header">
-                  <h6 class="mb-0">Harmonogram</h6>
+            <div class="card mb-3">
+              <div class="card-header">
+                <h6 class="mb-0">Harmonogram</h6>
+              </div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label for="minute" class="form-label">Minuta (0-59)</label>
+                    <input type="text" class="form-control" id="minute" name="minute" placeholder="*">
+                    <div class="form-text">* dla każdej minuty, lub konkretne wartości, np. 0,15,30,45</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="hour" class="form-label">Godzina (0-23)</label>
+                    <input type="text" class="form-control" id="hour" name="hour" placeholder="*">
+                    <div class="form-text">* dla każdej godziny, lub konkretne wartości, np. 9,12,18</div>
+                  </div>
                 </div>
-                <div class="card-body">
-                  <div class="row mb-3">
-                    <div class="col-md-6">
-                      <label for="minute" class="form-label">Minuta (0-59)</label>
-                      <input type="text" class="form-control" id="minute" name="minute" placeholder="*">
-                      <div class="form-text">* dla każdej minuty, lub konkretne wartości, np. 0,15,30,45</div>
-                    </div>
-                    <div class="col-md-6">
-                      <label for="hour" class="form-label">Godzina (0-23)</label>
-                      <input type="text" class="form-control" id="hour" name="hour" placeholder="*">
-                      <div class="form-text">* dla każdej godziny, lub konkretne wartości, np. 9,12,18</div>
-                    </div>
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <label for="day" class="form-label">Dzień miesiąca (1-31)</label>
+                    <input type="text" class="form-control" id="day" name="day" placeholder="*">
+                    <div class="form-text">* dla każdego dnia</div>
                   </div>
-                  <div class="row mb-3">
-                    <div class="col-md-4">
-                      <label for="day" class="form-label">Dzień miesiąca (1-31)</label>
-                      <input type="text" class="form-control" id="day" name="day" placeholder="*">
-                      <div class="form-text">* dla każdego dnia</div>
-                    </div>
-                    <div class="col-md-4">
-                      <label for="month" class="form-label">Miesiąc (1-12)</label>
-                      <input type="text" class="form-control" id="month" name="month" placeholder="*">
-                      <div class="form-text">* dla każdego miesiąca</div>
-                    </div>
-                    <div class="col-md-4">
-                      <label for="weekday" class="form-label">Dzień tygodnia (0-6)</label>
-                      <input type="text" class="form-control" id="weekday" name="weekday" placeholder="*">
-                      <div class="form-text">0=niedziela, 6=sobota, * dla każdego dnia</div>
-                    </div>
+                  <div class="col-md-4">
+                    <label for="month" class="form-label">Miesiąc (1-12)</label>
+                    <input type="text" class="form-control" id="month" name="month" placeholder="*">
+                    <div class="form-text">* dla każdego miesiąca</div>
                   </div>
-                  <div id="scheduleSummary" class="alert alert-info mt-2">
-                    Podgląd harmonogramu pojawi się tutaj po uzupełnieniu pól
+                  <div class="col-md-4">
+                    <label for="weekday" class="form-label">Dzień tygodnia (0-6)</label>
+                    <input type="text" class="form-control" id="weekday" name="weekday" placeholder="*">
+                    <div class="form-text">0=niedziela, 6=sobota, * dla każdego dnia</div>
                   </div>
+                </div>
+                <div id="scheduleSummary" class="alert alert-info mt-2">
+                  Podgląd harmonogramu pojawi się tutaj po uzupełnieniu pól
                 </div>
               </div>
-              
-              <div class="card mb-3">
-                <div class="card-header">
-                  <h6 class="mb-0">Opcje wyglądu</h6>
+            </div>
+            
+            <div class="card mb-3">
+              <div class="card-header">
+                <h6 class="mb-0">Opcje wyglądu</h6>
+              </div>
+              <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="embed" name="embed">
+                  <label class="form-check-label" for="embed">
+                    Wysyłaj jako osadzoną wiadomość (embed)
+                  </label>
                 </div>
-                <div class="card-body">
-                  <div class="form-check form-switch mb-3">
-                    <input class="form-check-input" type="checkbox" id="embed" name="embed">
-                    <label class="form-check-label" for="embed">
-                      Wysyłaj jako osadzoną wiadomość (embed)
-                    </label>
-                  </div>
-                  <div class="mb-3" id="colorContainer" style="display: none;">
-                    <label for="color" class="form-label">Kolor embeda</label>
-                    <input type="color" class="form-control form-control-color" id="color" name="color" value="#3498db">
-                  </div>
+                <div class="mb-3" id="colorContainer" style="display: none;">
+                  <label for="color" class="form-label">Kolor embeda</label>
+                  <input type="color" class="form-control form-control-color" id="color" name="color" value="#3498db">
                 </div>
               </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-primary" id="createLiveFeedButton">Utwórz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal do edycji harmonogramu -->
+  <div class="modal fade" id="editLiveFeedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edytuj harmonogram wiadomości</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editLiveFeedForm">
+            <input type="hidden" id="editFeedId" name="feedId">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="editName" class="form-label">Nazwa harmonogramu</label>
+                <input type="text" class="form-control" id="editName" name="name" required>
+              </div>
+              <div class="col-md-6">
+                <label for="editChannelId" class="form-label">Kanał</label>
+                <select class="form-select" id="editChannelId" name="channelId" required>
+                  <option value="">Wybierz kanał...</option>
+                  <% channels.forEach(channel => { %>
+                    <option value="<%= channel.id %>">#<%= channel.name %></option>
+                  <% }); %>
+                </select>
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="editMessage" class="form-label">Treść wiadomości</label>
+              <textarea class="form-control" id="editMessage" name="message" rows="5" required></textarea>
+              <div class="form-text">Wpisz treść wiadomości, która będzie wysyłana zgodnie z harmonogramem.</div>
+            </div>
+            <div class="card mb-3">
+              <div class="card-header">
+                <h6 class="mb-0">Harmonogram</h6>
+              </div>
+              <div class="card-body">
+                <div class="row mb-3">
+                  <div class="col-md-6">
+                    <label for="editMinute" class="form-label">Minuta (0-59)</label>
+                    <input type="text" class="form-control" id="editMinute" name="minute" placeholder="*">
+                    <div class="form-text">* dla każdej minuty, lub konkretne wartości, np. 0,15,30,45</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label for="editHour" class="form-label">Godzina (0-23)</label>
+                    <input type="text" class="form-control" id="editHour" name="hour" placeholder="*">
+                    <div class="form-text">* dla każdej godziny, lub konkretne wartości, np. 9,12,18</div>
+                  </div>
+                </div>
+                <div class="row mb-3">
+                  <div class="col-md-4">
+                    <label for="editDay" class="form-label">Dzień miesiąca (1-31)</label>
+                    <input type="text" class="form-control" id="editDay" name="day" placeholder="*">
+                    <div class="form-text">* dla każdego dnia</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="editMonth" class="form-label">Miesiąc (1-12)</label>
+                    <input type="text" class="form-control" id="editMonth" name="month" placeholder="*">
+                    <div class="form-text">* dla każdego miesiąca</div>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="editWeekday" class="form-label">Dzień tygodnia (0-6)</label>
+                    <input type="text" class="form-control" id="editWeekday" name="weekday" placeholder="*">
+                    <div class="form-text">0=niedziela, 6=sobota, * dla każdego dnia</div>
+                  </div>
+                </div>
+                <div id="editScheduleSummary" class="alert alert-info mt-2">
+                  Podgląd harmonogramu pojawi się tutaj po uzupełnieniu pól
+                </div>
+              </div>
+            </div>
+            
+            <div class="card mb-3">
+              <div class="card-header">
+                <h6 class="mb-0">Opcje wyglądu</h6>
+              </div>
+              <div class="card-body">
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="editEmbed" name="embed">
+                  <label class="form-check-label" for="editEmbed">
+                    Wysyłaj jako osadzoną wiadomość (embed)
+                  </label>
+                </div>
+                <div class="mb-3" id="editColorContainer" style="display: none;">
+                  <label for="editColor" class="form-label">Kolor embeda</label>
+                  <input type="color" class="form-control form-control-color" id="editColor" name="color" value="#3498db">
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-primary" id="updateLiveFeedButton">Zapisz zmiany</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/dark-mode.js"></script>
+  
+  <script>
+    // Funkcje obsługi modalu dla Embed
+    document.getElementById('embed').addEventListener('change', function() {
+      const colorContainer = document.getElementById('colorContainer');
+      colorContainer.style.display = this.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('editEmbed').addEventListener('change', function() {
+      const colorContainer = document.getElementById('editColorContainer');
+      colorContainer.style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Aktualizacja podglądu harmonogramu
+    function updateScheduleSummary() {
+      const minute = document.getElementById('minute').value || '*';
+      const hour = document.getElementById('hour').value || '*';
+      const day = document.getElementById('day').value || '*';
+      const month = document.getElementById('month').value || '*';
+      const weekday = document.getElementById('weekday').value || '*';
+      
+      const summary = `Harmonogram: ${minute} ${hour} ${day} ${month} ${weekday} (format cron)`;
+      document.getElementById('scheduleSummary').innerText = summary;
+    }
+
+    function updateEditScheduleSummary() {
+      const minute = document.getElementById('editMinute').value || '*';
+      const hour = document.getElementById('editHour').value || '*';
+      const day = document.getElementById('editDay').value || '*';
+      const month = document.getElementById('editMonth').value || '*';
+      const weekday = document.getElementById('editWeekday').value || '*';
+      
+      const summary = `Harmonogram: ${minute} ${hour} ${day} ${month} ${weekday} (format cron)`;
+      document.getElementById('editScheduleSummary').innerText = summary;
+    }
+
+    // Dodaj nasłuchiwanie na zmiany w polach harmonogramu
+    ['minute', 'hour', 'day', 'month', 'weekday'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateScheduleSummary);
+    });
+
+    ['editMinute', 'editHour', 'editDay', 'editMonth', 'editWeekday'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateEditScheduleSummary);
+    });
+
+    // Funkcja tworzenia nowego Live Feed
+    document.getElementById('createLiveFeedButton').addEventListener('click', function() {
+      createLiveFeed('<%= guild.id %>');
+    });
+
+    // Funkcja aktualizacji istniejącego Live Feed
+    document.getElementById('updateLiveFeedButton').addEventListener('click', function() {
+      updateLiveFeed('<%= guild.id %>');
+    });
+
+    async function createLiveFeed(guildId) {
+      const form = document.getElementById('createLiveFeedForm');
+      const formData = new FormData(form);
+      
+      const data = {
+        name: formData.get('name'),
+        channelId: formData.get('channelId'),
+        message: formData.get('message'),
+        minute: formData.get('minute') || '*',
+        hour: formData.get('hour') || '*',
+        day: formData.get('day') || '*',
+        month: formData.get('month') || '*',
+        weekday: formData.get('weekday') || '*',
+        embed: formData.get('embed') ? true : false,
+        color: formData.get('color') || '#3498db'
+      };
+      
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/livefeeds`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Zamknij modal i odśwież stronę
+          const modal = bootstrap.Modal.getInstance(document.getElementById('createLiveFeedModal'));
+          modal.hide();
+          location.reload();
+        } else {
+          alert(`Błąd: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd podczas tworzenia Live Feed:', error);
+        alert('Wystąpił błąd podczas tworzenia harmonogramu.');
+      }
+    }
+
+    async function editFeed(feedId) {
+      try {
+        const response = await fetch(`/api/guilds/<%= guild.id %>/livefeeds/${feedId}`);
+        const result = await response.json();
+        
+        if (result.success) {
+          const feed = result.feed;
+          
+          // Wypełnij formularz danymi
+          document.getElementById('editFeedId').value = feed._id;
+          document.getElementById('editName').value = feed.name;
+          document.getElementById('editChannelId').value = feed.channelId;
+          document.getElementById('editMessage').value = feed.message;
+          document.getElementById('editMinute').value = feed.schedule.minute || '*';
+          document.getElementById('editHour').value = feed.schedule.hour || '*';
+          document.getElementById('editDay').value = feed.schedule.dayOfMonth || '*';
+          document.getElementById('editMonth').value = feed.schedule.month || '*';
+          document.getElementById('editWeekday').value = feed.schedule.dayOfWeek || '*';
+          document.getElementById('editEmbed').checked = feed.embed;
+          document.getElementById('editColor').value = feed.embedColor || '#3498db';
+          
+          // Pokaż/ukryj pole koloru
+          document.getElementById('editColorContainer').style.display = feed.embed ? 'block' : 'none';
+          
+          // Aktualizuj podgląd harmonogramu
+          updateEditScheduleSummary();
+          
+          // Otwórz modal
+          const modal = new bootstrap.Modal(document.getElementById('editLiveFeedModal'));
+          modal.show();
+        } else {
+          alert(`Błąd: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd podczas pobierania danych Live Feed:', error);
+        alert('Wystąpił błąd podczas pobierania danych harmonogramu.');
+      }
+    }
+
+    async function updateLiveFeed(guildId) {
+      const form = document.getElementById('editLiveFeedForm');
+      const formData = new FormData(form);
+      const feedId = formData.get('feedId');
+      
+      const data = {
+        name: formData.get('name'),
+        channelId: formData.get('channelId'),
+        message: formData.get('message'),
+        minute: formData.get('minute') || '*',
+        hour: formData.get('hour') || '*',
+        day: formData.get('day') || '*',
+        month: formData.get('month') || '*',
+        weekday: formData.get('weekday') || '*',
+        embed: formData.get('embed') ? true : false,
+        color: formData.get('color') || '#3498db'
+      };
+      
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/livefeeds/${feedId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Zamknij modal i odśwież stronę
+          const modal = bootstrap.Modal.getInstance(document.getElementById('editLiveFeedModal'));
+          modal.hide();
+          location.reload();
+        } else {
+          alert(`Błąd: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd podczas aktualizacji Live Feed:', error);
+        alert('Wystąpił błąd podczas aktualizacji harmonogramu.');
+      }
+    }
+
+    async function testFeed(guildId, feedId) {
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/livefeeds/${feedId}/test`, {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('Testowa wiadomość została wysłana!');
+        } else {
+          alert(`Błąd: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd podczas testowania Live Feed:', error);
+        alert('Wystąpił błąd podczas testowania harmonogramu.');
+      }
+    }
+
+    async function pauseFeed(guildId, feedId) {
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/livefeeds/${feedId}/pause`, {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert(`Błąd: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd podczas wstrzymywania Live Feed:', error);
+        alert('Wystąpił błąd podczas wstrzymywania harmonogramu.');
+      }
+    }
+
+    async function resumeFeed(guildId, feedId) {
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/livefeeds/${feedId}/resume`, {
+          method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert(`Błąd: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd podczas wznawiania Live Feed:', error);
+        alert('Wystąpił błąd podczas wznawiania harmonogramu.');
+      }
+    }
+
+    async function deleteFeed(guildId, feedId) {
+      if (!confirm('Czy na pewno chcesz usunąć ten harmonogram wiadomości?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/livefeeds/${feedId}`, {
+          method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          location.reload();
+        } else {
+          alert(`Błąd: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd podczas usuwania Live Feed:', error);
+        alert('Wystąpił błąd podczas usuwania harmonogramu.');
+      }
+    }
+
+    // Inicjalizacja
+    document.addEventListener('DOMContentLoaded', function() {
+      updateScheduleSummary();
+    });
+  </script>
+</body>
+</html>

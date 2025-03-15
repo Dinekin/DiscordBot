@@ -1,8 +1,8 @@
-// Dodaj te funkcje pomocnicze do pliku server.js jako middleware przed routingiem
-// lub utwórz plik src/web/helpers.js i zaimportuj go w server.js
+// src/web/helpers.js
+// Funkcje pomocnicze dla szablonów EJS
 
 module.exports = function(app) {
-app.use((req, res, next) => {
+  app.use((req, res, next) => {
     // Formatowanie harmonogramu CRON do czytelnej postaci dla człowieka
     res.locals.formatSchedule = function(schedule) {
       if (!schedule) return 'Nieznany harmonogram';
@@ -53,41 +53,115 @@ app.use((req, res, next) => {
       return parts.join(', ');
     };
     
-    // Formatowanie czasu względnego (np. "5 minut temu", "za 2 godziny")
+    // Formatowanie czasu względnego (np. "5 minut temu", "za 2 godziny", "za 1 dzień")
     res.locals.timeAgo = function(date) {
       if (!date) return 'nigdy';
       
       const now = new Date();
-      const past = new Date(date);
-      const diffMs = now - past;
-      const diffSec = Math.round(diffMs / 1000);
-      const diffMin = Math.round(diffSec / 60);
-      const diffHour = Math.round(diffMin / 60);
-      const diffDay = Math.round(diffHour / 24);
+      const targetDate = new Date(date);
+      const diffMs = targetDate - now; // Różnica w milisekundach (ujemna dla przeszłości, dodatnia dla przyszłości)
+      const isFuture = diffMs > 0;
       
-      function formatTimeDiff(diffSec, diffMin, diffHour, diffDay) {
-        if (diffDay > 30) {
-          return 'ponad miesiąc';
-        } else if (diffDay > 0) {
-          return `${diffDay} ${diffDay === 1 ? 'dzień' : (diffDay < 5 ? 'dni' : 'dni')}`;
-        } else if (diffHour > 0) {
-          return `${diffHour} ${diffHour === 1 ? 'godzinę' : (diffHour < 5 ? 'godziny' : 'godzin')}`;
-        } else if (diffMin > 0) {
-          return `${diffMin} ${diffMin === 1 ? 'minutę' : (diffMin < 5 ? 'minuty' : 'minut')}`;
-        } else {
-          return `${diffSec} ${diffSec === 1 ? 'sekundę' : (diffSec < 5 ? 'sekundy' : 'sekund')}`;
-        }
+      // Oblicz różnice w różnych jednostkach czasu
+      const absDiffMs = Math.abs(diffMs);
+      const absDiffSec = Math.floor(absDiffMs / 1000);
+      const absDiffMin = Math.floor(absDiffSec / 60);
+      const absDiffHour = Math.floor(absDiffMin / 60);
+      const absDiffDay = Math.floor(absDiffHour / 24);
+      const absDiffMonth = Math.floor(absDiffDay / 30);
+      const absDiffYear = Math.floor(absDiffDay / 365);
+      
+      // Funkcja pomocnicza do wyboru poprawnej formy gramatycznej (dla języka polskiego)
+      function polishPlural(number, singular, plural1, plural2) {
+        if (number === 1) return singular;
+        if (number % 10 >= 2 && number % 10 <= 4 && (number % 100 < 10 || number % 100 >= 20)) return plural1;
+        return plural2;
       }
       
-      if (diffSec < 0) {
-        // Przyszłość
-        return `za ${formatTimeDiff(-diffSec, -diffMin, -diffHour, -diffDay)}`;
+      let timeText = '';
+      
+      // Wybierz najbardziej odpowiednią jednostkę czasu
+      if (absDiffYear > 0) {
+        timeText = `${absDiffYear} ${polishPlural(absDiffYear, 'rok', 'lata', 'lat')}`;
+      } else if (absDiffMonth > 0) {
+        timeText = `${absDiffMonth} ${polishPlural(absDiffMonth, 'miesiąc', 'miesiące', 'miesięcy')}`;
+      } else if (absDiffDay > 0) {
+        timeText = `${absDiffDay} ${polishPlural(absDiffDay, 'dzień', 'dni', 'dni')}`;
+      } else if (absDiffHour > 0) {
+        timeText = `${absDiffHour} ${polishPlural(absDiffHour, 'godzinę', 'godziny', 'godzin')}`;
+      } else if (absDiffMin > 0) {
+        timeText = `${absDiffMin} ${polishPlural(absDiffMin, 'minutę', 'minuty', 'minut')}`;
       } else {
-        // Przeszłość
-        return `${formatTimeDiff(diffSec, diffMin, diffHour, diffDay)} temu`;
+        timeText = `${absDiffSec} ${polishPlural(absDiffSec, 'sekundę', 'sekundy', 'sekund')}`;
       }
+      
+      // Dodaj odpowiedni przedrostek w zależności czy data jest w przyszłości czy przeszłości
+      return isFuture ? `za ${timeText}` : `${timeText} temu`;
+    };
+    
+    // Formatowanie daty do czytelnego formatu
+    res.locals.formatDate = function(date) {
+      if (!date) return 'brak daty';
+      
+      const d = new Date(date);
+      return d.toLocaleString('pl-PL', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+    
+    // Formatowanie liczby z separatorem tysięcy
+    res.locals.formatNumber = function(num) {
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    };
+    
+    // Skracanie tekstu
+    res.locals.truncateText = function(text, length = 100) {
+      if (!text) return '';
+      if (text.length <= length) return text;
+      return text.substring(0, length) + '...';
+    };
+    
+    // Sprawdzanie uprawnień użytkownika
+    res.locals.hasPermission = function(user, guildId, permission) {
+      if (!user || !user.guilds) return false;
+      
+      const guild = user.guilds.find(g => g.id === guildId);
+      if (!guild) return false;
+      
+      // Konwersja permisji string -> liczba (dla wygody)
+      const permissionMap = {
+        'ADMINISTRATOR': 0x8,
+        'MANAGE_GUILD': 0x20,
+        'MANAGE_ROLES': 0x10000000,
+        'MANAGE_CHANNELS': 0x10,
+        'MANAGE_MESSAGES': 0x2000
+      };
+      
+      // Jeśli użytkownik jest administratorem, zawsze ma wszystkie uprawnienia
+      if ((guild.permissions & 0x8) === 0x8) return true;
+      
+      // W przeciwnym razie sprawdź konkretne uprawnienia
+      const permValue = permissionMap[permission] || 0;
+      return (guild.permissions & permValue) === permValue;
+    };
+    
+    // Formatowanie koloru hex
+    res.locals.formatColor = function(color) {
+      if (!color) return '#000000';
+      if (color.startsWith('#')) return color;
+      return `#${color}`;
+    };
+    
+    // Stwórz funkcję do sprawdzania statusu modułu (do użycia w templateach)
+    res.locals.isModuleEnabled = function(settings, moduleName) {
+      if (!settings || !settings.modules) return false;
+      return settings.modules[moduleName] === true;
     };
     
     next();
   });
-}
+};

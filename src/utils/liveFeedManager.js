@@ -69,15 +69,18 @@ class LiveFeedManager {
     
     for (const [id, feed] of this.feeds.entries()) {
       try {
-        // Sprawdź czy feed powinien zostać uruchomiony
-        if (feed.shouldRun(now)) {
+        // Sprawdź czy feed powinien zostać uruchomiony na podstawie harmonogramu CRON
+        if (this.shouldRunCron(feed, now)) {
           logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
           await this.executeFeed(feed);
           
           // Aktualizuj czas ostatniego uruchomienia
           feed.lastRun = now;
-          feed.calculateNextRun();
+          feed.calculateNextRun(); // Oblicz następny czas uruchomienia
           await feed.save();
+          
+          // Dodaj logging informacji o następnym uruchomieniu
+          logger.info(`Następne uruchomienie live feed "${feed.name}" (ID: ${id}) zaplanowane na: ${feed.nextRun}`);
         }
       } catch (error) {
         logger.error(`Błąd podczas wykonywania live feed ${id}: ${error.stack}`);
@@ -85,6 +88,57 @@ class LiveFeedManager {
     }
   }
 
+  // Poprawiona funkcja sprawdzania, czy feed powinien zostać uruchomiony
+  shouldRunCron(feed, currentTime) {
+    const date = currentTime || new Date();
+    
+    // Wyciągnij komponenty daty
+    const minute = date.getMinutes();
+    const hour = date.getHours();
+    const dayOfMonth = date.getDate();
+    const month = date.getMonth() + 1; // JavaScript zwraca miesiące 0-11
+    const dayOfWeek = date.getDay(); // 0 = niedziela, 6 = sobota
+    
+    // Funkcja do sprawdzania czy wartość pasuje do wzorca CRON
+    function matchesCronPattern(value, pattern) {
+      if (pattern === '*') return true;
+      
+      // Obsługa wielu wartości oddzielonych przecinkiem
+      if (pattern.includes(',')) {
+        const allowed = pattern.split(',').map(p => parseInt(p.trim()));
+        return allowed.includes(value);
+      }
+      
+      // Dopasowanie pojedynczej wartości
+      return parseInt(pattern) === value;
+    }
+    
+    // Debugowanie - wypisz szczegóły sprawdzania
+    logger.debug(`Sprawdzanie harmonogramu dla feed "${feed.name}" (ID: ${feed._id}):
+      Czas sprawdzania: ${date.toISOString()}
+      Minuta: ${minute} vs ${feed.schedule.minute} -> ${matchesCronPattern(minute, feed.schedule.minute) ? 'TAK' : 'NIE'}
+      Godzina: ${hour} vs ${feed.schedule.hour} -> ${matchesCronPattern(hour, feed.schedule.hour) ? 'TAK' : 'NIE'}
+      Dzień miesiąca: ${dayOfMonth} vs ${feed.schedule.dayOfMonth} -> ${matchesCronPattern(dayOfMonth, feed.schedule.dayOfMonth) ? 'TAK' : 'NIE'}
+      Miesiąc: ${month} vs ${feed.schedule.month} -> ${matchesCronPattern(month, feed.schedule.month) ? 'TAK' : 'NIE'}
+      Dzień tygodnia: ${dayOfWeek} vs ${feed.schedule.dayOfWeek} -> ${matchesCronPattern(dayOfWeek, feed.schedule.dayOfWeek) ? 'TAK' : 'NIE'}`);
+    
+    // Sprawdź, czy wszystkie komponenty daty pasują do harmonogramu
+    const minuteMatches = matchesCronPattern(minute, feed.schedule.minute);
+    const hourMatches = matchesCronPattern(hour, feed.schedule.hour);
+    const dayMatches = matchesCronPattern(dayOfMonth, feed.schedule.dayOfMonth);
+    const monthMatches = matchesCronPattern(month, feed.schedule.month);
+    const weekdayMatches = matchesCronPattern(dayOfWeek, feed.schedule.dayOfWeek);
+    
+    const result = minuteMatches && hourMatches && dayMatches && monthMatches && weekdayMatches;
+    
+    // Jeśli feed powinien zostać uruchomiony, zaloguj ten fakt
+    if (result) {
+      logger.info(`Feed "${feed.name}" (ID: ${feed._id}) powinien zostać uruchomiony o ${date.toISOString()}!`);
+      logger.info(`(harmonogram: ${feed.schedule.minute} ${feed.schedule.hour} ${feed.schedule.dayOfMonth} ${feed.schedule.month} ${feed.schedule.dayOfWeek})`);
+    }
+    
+    return result;
+  }
   // Wykonaj pojedynczy feed
   async executeFeed(feed) {
     try {
