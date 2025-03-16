@@ -6,6 +6,7 @@ const { setupGiveawaysManager } = require('./utils/giveawayManager');
 const logger = require('./utils/logger');
 const { checkExpiredRoles } = require('./utils/checkExpiredRoles');
 const { LiveFeedManager } = require('./utils/liveFeedManager');
+const { initAllowlist } = require('./utils/initAllowlist');
 
 // Konfiguracja klienta Discord z odpowiednimi uprawnieniami
 const client = new Client({
@@ -131,7 +132,7 @@ async function startBot() {
     // Ładowanie komend i eventów
     loadCommands();
     loadEvents();
-    
+    initAllowlist(client);
     // Lista zarejestrowanych listenerów po załadowaniu
     listRegisteredEvents();
     
