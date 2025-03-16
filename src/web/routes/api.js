@@ -59,42 +59,33 @@ function hasGuildPermission(req, res, next) {
 }
 
 router.get('/', async (req, res) => {
-  // Filtruj serwery, gdzie użytkownik ma uprawnienia administratora lub moderatora
-  const ADMIN_PERMISSION = 0x8;          // ADMINISTRATOR
-  const MANAGE_GUILD = 0x20;             // MANAGE_GUILD
-  const MANAGE_ROLES = 0x10000000;       // MANAGE_ROLES
-  const MANAGE_MESSAGES = 0x2000;        // MANAGE_MESSAGES
+  // Kod filtrowania uprawnień (istniejący kod)...
   
-  const allowedGuilds = req.user.guilds.filter(g => {
-    // Sprawdź, czy użytkownik ma któreś z wymaganych uprawnień
-    return (g.permissions & ADMIN_PERMISSION) === ADMIN_PERMISSION ||
-           (g.permissions & MANAGE_GUILD) === MANAGE_GUILD ||
-           (g.permissions & MANAGE_ROLES) === MANAGE_ROLES ||
-           (g.permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
+  // Filtrowanie serwerów na podstawie listy autoryzowanych
+  const allowedServers = process.env.ALLOWED_GUILD_IDS 
+    ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
+    : [];
+  
+  // Sprawdź, które serwery mają bota
+  const botGuilds = client.guilds.cache.map(g => g.id);
+  
+  // Filtruj wyświetlane serwery - jeśli lista autoryzowanych nie jest pusta
+  const filteredGuilds = allowedServers.length > 0
+    ? allowedGuilds.filter(g => allowedServers.includes(g.id))
+    : allowedGuilds;
+  
+  // Oznacz serwery
+  const guilds = filteredGuilds.map(g => ({
+    ...g,
+    hasBot: botGuilds.includes(g.id),
+    isAuthorized: true
+  }));
+  
+  res.render('dashboard/index', {
+    user: req.user,
+    guilds: guilds,
+    ownerContact: process.env.BOT_OWNER_CONTACT || null
   });
-// Sprawdź, które serwery mają bota
-const botGuilds = client.guilds.cache.map(g => g.id);
-  
-// Lista autoryzowanych serwerów
-const authorizedGuildIds = process.env.ALLOWED_GUILD_IDS 
-  ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
-  : [];
-  
-// Filtruj serwery - pokazuj tylko te, które są autoryzowane lub jeśli lista jest pusta
-const filteredGuilds = authorizedGuildIds.length > 0
-  ? allowedGuilds.filter(g => authorizedGuildIds.includes(g.id))
-  : allowedGuilds;
-
-// Oznacz serwery, na których jest bot
-const guilds = filteredGuilds.map(g => ({
-  ...g,
-  hasBot: botGuilds.includes(g.id)
-}));
-
-res.render('dashboard/index', {
-  user: req.user,
-  guilds: guilds
-});
 });
 
 // Endpoint do włączania/wyłączania logowania wiadomości

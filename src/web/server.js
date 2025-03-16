@@ -82,6 +82,47 @@ function hasModeratorPermissions(permissions) {
          (permissions & PERMISSIONS.MANAGE_MESSAGES) === PERMISSIONS.MANAGE_MESSAGES;
 }
 
+function generateAuthenticatedOAuthURL() {
+  const baseURL = `https://discord.com/api/oauth2/authorize`;
+  const clientID = process.env.CLIENT_ID;
+  const redirectURI = encodeURIComponent(process.env.CALLBACK_URL);
+  
+  // Pobierz listę autoryzowanych serwerów
+  const allowedServers = process.env.ALLOWED_GUILD_IDS 
+    ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
+    : [];
+  
+  // Jeśli lista jest pusta, zwróć standardowy URL
+  if (allowedServers.length === 0) {
+    return `${baseURL}?client_id=${clientID}&permissions=8&scope=bot%20applications.commands`;
+  }
+  
+  // Ogranicz do autoryzowanych serwerów
+  const guildParam = allowedServers.length === 1 
+    ? `&guild_id=${allowedServers[0]}` 
+    : `&guild_ids=${allowedServers.join(',')}`;
+  
+  return `${baseURL}?client_id=${clientID}&permissions=8&scope=bot%20applications.commands${guildParam}`;
+}
+
+// Dodaj funkcję do zmiennych lokalnych, aby była dostępna w szablonach
+app.locals.getInviteURL = generateAuthenticatedOAuthURL;
+
+// Dodaj też te pomocnicze funkcje
+app.locals.isGuildAuthorized = function(guildId) {
+  const allowedServers = process.env.ALLOWED_GUILD_IDS 
+    ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
+    : [];
+  
+  return allowedServers.length === 0 || allowedServers.includes(guildId);
+};
+
+app.locals.getAuthorizedServers = function() {
+  return process.env.ALLOWED_GUILD_IDS 
+    ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
+    : [];
+};
+
 // Dodaj funkcję pomocniczą globalne dla wszystkich widoków
 app.locals.hasModeratorPermissions = hasModeratorPermissions;
 app.locals.PERMISSIONS = PERMISSIONS;

@@ -32,9 +32,25 @@
                             Zarządzaj
                           </a>
                         <% } else { %>
-                          <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>" class="btn btn-outline-primary mt-auto">
-                            Dodaj bota
-                          </a>
+                          <% 
+                          // Sprawdź, czy serwer jest na liście dozwolonych
+                          const allowedServers = process.env.ALLOWED_GUILD_IDS 
+                            ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
+                            : [];
+                          
+                          // Jeśli lista jest pusta, wszystkie serwery są dozwolone
+                          const isAllowed = allowedServers.length === 0 || allowedServers.includes(guild.id);
+                          %>
+                          
+                          <% if (isAllowed) { %>
+                            <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>" class="btn btn-outline-primary mt-auto">
+                              <i class="fas fa-plus-circle me-1"></i> Dodaj bota
+                            </a>
+                          <% } else { %>
+                            <button class="btn btn-outline-secondary mt-auto" disabled title="Ten serwer nie jest autoryzowany">
+                              <i class="fas fa-lock me-1"></i> Serwer nieautoryzowany
+                            </button>
+                          <% } %>
                         <% } %>
                       </div>
                     </div>
@@ -46,18 +62,28 @@
                     Nie masz dostępu do żadnych serwerów lub nie jesteś administratorem ani moderatorem na żadnym serwerze.
                   </div>
                 </div>
-              <% } %>
-              <% if (guilds && guilds.length === 0 && process.env.ALLOWED_GUILD_IDS && process.env.ALLOWED_GUILD_IDS.length > 0) { %>
-  
-    
-      
-                Uwaga: Nie posiadasz dostępu do żadnych autoryzowanych serwerów.
-                <% if (process.env.BOT_OWNER_CONTACT) { %>
-                  Skontaktuj się z właścicielem bota: <%= process.env.BOT_OWNER_CONTACT %> aby uzyskać autoryzację.
-                <% } %>
-              
-            
-          <% } %>
+                <% 
+                  const allowedServers = process.env.ALLOWED_GUILD_IDS 
+                    ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
+                    : [];
+
+                  if (allowedServers.length > 0) {
+                    // Sprawdź, czy użytkownik ma jakikolwiek autoryzowany serwer
+                    const hasAuthorizedServer = guilds.some(g => allowedServers.includes(g.id));
+                    
+                    if (!hasAuthorizedServer) { 
+                  %>
+                    <div class="alert alert-warning mt-4">
+                      <i class="fas fa-exclamation-triangle me-2"></i>
+                      <strong>Uwaga:</strong> Nie posiadasz dostępu do żadnych autoryzowanych serwerów.
+                      <% if (process.env.BOT_OWNER_CONTACT) { %>
+                        Aby uzyskać autoryzację, skontaktuj się z: <%= process.env.BOT_OWNER_CONTACT %>
+                      <% } %>
+                    </div>
+                  <% 
+                    }
+                  } 
+                  %>
             </div>
           </div>
         </div>
