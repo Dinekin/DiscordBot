@@ -66,26 +66,36 @@ function isAuthenticated(req, res, next) {
   res.redirect('/login');
 }
 
-// Funkcja pomocnicza do sprawdzania uprawnień serwera
-function hasModeratorPermission(userPermissions) {
-  const ADMIN = 0x8;             // ADMINISTRATOR
-  const MANAGE_GUILD = 0x20;     // MANAGE_GUILD
-  const MANAGE_ROLES = 0x10000000; // MANAGE_ROLES
-  const MANAGE_MESSAGES = 0x2000; // MANAGE_MESSAGES
-  
-  return (userPermissions & ADMIN) === ADMIN ||
-         (userPermissions & MANAGE_GUILD) === MANAGE_GUILD ||
-         (userPermissions & MANAGE_ROLES) === MANAGE_ROLES ||
-         (userPermissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
+// Definiujemy stałe dla uprawnień
+const PERMISSIONS = {
+  ADMIN: 0x8,              // ADMINISTRATOR
+  MANAGE_GUILD: 0x20,      // MANAGE_GUILD
+  MANAGE_ROLES: 0x10000000, // MANAGE_ROLES
+  MANAGE_MESSAGES: 0x2000   // MANAGE_MESSAGES
+};
+
+// Funkcja pomocnicza do sprawdzania uprawnień
+function hasModeratorPermissions(permissions) {
+  return (permissions & PERMISSIONS.ADMIN) === PERMISSIONS.ADMIN ||
+         (permissions & PERMISSIONS.MANAGE_GUILD) === PERMISSIONS.MANAGE_GUILD ||
+         (permissions & PERMISSIONS.MANAGE_ROLES) === PERMISSIONS.MANAGE_ROLES ||
+         (permissions & PERMISSIONS.MANAGE_MESSAGES) === PERMISSIONS.MANAGE_MESSAGES;
 }
 
-// Dodaj funkcję pomocniczą do aplikacji, aby była dostępna w szablonach
-app.locals.hasModeratorPermission = hasModeratorPermission;
+// Dodaj funkcję pomocniczą globalne dla wszystkich widoków
+app.locals.hasModeratorPermissions = hasModeratorPermissions;
+app.locals.PERMISSIONS = PERMISSIONS;
 
 // Ładowanie tras
 app.use('/', require('./routes/auth'));
 app.use('/dashboard', isAuthenticated, require('./routes/dashboard'));
 app.use('/api', isAuthenticated, require('./routes/api'));
+
+// Middleware dla zmiennej path we wszystkich widokach
+app.use((req, res, next) => {
+  res.locals.path = req.path;
+  next();
+});
 
 // Strona główna
 app.get('/', (req, res) => {

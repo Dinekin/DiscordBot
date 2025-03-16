@@ -7,48 +7,55 @@ const MessageLog = require('../../models/MessageLog');
 const { EmbedBuilder } = require('discord.js');
 const logger = require('../../utils/logger');
 
-const MOD_PERMISSIONS = {
-  ADMIN: 0x8,             // ADMINISTRATOR
-  MANAGE_GUILD: 0x20,     // MANAGE_GUILD
+// Uprawnienia moderatora
+const PERMISSIONS = {
+  ADMIN: 0x8,              // ADMINISTRATOR
+  MANAGE_GUILD: 0x20,      // MANAGE_GUILD
   MANAGE_ROLES: 0x10000000, // MANAGE_ROLES
-  MANAGE_MESSAGES: 0x2000 // MANAGE_MESSAGES
+  MANAGE_MESSAGES: 0x2000   // MANAGE_MESSAGES
 };
 
-function hasModeratorPermission(userPermissions) {
-  return (userPermissions & MOD_PERMISSIONS.ADMIN) === MOD_PERMISSIONS.ADMIN ||
-         (userPermissions & MOD_PERMISSIONS.MANAGE_GUILD) === MOD_PERMISSIONS.MANAGE_GUILD ||
-         (userPermissions & MOD_PERMISSIONS.MANAGE_ROLES) === MOD_PERMISSIONS.MANAGE_ROLES ||
-         (userPermissions & MOD_PERMISSIONS.MANAGE_MESSAGES) === MOD_PERMISSIONS.MANAGE_MESSAGES;
+// Funkcja pomocnicza do sprawdzania uprawnień moderatora
+function hasModeratorPermissions(permissions) {
+  return (permissions & PERMISSIONS.ADMIN) === PERMISSIONS.ADMIN ||
+         (permissions & PERMISSIONS.MANAGE_GUILD) === PERMISSIONS.MANAGE_GUILD ||
+         (permissions & PERMISSIONS.MANAGE_ROLES) === PERMISSIONS.MANAGE_ROLES ||
+         (permissions & PERMISSIONS.MANAGE_MESSAGES) === PERMISSIONS.MANAGE_MESSAGES;
 }
 
 // Middleware do sprawdzania uprawnień na serwerze
 function hasGuildPermission(req, res, next) {
-  if (!req.params.guildId) {
-    return res.status(400).json({ error: 'Brak ID serwera' });
+  try {
+    if (!req.params.guildId) {
+      return res.status(400).json({ error: 'Brak ID serwera' });
+    }
+    
+    const guild = req.user.guilds.find(g => g.id === req.params.guildId);
+    
+    if (!guild) {
+      return res.status(403).json({ error: 'Nie masz dostępu do tego serwera' });
+    }
+    
+    // Sprawdź czy użytkownik ma uprawnienia moderatora
+    const hasPermission = hasModeratorPermissions(guild.permissions);
+    
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Nie masz wystarczających uprawnień na tym serwerze' });
+    }
+    
+    // Dodaj informacje o uprawnieniach do obiektu req
+    req.userPermissions = {
+      isAdmin: (guild.permissions & PERMISSIONS.ADMIN) === PERMISSIONS.ADMIN,
+      canManageGuild: (guild.permissions & PERMISSIONS.MANAGE_GUILD) === PERMISSIONS.MANAGE_GUILD,
+      canManageRoles: (guild.permissions & PERMISSIONS.MANAGE_ROLES) === PERMISSIONS.MANAGE_ROLES,
+      canManageMessages: (guild.permissions & PERMISSIONS.MANAGE_MESSAGES) === PERMISSIONS.MANAGE_MESSAGES
+    };
+    
+    next();
+  } catch (error) {
+    logger.error(`Błąd w middleware API hasGuildPermission: ${error.stack}`);
+    return res.status(500).json({ error: 'Wewnętrzny błąd serwera' });
   }
-  
-  const guild = req.user.guilds.find(g => g.id === req.params.guildId);
-  
-  if (!guild) {
-    return res.status(403).json({ error: 'Nie masz dostępu do tego serwera' });
-  }
-  
-  // Sprawdź czy użytkownik ma uprawnienia moderatora
-  const hasPermission = hasModeratorPermission(guild.permissions);
-  
-  if (!hasPermission) {
-    return res.status(403).json({ error: 'Nie masz wystarczających uprawnień na tym serwerze' });
-  }
-  
-  // Dodaj informacje o uprawnieniach do obiektu req
-  req.userPermissions = {
-    isAdmin: (guild.permissions & MOD_PERMISSIONS.ADMIN) === MOD_PERMISSIONS.ADMIN,
-    canManageGuild: (guild.permissions & MOD_PERMISSIONS.MANAGE_GUILD) === MOD_PERMISSIONS.MANAGE_GUILD,
-    canManageRoles: (guild.permissions & MOD_PERMISSIONS.MANAGE_ROLES) === MOD_PERMISSIONS.MANAGE_ROLES,
-    canManageMessages: (guild.permissions & MOD_PERMISSIONS.MANAGE_MESSAGES) === MOD_PERMISSIONS.MANAGE_MESSAGES
-  };
-  
-  next();
 }
 
 router.get('/', async (req, res) => {

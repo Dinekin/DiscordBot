@@ -6,12 +6,21 @@ const ReactionRole = require('../../models/ReactionRole');
 const MessageLog = require('../../models/MessageLog');
 const logger = require('../../utils/logger');
 
-const MOD_PERMISSIONS = {
-  ADMIN: 0x8,             // ADMINISTRATOR
-  MANAGE_GUILD: 0x20,     // MANAGE_GUILD
+// Stałe definicje uprawnień
+const PERMISSIONS = {
+  ADMIN: 0x8,              // ADMINISTRATOR
+  MANAGE_GUILD: 0x20,      // MANAGE_GUILD
   MANAGE_ROLES: 0x10000000, // MANAGE_ROLES
-  MANAGE_MESSAGES: 0x2000 // MANAGE_MESSAGES
+  MANAGE_MESSAGES: 0x2000   // MANAGE_MESSAGES
 };
+
+// Funkcja pomocnicza do sprawdzania uprawnień moderatora
+function hasModeratorPermissions(permissions) {
+  return (permissions & PERMISSIONS.ADMIN) === PERMISSIONS.ADMIN ||
+         (permissions & PERMISSIONS.MANAGE_GUILD) === PERMISSIONS.MANAGE_GUILD ||
+         (permissions & PERMISSIONS.MANAGE_ROLES) === PERMISSIONS.MANAGE_ROLES ||
+         (permissions & PERMISSIONS.MANAGE_MESSAGES) === PERMISSIONS.MANAGE_MESSAGES;
+}
 
 // Middleware do sprawdzania uprawnień na serwerze
 function hasGuildPermission(req, res, next) {
@@ -26,18 +35,8 @@ function hasGuildPermission(req, res, next) {
       return res.redirect('/dashboard');
     }
     
-    // Uprawnienia moderatora i administratora
-    const ADMIN = 0x8;              // ADMINISTRATOR
-    const MANAGE_GUILD = 0x20;      // MANAGE_GUILD
-    const MANAGE_ROLES = 0x10000000; // MANAGE_ROLES
-    const MANAGE_MESSAGES = 0x2000;  // MANAGE_MESSAGES
-    
     // Sprawdź czy użytkownik ma uprawnienia moderatora
-    const hasPermission = 
-      (guild.permissions & ADMIN) === ADMIN ||
-      (guild.permissions & MANAGE_GUILD) === MANAGE_GUILD ||
-      (guild.permissions & MANAGE_ROLES) === MANAGE_ROLES ||
-      (guild.permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
+    const hasPermission = hasModeratorPermissions(guild.permissions);
     
     if (!hasPermission) {
       return res.redirect('/dashboard');
@@ -45,10 +44,10 @@ function hasGuildPermission(req, res, next) {
     
     // Dodaj informacje o uprawnieniach do obiektu req
     req.userPermissions = {
-      isAdmin: (guild.permissions & ADMIN) === ADMIN,
-      canManageGuild: (guild.permissions & MANAGE_GUILD) === MANAGE_GUILD,
-      canManageRoles: (guild.permissions & MANAGE_ROLES) === MANAGE_ROLES,
-      canManageMessages: (guild.permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES
+      isAdmin: (guild.permissions & PERMISSIONS.ADMIN) === PERMISSIONS.ADMIN,
+      canManageGuild: (guild.permissions & PERMISSIONS.MANAGE_GUILD) === PERMISSIONS.MANAGE_GUILD,
+      canManageRoles: (guild.permissions & PERMISSIONS.MANAGE_ROLES) === PERMISSIONS.MANAGE_ROLES,
+      canManageMessages: (guild.permissions & PERMISSIONS.MANAGE_MESSAGES) === PERMISSIONS.MANAGE_MESSAGES
     };
     
     next();
@@ -61,22 +60,8 @@ function hasGuildPermission(req, res, next) {
 // Lista serwerów
 router.get('/', async (req, res) => {
   try {
-    // Definicje upawnień moderatora
-    const ADMIN_PERMISSION = 0x8;          // ADMINISTRATOR
-    const MANAGE_GUILD = 0x20;             // MANAGE_GUILD
-    const MANAGE_ROLES = 0x10000000;       // MANAGE_ROLES
-    const MANAGE_MESSAGES = 0x2000;        // MANAGE_MESSAGES
-    
-    // Funkcja pomocnicza do sprawdzania uprawnień moderatora
-    function hasModPerms(permissions) {
-      return (permissions & ADMIN_PERMISSION) === ADMIN_PERMISSION ||
-             (permissions & MANAGE_GUILD) === MANAGE_GUILD ||
-             (permissions & MANAGE_ROLES) === MANAGE_ROLES ||
-             (permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
-    }
-    
     // Filtruj serwery, gdzie użytkownik ma uprawnienia administratora lub moderatora
-    const allowedGuilds = req.user.guilds.filter(g => hasModPerms(g.permissions));
+    const allowedGuilds = req.user.guilds.filter(g => hasModeratorPermissions(g.permissions));
     
     // Sprawdź, które serwery mają bota
     const botGuilds = client.guilds.cache.map(g => g.id);
@@ -101,81 +86,145 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Panel zarządzania serwerem
+router.get('/guild/:guildId', hasGuildPermission, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+    
+    // Pobierz dane serwera z bazy danych
+    let guildSettings = await Guild.findOne({ guildId: guildId });
+    
+    // Jeśli nie ma w bazie, stwórz nowy rekord
+    if (!guildSettings) {
+      guildSettings = await Guild.create({
+        guildId: guildId
+      });
+    }
+    
+    // Pobierz dane serwera z Discorda
+    const guild = client.guilds.cache.get(guildId);
+    
+    if (!guild) {
+      return res.render('dashboard/not-in-guild', {
+        user: req.user,
+        guild: req.user.guilds.find(g => g.id === guildId)
+      });
+    }
+    
+    // Renderuj panel zarządzania z informacjami o uprawnieniach
+    res.render('dashboard/guild', {
+      user: req.user,
+      guild: guild,
+      settings: guildSettings,
+      userPermissions: req.userPermissions,
+      path: req.path
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania panelu zarządzania: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania panelu zarządzania'
+    });
+  }
+});
+
 // Konfiguracja ogólna serwera
 router.get('/guild/:guildId/settings', hasGuildPermission, async (req, res) => {
-  const guildId = req.params.guildId;
-  
-  // Pobierz dane serwera z bazy danych
-  let guildSettings = await Guild.findOne({ guildId: guildId });
-  
-  // Pobierz dane serwera z Discorda
-  const guild = client.guilds.cache.get(guildId);
-  
-  if (!guild) {
-    return res.redirect('/dashboard');
+  try {
+    const guildId = req.params.guildId;
+    
+    // Pobierz dane serwera z bazy danych
+    let guildSettings = await Guild.findOne({ guildId: guildId });
+    
+    // Pobierz dane serwera z Discorda
+    const guild = client.guilds.cache.get(guildId);
+    
+    if (!guild) {
+      return res.redirect('/dashboard');
+    }
+    
+    // Pobierz listę kanałów tekstowych
+    const textChannels = guild.channels.cache
+      .filter(c => c.type === 0) // 0 = kanał tekstowy
+      .map(c => ({ id: c.id, name: c.name }));
+    
+    res.render('dashboard/settings', {
+      user: req.user,
+      guild: guild,
+      settings: guildSettings,
+      channels: textChannels,
+      userPermissions: req.userPermissions,
+      path: req.path
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania ustawień: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania ustawień'
+    });
   }
-  
-  // Pobierz listę kanałów tekstowych
-  const textChannels = guild.channels.cache
-    .filter(c => c.type === 0) // 0 = kanał tekstowy
-    .map(c => ({ id: c.id, name: c.name }));
-  
-  res.render('dashboard/settings', {
-    user: req.user,
-    guild: guild,
-    settings: guildSettings,
-    channels: textChannels,
-    userPermissions: req.userPermissions
-  });
 });
 
 // Zarządzanie reaction roles
 router.get('/guild/:guildId/reaction-roles', hasGuildPermission, async (req, res) => {
-  const guildId = req.params.guildId;
-  
-  // Pobierz dane serwera z Discorda
-  const guild = client.guilds.cache.get(guildId);
-  
-  if (!guild) {
-    return res.redirect('/dashboard');
+  try {
+    const guildId = req.params.guildId;
+    
+    // Pobierz dane serwera z Discorda
+    const guild = client.guilds.cache.get(guildId);
+    
+    if (!guild) {
+      return res.redirect('/dashboard');
+    }
+    
+    // Pobierz wszystkie reaction roles dla tego serwera
+    const reactionRoles = await ReactionRole.find({ guildId: guildId });
+    
+    // Pobierz listę kanałów tekstowych
+    const textChannels = guild.channels.cache
+      .filter(c => c.type === 0) // 0 = kanał tekstowy
+      .map(c => ({ id: c.id, name: c.name }));
+    
+    // Pobierz listę ról
+    const roles = guild.roles.cache
+      .filter(r => !r.managed && r.name !== '@everyone')
+      .sort((a, b) => b.position - a.position)
+      .map(r => ({ id: r.id, name: r.name, color: r.color }));
+    
+    res.render('dashboard/reaction-roles', {
+      user: req.user,
+      guild: guild,
+      reactionRoles: reactionRoles,
+      channels: textChannels,
+      roles: roles,
+      userPermissions: req.userPermissions,
+      path: req.path
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania role reaction: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania ról reakcji'
+    });
   }
-  
-  // Pobierz wszystkie reaction roles dla tego serwera
-  const reactionRoles = await ReactionRole.find({ guildId: guildId });
-  
-  // Pobierz listę kanałów tekstowych
-  const textChannels = guild.channels.cache
-    .filter(c => c.type === 0) // 0 = kanał tekstowy
-    .map(c => ({ id: c.id, name: c.name }));
-  
-  // Pobierz listę ról
-  const roles = guild.roles.cache
-    .filter(r => !r.managed && r.name !== '@everyone')
-    .sort((a, b) => b.position - a.position)
-    .map(r => ({ id: r.id, name: r.name, color: r.color }));
-  
-  res.render('dashboard/reaction-roles', {
-    user: req.user,
-    guild: guild,
-    reactionRoles: reactionRoles,
-    channels: textChannels,
-    roles: roles,
-    userPermissions: req.userPermissions
-  });
 });
+
 // Zarządzanie logami wiadomości
 router.get('/guild/:guildId/message-logs', hasGuildPermission, async (req, res) => {
-  const guildId = req.params.guildId;
-  
-  // Pobierz dane serwera z Discorda
-  const guild = client.guilds.cache.get(guildId);
-  
-  if (!guild) {
-    logger.warn(`Próba dostępu do panelu message-logs dla serwera ${guildId}, ale bot nie jest na tym serwerze`);
-    return res.redirect('/dashboard');
-  }
-  
   try {
+    const guildId = req.params.guildId;
+    
+    // Pobierz dane serwera z Discorda
+    const guild = client.guilds.cache.get(guildId);
+    
+    if (!guild) {
+      logger.warn(`Próba dostępu do panelu message-logs dla serwera ${guildId}, ale bot nie jest na tym serwerze`);
+      return res.redirect('/dashboard');
+    }
+    
     // Pobierz ustawienia z bazy danych
     const settings = await Guild.findOne({ guildId: guildId });
     
@@ -191,7 +240,8 @@ router.get('/guild/:guildId/message-logs', hasGuildPermission, async (req, res) 
       guild: guild,
       settings: settings || {},
       channels: textChannels,
-      userPermissions: req.userPermissions
+      userPermissions: req.userPermissions,
+      path: req.path
     });
   } catch (error) {
     logger.error(`Błąd podczas renderowania strony message-logs: ${error.stack}`);
@@ -204,16 +254,16 @@ router.get('/guild/:guildId/message-logs', hasGuildPermission, async (req, res) 
 });
 
 router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
-  const guildId = req.params.guildId;
-  
-  // Pobierz dane serwera z Discorda
-  const guild = client.guilds.cache.get(guildId);
-  
-  if (!guild) {
-    return res.redirect('/dashboard');
-  }
-  
   try {
+    const guildId = req.params.guildId;
+    
+    // Pobierz dane serwera z Discorda
+    const guild = client.guilds.cache.get(guildId);
+    
+    if (!guild) {
+      return res.redirect('/dashboard');
+    }
+    
     // Sprawdź czy manager LiveFeed jest dostępny
     if (!client.liveFeedManager) {
       return res.status(500).render('error', {
@@ -237,7 +287,8 @@ router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
       guild: guild,
       feeds: feeds,
       channels: textChannels,
-      userPermissions: req.userPermissions
+      userPermissions: req.userPermissions,
+      path: req.path
     });
   } catch (error) {
     logger.error(`Błąd podczas renderowania strony livefeed: ${error.stack}`);
@@ -249,28 +300,38 @@ router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
   }
 });
 
-// Dodaj tę trasę do modułu router w pliku src/web/routes/dashboard.js
+// Giveaways
 router.get('/guild/:guildId/giveaways', hasGuildPermission, async (req, res) => {
-  const guildId = req.params.guildId;
-  
-  // Pobierz dane serwera z Discorda
-  const guild = client.guilds.cache.get(guildId);
-  
-  if (!guild) {
-    return res.redirect('/dashboard');
+  try {
+    const guildId = req.params.guildId;
+    
+    // Pobierz dane serwera z Discorda
+    const guild = client.guilds.cache.get(guildId);
+    
+    if (!guild) {
+      return res.redirect('/dashboard');
+    }
+    
+    // Pobierz listę kanałów tekstowych
+    const textChannels = guild.channels.cache
+      .filter(c => c.type === 0) // 0 = kanał tekstowy
+      .map(c => ({ id: c.id, name: c.name }));
+    
+    res.render('dashboard/giveaways', {
+      user: req.user,
+      guild: guild,
+      channels: textChannels,
+      userPermissions: req.userPermissions,
+      path: req.path
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania strony giveaways: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania strony konkursów'
+    });
   }
-  
-  // Pobierz listę kanałów tekstowych
-  const textChannels = guild.channels.cache
-    .filter(c => c.type === 0) // 0 = kanał tekstowy
-    .map(c => ({ id: c.id, name: c.name }));
-  
-  res.render('dashboard/giveaways', {
-    user: req.user,
-    guild: guild,
-    channels: textChannels,
-    userPermissions: req.userPermissions
-  });
 });
 
 module.exports = router;

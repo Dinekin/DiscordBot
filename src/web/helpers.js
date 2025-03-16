@@ -125,35 +125,35 @@ module.exports = function(app) {
       return text.substring(0, length) + '...';
     };
     
-    // Sprawdzanie uprawnień użytkownika
+    // Sprawdzanie uprawnień użytkownika - poprawiona wersja
     res.locals.hasPermission = function(user, guildId, permission) {
       if (!user || !user.guilds) return false;
       
       const guild = user.guilds.find(g => g.id === guildId);
       if (!guild) return false;
       
-      // Konwersja permisji string -> liczba (dla wygody)
-      const permissionMap = {
-        'ADMINISTRATOR': 0x8,
-        'MANAGE_GUILD': 0x20,
-        'MANAGE_ROLES': 0x10000000,
-        'MANAGE_CHANNELS': 0x10,
-        'MANAGE_MESSAGES': 0x2000
+      // Stałe dla uprawnień
+      const PERMISSIONS = {
+        ADMIN: 0x8,              // ADMINISTRATOR
+        MANAGE_GUILD: 0x20,      // MANAGE_GUILD
+        MANAGE_ROLES: 0x10000000, // MANAGE_ROLES
+        MANAGE_CHANNELS: 0x10,   // MANAGE_CHANNELS
+        MANAGE_MESSAGES: 0x2000  // MANAGE_MESSAGES
       };
       
       // Jeśli użytkownik jest administratorem, zawsze ma wszystkie uprawnienia
-      if ((guild.permissions & 0x8) === 0x8) return true;
+      if ((guild.permissions & PERMISSIONS.ADMIN) === PERMISSIONS.ADMIN) return true;
       
       // Jeśli żądane jest konkretne uprawnienie
-      if (permission && permissionMap[permission]) {
-        const permValue = permissionMap[permission];
+      if (permission && PERMISSIONS[permission]) {
+        const permValue = PERMISSIONS[permission];
         return (guild.permissions & permValue) === permValue;
       }
       
       // Sprawdź, czy użytkownik ma jakiekolwiek uprawnienia moderatora
-      return (guild.permissions & 0x20) === 0x20 ||          // MANAGE_GUILD
-             (guild.permissions & 0x10000000) === 0x10000000 || // MANAGE_ROLES
-             (guild.permissions & 0x2000) === 0x2000;         // MANAGE_MESSAGES
+      return (guild.permissions & PERMISSIONS.MANAGE_GUILD) === PERMISSIONS.MANAGE_GUILD ||
+             (guild.permissions & PERMISSIONS.MANAGE_ROLES) === PERMISSIONS.MANAGE_ROLES ||
+             (guild.permissions & PERMISSIONS.MANAGE_MESSAGES) === PERMISSIONS.MANAGE_MESSAGES;
     };
     
     // Formatowanie koloru hex
