@@ -87,6 +87,7 @@ router.get('/', async (req, res) => {
 });
 
 // Panel zarządzania serwerem
+// Panel zarządzania serwerem
 router.get('/guild/:guildId', hasGuildPermission, async (req, res) => {
   try {
     const guildId = req.params.guildId;
@@ -97,19 +98,28 @@ router.get('/guild/:guildId', hasGuildPermission, async (req, res) => {
     // Jeśli nie ma w bazie, stwórz nowy rekord
     if (!guildSettings) {
       guildSettings = await Guild.create({
-        guildId: guildId
+        guildId: guildId,
+        modules: {
+          messageLog: false,
+          reactionRoles: true,
+          notifications: true
+        }
       });
+      logger.info(`Utworzono nowe ustawienia dla serwera ${guildId}`);
     }
     
     // Pobierz dane serwera z Discorda
     const guild = client.guilds.cache.get(guildId);
     
     if (!guild) {
+      logger.warn(`Próba dostępu do panelu dla serwera ${guildId}, ale bot nie jest na tym serwerze`);
       return res.render('dashboard/not-in-guild', {
         user: req.user,
         guild: req.user.guilds.find(g => g.id === guildId)
       });
     }
+    
+    logger.info(`Renderowanie panelu zarządzania dla serwera ${guild.name} (${guildId})`);
     
     // Renderuj panel zarządzania z informacjami o uprawnieniach
     res.render('dashboard/guild', {
@@ -117,7 +127,11 @@ router.get('/guild/:guildId', hasGuildPermission, async (req, res) => {
       guild: guild,
       settings: guildSettings,
       userPermissions: req.userPermissions,
-      path: req.path
+      path: req.path,
+      isModuleEnabled: (settings, moduleName) => {
+        if (!settings || !settings.modules) return false;
+        return settings.modules[moduleName] === true;
+      }
     });
   } catch (error) {
     logger.error(`Błąd podczas renderowania panelu zarządzania: ${error.stack}`);

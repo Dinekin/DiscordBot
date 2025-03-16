@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= guild.name %> - Panel zarządzania</title>
+  <title>Panel zarządzania - <%= guild.name %></title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
@@ -12,83 +12,115 @@
 </head>
 <body>
   <%- include('../partials/navbar') %>
-
+  
   <div class="container mt-4">
     <div class="row">
-      <%- include('../partials/guild-sidebar', { path: '/dashboard/guild/' + guild.id }) %>
-
+      <%- include('../partials/guild-sidebar') %>
+      
       <div class="col-md-9">
         <div class="card shadow-sm mb-4">
           <div class="card-body">
-            <h2 class="card-title">Panel zarządzania - <%= guild.name %></h2>
-            <p class="card-text">Witaj w panelu zarządzania dla twojego serwera Discord. Wybierz jedną z dostępnych opcji, aby rozpocząć konfigurację.</p>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                  <i class="fas fa-cog fa-2x text-primary me-3"></i>
-                  <h3 class="card-title mb-0">Ustawienia</h3>
+            <h2 class="card-title">Panel zarządzania: <%= guild.name %></h2>
+            <p class="card-text">Witaj w panelu zarządzania botem na serwerze <%= guild.name %>.</p>
+            
+            <div class="row mt-4">
+              <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-tags me-2"></i> Role reakcji</h5>
+                    <p class="card-text">Zarządzaj rolami, które użytkownicy mogą otrzymać poprzez reakcje.</p>
+                    <a href="/dashboard/guild/<%= guild.id %>/reaction-roles" class="btn btn-primary">Zarządzaj</a>
+                  </div>
                 </div>
-                <p class="card-text">Skonfiguruj podstawowe ustawienia bota, takie jak prefix, kanały i język.</p>
-                <a href="/dashboard/guild/<%= guild.id %>/settings" class="btn btn-primary mt-auto">
-                  Zarządzaj ustawieniami
-                </a>
+              </div>
+              
+              <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-history me-2"></i> Logi wiadomości</h5>
+                    <p class="card-text">Przegląd logów wiadomości, ustawienia i konfiguracja.</p>
+                    <a href="/dashboard/guild/<%= guild.id %>/message-logs" class="btn btn-primary">Zarządzaj</a>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-bullhorn me-2"></i> Live Feed</h5>
+                    <p class="card-text">Skonfiguruj automatyczne wiadomości wysyłane według harmonogramu.</p>
+                    <a href="/dashboard/guild/<%= guild.id %>/livefeed" class="btn btn-primary">Zarządzaj</a>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-gift me-2"></i> Konkursy</h5>
+                    <p class="card-text">Twórz i zarządzaj konkursami (giveaway) na serwerze.</p>
+                    <a href="/dashboard/guild/<%= guild.id %>/giveaways" class="btn btn-primary">Zarządzaj</a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-
-          <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <div class="d-flex align-items-center mb-3">
-                  <i class="fas fa-tags fa-2x text-primary me-3"></i>
-                  <h3 class="card-title mb-0">Role reakcji</h3>
-                </div>
-                <p class="card-text">Twórz i zarządzaj systemami ról poprzez reakcje emotikonami na twoim serwerze.</p>
-                <a href="/dashboard/guild/<%= guild.id %>/reaction-roles" class="btn btn-primary mt-auto">
-                  Zarządzaj rolami reakcji
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
-
-        <div class="card shadow-sm mb-4">
-          <div class="card-header">
-            <h5 class="mb-0">Statystyki serwera</h5>
-          </div>
+        
+        <div class="card shadow-sm">
           <div class="card-body">
-            <div class="row">
-              <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card bg-light">
-                  <div class="card-body text-center">
-                    <h6 class="text-muted">Członkowie</h6>
-                    <h3><%= guild.memberCount %></h3>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card bg-light">
-                  <div class="card-body text-center">
-                    <h6 class="text-muted">Kanały</h6>
-                    <h3><%= guild.channels.cache.size %></h3>
-                  </div>
-                </div>
-              </div>
-
-              <div class="col-md-4">
-                <div class="card bg-light">
-                  <div class="card-body text-center">
-                    <h6 class="text-muted">Role</h6>
-                    <h3><%= guild.roles.cache.size %></h3>
-                  </div>
-                </div>
-              </div>
+            <h3 class="card-title">Status modułów</h3>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Moduł</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Logowanie wiadomości</td>
+                    <td>
+                      <% if (isModuleEnabled(settings, 'messageLog')) { %>
+                        <span class="badge bg-success">Włączony</span>
+                      <% } else { %>
+                        <span class="badge bg-danger">Wyłączony</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <a href="/dashboard/guild/<%= guild.id %>/message-logs" class="btn btn-sm btn-primary">Konfiguruj</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Role reakcji</td>
+                    <td>
+                      <% if (settings.modules && settings.modules.reactionRoles === false) { %>
+                        <span class="badge bg-danger">Wyłączony</span>
+                      <% } else { %>
+                        <span class="badge bg-success">Włączony</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <a href="/dashboard/guild/<%= guild.id %>/reaction-roles" class="btn btn-sm btn-primary">Konfiguruj</a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Powiadomienia</td>
+                    <td>
+                      <% if (settings.modules && settings.modules.notifications === false) { %>
+                        <span class="badge bg-danger">Wyłączone</span>
+                      <% } else { %>
+                        <span class="badge bg-success">Włączone</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <a href="/dashboard/guild/<%= guild.id %>/settings" class="btn btn-sm btn-primary">Konfiguruj</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

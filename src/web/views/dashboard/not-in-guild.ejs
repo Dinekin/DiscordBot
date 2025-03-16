@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bot nie jest na serwerze - <%= guild.name %></title>
+  <title>Bot nie jest na serwerze</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
@@ -12,36 +12,20 @@
 </head>
 <body>
   <%- include('../partials/navbar') %>
-
+  
   <div class="container mt-5">
     <div class="row justify-content-center">
       <div class="col-md-8">
-        <div class="card shadow-sm text-center">
-          <div class="card-body py-5">
-            <% if (guild.icon) { %>
-              <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="<%= guild.name %>" class="server-icon-lg mb-4">
-            <% } else { %>
-              <div class="server-icon-lg server-icon-placeholder mb-4 mx-auto">
-                <%= guild.name.charAt(0) %>
-              </div>
-            <% } %>
-
-            <h2 class="mb-4"><%= guild.name %></h2>
-            <div class="alert alert-info mb-4">
-              <i class="fas fa-info-circle me-2"></i> Bot nie jest jeszcze dodany do tego serwera.
-            </div>
-
-            <p class="mb-4">Aby korzystać z panelu zarządzania, najpierw dodaj bota do swojego serwera Discord.</p>
-
+        <div class="card shadow-sm text-center py-5">
+          <div class="card-body">
+            <i class="fas fa-robot fa-5x text-muted mb-4"></i>
+            <h2 class="mb-4">Bot nie jest na tym serwerze</h2>
+            <p class="mb-4">
+              Aby korzystać z panelu zarządzania, musisz najpierw dodać bota na swój serwer.
+            </p>
             <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>" class="btn btn-primary btn-lg">
-              <i class="fas fa-plus-circle me-2"></i> Dodaj bota do serwera
+              <i class="fas fa-plus-circle me-2"></i> Dodaj bota na serwer
             </a>
-
-            <div class="mt-4">
-              <a href="/dashboard" class="text-decoration-none">
-                <i class="fas fa-arrow-left me-1"></i> Powrót do dashboardu
-              </a>
-            </div>
           </div>
         </div>
       </div>
