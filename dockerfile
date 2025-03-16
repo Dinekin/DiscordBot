@@ -1,38 +1,35 @@
 FROM node:23-alpine
 
-# Dodaj etykiety do obrazu
+# Add labels to image
 LABEL maintainer="Discord Bot Maintainer"
 LABEL description="Discord Reaction Roles Bot with Web Dashboard"
 LABEL version="1.0.5"
 
-# Użycie argumentu NODE_ENV z możliwością nadpisania
+# Use NODE_ENV argument with overridable default
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 
-# Utworzenie katalogu aplikacji
+# Create app directory
 WORKDIR /usr/src/app
 
-# Kopiowanie plików package.json i package-lock.json
+# Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Zainstalowanie narzędzi do budowy (dla natywnych modułów) i zależności
+# Install build tools (for native modules) and dependencies
 RUN apk add --no-cache --virtual .build-deps python3 make g++ \
     && npm ci --only=production \
     && apk del .build-deps
 
-# Kopiowanie reszty kodu aplikacji
+# Copy app code
 COPY . .
 
-# Tworzenie katalogu na logi
+# Create logs directory with appropriate permissions
 RUN mkdir -p logs && chmod -R 777 logs
 
-# Ujawnienie portu używanego przez serwer web
-EXPOSE 3000
-
-# Ustawienie nieroot użytkownika z odpowiednimi uprawnieniami
+# Switch to non-root user with appropriate permissions
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /usr/src/app
 USER appuser
 
-# Ustawienie punktu wejścia
+# Set entry point
 CMD ["node", "index.js"]
