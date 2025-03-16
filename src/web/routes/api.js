@@ -72,20 +72,29 @@ router.get('/', async (req, res) => {
            (g.permissions & MANAGE_ROLES) === MANAGE_ROLES ||
            (g.permissions & MANAGE_MESSAGES) === MANAGE_MESSAGES;
   });
+// Sprawdź, które serwery mają bota
+const botGuilds = client.guilds.cache.map(g => g.id);
   
-  // Sprawdź, które serwery mają bota
-  const botGuilds = client.guilds.cache.map(g => g.id);
+// Lista autoryzowanych serwerów
+const authorizedGuildIds = process.env.ALLOWED_GUILD_IDS 
+  ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
+  : [];
   
-  // Oznacz serwery, na których jest bot
-  const guilds = allowedGuilds.map(g => ({
-    ...g,
-    hasBot: botGuilds.includes(g.id)
-  }));
-  
-  res.render('dashboard/index', {
-    user: req.user,
-    guilds: guilds
-  });
+// Filtruj serwery - pokazuj tylko te, które są autoryzowane lub jeśli lista jest pusta
+const filteredGuilds = authorizedGuildIds.length > 0
+  ? allowedGuilds.filter(g => authorizedGuildIds.includes(g.id))
+  : allowedGuilds;
+
+// Oznacz serwery, na których jest bot
+const guilds = filteredGuilds.map(g => ({
+  ...g,
+  hasBot: botGuilds.includes(g.id)
+}));
+
+res.render('dashboard/index', {
+  user: req.user,
+  guilds: guilds
+});
 });
 
 // Endpoint do włączania/wyłączania logowania wiadomości

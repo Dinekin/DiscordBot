@@ -27,7 +27,6 @@
                           <% } %>
                           <h5 class="card-title mb-0"><%= guild.name %></h5>
                         </div>
-                        
                         <% if (guild.hasBot) { %>
                           <a href="/dashboard/guild/<%= guild.id %>" class="btn btn-primary mt-auto">
                             Zarządzaj
@@ -48,6 +47,17 @@
                   </div>
                 </div>
               <% } %>
+              <% if (guilds && guilds.length === 0 && process.env.ALLOWED_GUILD_IDS && process.env.ALLOWED_GUILD_IDS.length > 0) { %>
+  
+    
+      
+                Uwaga: Nie posiadasz dostępu do żadnych autoryzowanych serwerów.
+                <% if (process.env.BOT_OWNER_CONTACT) { %>
+                  Skontaktuj się z właścicielem bota: <%= process.env.BOT_OWNER_CONTACT %> aby uzyskać autoryzację.
+                <% } %>
+              
+            
+          <% } %>
             </div>
           </div>
         </div>
