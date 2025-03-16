@@ -1,121 +1,70 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Discord Reaction Roles Bot</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css">
-    <!-- Add dark mode stylesheet -->
-    <link rel="stylesheet" href="/css/dark-mode.css">
-    <script src="/js/saved-style.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel bota Discord - Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/dark-mode.css">
+  <script src="/js/saved-style.js"></script>
 </head>
 <body>
-<%- include('partials/navbar') %>
+  <%- include('../partials/navbar') %>
 
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-md-10 col-lg-8">
-      <div class="text-center mt-5">
-        <% if (botUser && botUser.avatar) { %>
-          <img src="https://cdn.discordapp.com/avatars/<%= botUser.id %>/<%= botUser.avatar %>.png" alt="Bot Avatar" class="bot-avatar mb-4">
-        <% } else { %>
-          <div class="bot-avatar-placeholder mb-4 mx-auto">
-            <i class="fas fa-robot"></i>
-          </div>
-        <% } %>
-        <h1 class="display-4">Choco</h1>
-        <p class="lead">Prosty bot do discorda.</p>
+  <div class="container mt-4">
+    <div class="row">
+      <div class="col-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h2 class="card-title">Twoje serwery</h2>
 
-        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mt-4">
-          <% 
-          // Pobierz listę autoryzowanych serwerów
-          const allowedServers = typeof process.env.ALLOWED_GUILD_IDS !== 'undefined' 
-            ? process.env.ALLOWED_GUILD_IDS.split(',').map(id => id.trim())
-            : [];
-          
-          if (allowedServers.length > 0) { 
-          %>
-            <div class="dropdown">
-              <button class="btn btn-primary btn-lg dropdown-toggle" type="button" id="inviteDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fas fa-plus-circle me-2"></i> Dodaj do autoryzowanego serwera
-              </button>
-              <ul class="dropdown-menu" aria-labelledby="inviteDropdown">
-                <% for (const serverId of allowedServers) { %>
-                  <li>
-                    <a class="dropdown-item" href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= serverId %>">
-                      Serwer <%= serverId %>
-                    </a>
-                  </li>
-                <% } %>
-              </ul>
-            </div>
-          <% } else { %>
-            <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands" class="btn btn-primary btn-lg px-4 gap-3">
-              <i class="fas fa-plus-circle me-2"></i> Dodaj do swojego serwera
-            </a>
-          <% } %>
-          
-          <a href="/dashboard" class="btn btn-outline-primary btn-lg px-4">
-            <i class="fas fa-tachometer-alt me-2"></i> Panel zarządzania
-          </a>
-        </div>
+            <div class="row mt-4">
+              <% if (guilds && guilds.length > 0) { %>
+                <% guilds.forEach(function(guild) { %>
+                  <div class="col-md-4 mb-4">
+                    <div class="card server-card h-100">
+                      <div class="card-body d-flex flex-column">
+                        <div class="d-flex align-items-center mb-3">
+                          <% if (guild.icon) { %>
+                            <img src="https://cdn.discordapp.com/icons/<%= guild.id %>/<%= guild.icon %>.png" alt="<%= guild.name %>" class="server-icon me-3">
+                          <% } else { %>
+                            <div class="server-icon server-icon-placeholder me-3">
+                              <%= guild.name.charAt(0) %>
+                            </div>
+                          <% } %>
+                          <h5 class="card-title mb-0"><%= guild.name %></h5>
+                        </div>
 
-        <!-- Dodaj informację o ograniczonym dostępie -->
-        <% if (typeof process.env.ALLOWED_GUILD_IDS !== 'undefined' && process.env.ALLOWED_GUILD_IDS && process.env.ALLOWED_GUILD_IDS.split(',').length > 0) { %>
-          <div class="alert alert-info mt-4">
-            <i class="fas fa-info-circle me-2"></i>
-            <strong>Informacja:</strong> Ten bot jest dostępny tylko dla autoryzowanych serwerów.
-            <% if (typeof process.env.BOT_OWNER_CONTACT !== 'undefined' && process.env.BOT_OWNER_CONTACT) { %>
-              Aby uzyskać autoryzację, skontaktuj się z: <%= process.env.BOT_OWNER_CONTACT %>
-            <% } %>
-          </div>
-        <% } %>
-      </div>
-
-      <div class="row mt-5">
-        <div class="col-md-4 mb-4">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body text-center">
-              <i class="fas fa-tags fa-3x text-primary mb-3"></i>
-              <h3>Role przez reakcje</h3>
-              <p>Pozwól użytkownikom wybierać role poprzez kliknięcie emotki pod wiadomością.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4 mb-4">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body text-center">
-              <i class="fas fa-bell fa-3x text-primary mb-3"></i>
-              <h3>Powiadomienia</h3>
-              <p>Otrzymuj powiadomienia gdy użytkownicy dodają lub usuwają role.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4 mb-4">
-          <div class="card h-100 shadow-sm">
-            <div class="card-body text-center">
-              <i class="fas fa-cog fa-3x text-primary mb-3"></i>
-              <h3>Panel webowy</h3>
-              <p>Zarządzaj wszystkimi ustawieniami bota przez prosty panel internetowy.</p>
+                        <% if (guild.hasBot) { %>
+                          <a href="/dashboard/guild/<%= guild.id %>" class="btn btn-primary mt-auto">
+                            Zarządzaj
+                          </a>
+                        <% } else { %>
+                          <a href="https://discord.com/api/oauth2/authorize?client_id=<%= process.env.CLIENT_ID %>&permissions=8&scope=bot%20applications.commands&guild_id=<%= guild.id %>" class="btn btn-outline-primary mt-auto">
+                            Dodaj bota
+                          </a>
+                        <% } %>
+                      </div>
+                    </div>
+                  </div>
+                <% }); %>
+              <% } else { %>
+                <div class="col-12">
+                  <div class="alert alert-info">
+                    Nie masz dostępu do żadnych serwerów lub nie jesteś administratorem na żadnym serwerze.
+                  </div>
+                </div>
+              <% } %>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<footer class="bg-light mt-5 py-4">
-  <div class="container text-center">
-    <p class="text-muted">Discord Reaction Roles Bot &copy; 2025</p>
-  </div>
-</footer>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-<script src="/js/dark-mode.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/dark-mode.js"></script>
 </body>
 </html>
