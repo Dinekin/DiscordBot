@@ -1,6 +1,7 @@
-// src/commands/temprolereplace.js
+// src/commands/temprolereplace.js - czysła wersja
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const TempRoleReplace = require('../models/TempRoleReplace');
+const { canAddAsTempRole } = require('../utils/checkExpiredRoles');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -136,6 +137,22 @@ module.exports = {
           });
         }
         
+        // Sprawdź czy rola czasowa może być dodana (czy nie jest chroniona)
+        if (!canAddAsTempRole(interaction.guild.id, user.id, tempRole.id)) {
+          return interaction.reply({
+            content: `Rola ${tempRole.name} jest obecnie chroniona przed dodaniem jako czasowa. Spróbuj ponownie za chwilę.`,
+            ephemeral: true
+          });
+        }
+        
+        // Sprawdź czy rola końcowa nie jest chroniona
+        if (!canAddAsTempRole(interaction.guild.id, user.id, finalRole.id)) {
+          return interaction.reply({
+            content: `Rola końcowa ${finalRole.name} jest obecnie chroniona. To może oznaczać, że właśnie została przyznana jako rola końcowa w innej operacji.`,
+            ephemeral: true
+          });
+        }
+        
         // Oblicz datę wygaśnięcia
         const expiresAt = new Date(Date.now() + milliseconds);
         
@@ -148,6 +165,7 @@ module.exports = {
         }
         
         // Zapisz w bazie danych
+        logger.warn(`🔧 Próba utworzenia TempRoleReplace: ${tempRole.name} → ${finalRole.name} dla ${user.tag}`);
         const tempRoleDoc = await TempRoleReplace.create({
           guildId: interaction.guild.id,
           userId: user.id,
@@ -159,6 +177,7 @@ module.exports = {
           reason: reason,
           removeTempRole: removeTemp
         });
+        logger.info(`✅ TempRoleReplace utworzono pomyślnie: ID ${tempRoleDoc._id}`);
         
         // Przygotuj embed
         const embed = new EmbedBuilder()

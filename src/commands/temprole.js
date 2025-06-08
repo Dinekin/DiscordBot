@@ -1,6 +1,7 @@
-// src/commands/temprole.js
+// src/commands/temprole.js - czysła wersja
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const TempRole = require('../models/TempRole');
+const { canAddAsTempRole } = require('../utils/checkExpiredRoles');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -99,6 +100,14 @@ module.exports = {
         if (role.position >= botMember.roles.highest.position) {
           return interaction.reply({
             content: 'Nie mogę zarządzać tą rolą, ponieważ jest wyższa niż moja najwyższa rola.',
+            ephemeral: true
+          });
+        }
+        
+        // Sprawdź czy rola może być dodana jako czasowa (czy nie jest chroniona)
+        if (!canAddAsTempRole(interaction.guild.id, user.id, role.id)) {
+          return interaction.reply({
+            content: `Rola ${role.name} jest obecnie chroniona przed dodaniem jako czasowa. Spróbuj ponownie za chwilę.`,
             ephemeral: true
           });
         }
@@ -263,7 +272,7 @@ module.exports = {
         const result = await checkExpiredRoles(interaction.client);
         
         return interaction.editReply({
-          content: `✅ Sprawdzono role czasowe.\n📊 Przetworzono: ${result.processed}\n🗑️ Usunięto: ${result.removed}\n❌ Błędów: ${result.errors}`,
+          content: `✅ Sprawdzono role czasowe.\n📊 Przetworzono: ${result.processed}\n🗑️ Usunięto: ${result.removed}\n🔄 Zamieniono: ${result.replaced || 0}\n❌ Błędów: ${result.errors}`,
           ephemeral: true
         });
       }
@@ -328,8 +337,8 @@ module.exports = {
                 inline: true
               },
               { 
-                name: '🆔 Interval ID', 
-                value: checkerStatus.intervalId ? checkerStatus.intervalId.toString() : 'Brak',
+                name: '🆔 Interval Status', 
+                value: checkerStatus.intervalId || 'Brak',
                 inline: true
               }
             )

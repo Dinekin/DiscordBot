@@ -1,7 +1,8 @@
-// Dodaj ten plik jako src/events/guildMemberUpdate.js
+// src/events/guildMemberUpdate.js - czysła wersja
 const { Events, EmbedBuilder, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
 const MessageLog = require('../models/MessageLog');
+const { canAddAsTempRole } = require('../utils/checkExpiredRoles');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -74,7 +75,7 @@ async function handleNicknameChange(oldMember, newMember) {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const auditLogs = await newMember.guild.fetchAuditLogs({
-      limit: 5, // zwiększ limit
+      limit: 5,
       type: AuditLogEvent.MemberUpdate
     });
     
@@ -144,6 +145,22 @@ async function handleRoleAdd(oldMember, newMember, addedRoles) {
   } catch (error) {
     logger.error(`Błąd podczas pobierania dziennika audytu dla dodania roli: ${error.message}`);
   }
+  
+  // WAŻNE: Tutaj NIE DODAJEMY automatycznie ról jako czasowych!
+  // Jeśli miałbyś taką logikę, dodaj sprawdzenie:
+  /*
+  for (const role of addedRoles) {
+    // Sprawdź czy rola może być dodana jako czasowa
+    if (!canAddAsTempRole(newMember.guild.id, newMember.id, role.id)) {
+      logger.info(`🚫 Pomijam automatyczne dodanie roli ${role.name} jako czasowa - jest chroniona`);
+      continue;
+    }
+    
+    // Tutaj ewentualny kod dodawania roli jako czasowej
+    // UWAGA: Ten kod został USUNIĘTY aby zapobiec problemom
+    // await TempRole.create({...});
+  }
+  */
   
   const changeEmbed = new EmbedBuilder()
     .setTitle('Dodano role użytkownikowi')

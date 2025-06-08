@@ -1,7 +1,9 @@
+// src/events/messageReactionAdd.js - z ochroną przed automatycznym dodawaniem ról czasowych
 const { Events } = require('discord.js');
 const ReactionRole = require('../models/ReactionRole');
 const Guild = require('../models/Guild');
-const logger = require('../utils/logger'); // Upewnij się, że masz importowany logger
+const { canAddAsTempRole } = require('../utils/checkExpiredRoles');
+const logger = require('../utils/logger');
 
 module.exports = {
   name: Events.MessageReactionAdd,
@@ -85,6 +87,19 @@ module.exports = {
           return;
         }
         
+        // WAŻNE: Sprawdź czy rola nie jest chroniona przed dodaniem jako czasowa
+        if (!canAddAsTempRole(guild.id, user.id, role.id)) {
+          logger.warn(`🚫 Reaction role: Blokuję dodanie chronionej roli ${role.name} użytkownikowi ${user.tag}`);
+          // Usuń reakcję żeby użytkownik wiedział, że nie może teraz otrzymać tej roli
+          try {
+            await reaction.users.remove(user.id);
+            logger.info(`Usunięto reakcję użytkownika ${user.tag} dla chronionej roli ${role.name}`);
+          } catch (removeError) {
+            logger.error(`Nie można usunąć reakcji: ${removeError.message}`);
+          }
+          return;
+        }
+        
         // Sprawdź, czy bot ma uprawnienia do zarządzania rolami
         const botMember = guild.members.cache.get(guild.client.user.id);
         if (!botMember.permissions.has('ManageRoles')) {
@@ -100,7 +115,10 @@ module.exports = {
         
         // Dodaj rolę
         await member.roles.add(roleInfo.roleId);
-        logger.info(`Dodano rolę ${role.name} użytkownikowi ${member.user.tag}`);
+        logger.info(`Dodano rolę ${role.name} użytkownikowi ${member.user.tag} przez reaction role`);
+        
+        // UWAGA: TU NIE DODAJEMY AUTOMATYCZNIE ROLI JAKO CZASOWEJ!
+        // Jeśli wcześniej była tutaj logika dodawania ról jako czasowych, została usunięta
         
         // Sprawdź, czy powiadomienia są włączone
         if (roleInfo.notificationEnabled && guildSettings && guildSettings.notificationChannel) {
