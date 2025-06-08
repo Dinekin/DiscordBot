@@ -1,8 +1,7 @@
-// Poprawiony model do śledzenia ról czasowych
-// src/models/TempRole.js
+// src/models/TempRoleReplace.js
 const mongoose = require('mongoose');
 
-const TempRoleSchema = new mongoose.Schema({
+const TempRoleReplaceSchema = new mongoose.Schema({
   guildId: {
     type: String,
     required: true,
@@ -13,7 +12,12 @@ const TempRoleSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  roleId: {
+  tempRoleId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  finalRoleId: {
     type: String,
     required: true,
     index: true
@@ -25,7 +29,7 @@ const TempRoleSchema = new mongoose.Schema({
   expiresAt: {
     type: Date,
     required: true,
-    index: true // Indeks do szybkiego wyszukiwania wygasłych ról
+    index: true
   },
   addedBy: {
     type: String,
@@ -34,16 +38,17 @@ const TempRoleSchema = new mongoose.Schema({
   reason: {
     type: String,
     default: 'Nie podano powodu'
+  },
+  removeTempRole: {
+    type: Boolean,
+    default: true // Czy usunąć rolę czasową po zamianie
   }
 }, { timestamps: true });
 
 // Złożony indeks dla szybszego wyszukiwania
-TempRoleSchema.index({ guildId: 1, userId: 1, roleId: 1 }, { unique: true });
+TempRoleReplaceSchema.index({ guildId: 1, userId: 1, tempRoleId: 1 }, { unique: true });
 
 // Indeks do znajdowania wygasłych ról
-TempRoleSchema.index({ expiresAt: 1 });
+TempRoleReplaceSchema.index({ expiresAt: 1 });
 
-// WAŻNE: NIE używamy expireAfterSeconds tutaj, bo chcemy kontrolować proces usuwania
-// MongoDB automatycznie usuwałby dokumenty, ale my chcemy kontrolować usuwanie ról
-
-module.exports = mongoose.model('TempRole', TempRoleSchema);
+module.exports = mongoose.model('TempRoleReplace', TempRoleReplaceSchema);

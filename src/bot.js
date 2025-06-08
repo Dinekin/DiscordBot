@@ -4,7 +4,7 @@ const path = require('path');
 const { connectToDatabase } = require('./utils/database');
 const { setupGiveawaysManager } = require('./utils/giveawayManager');
 const logger = require('./utils/logger');
-const { checkExpiredRoles } = require('./utils/checkExpiredRoles');
+const { startExpiredRoleChecker, getExpiredRoleCheckerStatus } = require('./utils/checkExpiredRoles');
 const { LiveFeedManager } = require('./utils/liveFeedManager');
 
 // Konfiguracja klienta Discord z odpowiednimi uprawnieniami
@@ -28,6 +28,9 @@ const client = new Client({
 // Kolekcje komend i cooldownów
 client.commands = new Collection();
 client.cooldowns = new Collection();
+
+// Zmienne do przechowywania intervalów
+let expiredRoleCheckerInterval = null;
 
 // Funkcja do ładowania komend
 function loadCommands() {
@@ -113,16 +116,7 @@ function listRegisteredEvents() {
   });
 }
 
-const ROLE_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minut w milisekundach
-setInterval(() => {
-  checkExpiredRoles(client).catch(error => {
-    logger.error(`Błąd podczas sprawdzania wygasłych ról: ${error.message}`);
-  });
-}, ROLE_CHECK_INTERVAL);
-
-logger.info(`Uruchomiono automatyczne sprawdzanie wygasłych ról co ${ROLE_CHECK_INTERVAL / 60000} minut`);
-
-// W funkcji startBot, po załadowaniu komend i eventów, ale przed logowaniem do Discorda
+// Główna funkcja startowa
 async function startBot() {
   try {
     // Połączenie z bazą danych
@@ -139,12 +133,26 @@ async function startBot() {
     await client.login(process.env.DISCORD_TOKEN);
     
     // Inicjalizacja managera giveaway po zalogowaniu do Discorda
-    const { setupGiveawaysManager } = require('./utils/giveawayManager');
     client.giveawaysManager = setupGiveawaysManager(client);
     logger.info('Menedżer giveaway został zainicjalizowany');
 
+    // Inicjalizacja Live Feed Manager
     client.liveFeedManager = await new LiveFeedManager(client).init();
     logger.info('Menedżer Live Feed został zainicjalizowany');
+    
+    // Uruchomienie automatycznego sprawdzania wygasłych ról czasowych
+    logger.info('🚀 Inicjalizacja systemu ról czasowych...');
+    expiredRoleCheckerInterval = startExpiredRoleChecker(client, 1); // sprawdzaj co 1 minutę
+    
+    // Sprawdź czy system się uruchomił
+    setTimeout(() => {
+      const status = getExpiredRoleCheckerStatus();
+      if (status.isRunning) {
+        logger.info('✅ System ról czasowych został pomyślnie uruchomiony (sprawdzanie co 1 minutę)');
+      } else {
+        logger.error('❌ BŁĄD: System ról czasowych nie został uruchomiony!');
+      }
+    }, 5000);
     
     logger.info(`Bot został uruchomiony pomyślnie i obsługuje ${client.guilds.cache.size} serwerów`);
   } catch (error) {
@@ -153,5 +161,47 @@ async function startBot() {
   }
 }
 
+// Graceful shutdown
+process.on('SIGINT', () => {
+  logger.info('Otrzymano sygnał SIGINT, zamykanie bota...');
+  
+  // Zatrzymaj sprawdzanie wygasłych ról
+  if (expiredRoleCheckerInterval) {
+    clearInterval(expiredRoleCheckerInterval);
+    logger.info('Zatrzymano sprawdzanie wygasłych ról');
+  }
+  
+  // Zatrzymaj Live Feed Manager
+  if (client.liveFeedManager) {
+    client.liveFeedManager.stopFeedChecker();
+  }
+  
+  // Zamknij połączenie z Discord
+  client.destroy();
+  
+  logger.info('Bot został zamknięty');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  logger.info('Otrzymano sygnał SIGTERM, zamykanie bota...');
+  
+  // Zatrzymaj sprawdzanie wygasłych ról
+  if (expiredRoleCheckerInterval) {
+    clearInterval(expiredRoleCheckerInterval);
+    logger.info('Zatrzymano sprawdzanie wygasłych ról');
+  }
+  
+  // Zatrzymaj Live Feed Manager
+  if (client.liveFeedManager) {
+    client.liveFeedManager.stopFeedChecker();
+  }
+  
+  // Zamknij połączenie z Discord
+  client.destroy();
+  
+  logger.info('Bot został zamknięty');
+  process.exit(0);
+});
 
 module.exports = { startBot, client };

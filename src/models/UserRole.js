@@ -19,10 +19,18 @@ const UserRoleSchema = new mongoose.Schema({
   leftAt: {
     type: Date,
     default: Date.now
+  },
+  // Dodaj pole do obsługi wygaśnięcia zapisanych ról
+  expiresAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 
 // Złożony indeks dla szybszego wyszukiwania
 UserRoleSchema.index({ guildId: 1, userId: 1 }, { unique: true });
+
+// Indeks dla automatycznego wygasania dokumentów
+UserRoleSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('UserRole', UserRoleSchema);

@@ -9,6 +9,7 @@ class LiveFeedManager {
     this.intervalId = null;
     this.checkInterval = 60000; // sprawdzaj co minutę
     this.feeds = new Map(); // przechowuje aktywne feedy w pamięci
+    this.lastExecuted = new Map(); // śledzi ostatnie wykonania feedów
   }
 
   // Inicjalizacja managera
@@ -27,10 +28,16 @@ class LiveFeedManager {
       
       // Resetowanie mapy
       this.feeds.clear();
+      this.lastExecuted.clear();
       
       // Dodawanie do mapy
       feeds.forEach(feed => {
         this.feeds.set(feed._id.toString(), feed);
+        
+        // Ustaw ostatnie wykonanie na lastRun z bazy danych lub null
+        if (feed.lastRun) {
+          this.lastExecuted.set(feed._id.toString(), new Date(feed.lastRun));
+        }
         
         // Oblicz następny czas uruchomienia (jeśli jeszcze nie określono)
         if (!feed.nextRun) {
@@ -65,17 +72,30 @@ class LiveFeedManager {
   // Główna funkcja sprawdzająca i uruchamiająca feedy
   async checkFeeds() {
     const now = new Date();
-    logger.debug(`Sprawdzanie live feedów... (${now.toLocaleTimeString()})`);
+    // Zaokrąglij do najbliższej minuty, resetując sekundy i milisekundy
+    const currentMinute = new Date(now);
+    currentMinute.setSeconds(0);
+    currentMinute.setMilliseconds(0);
+    
+    logger.debug(`Sprawdzanie live feedów... (${currentMinute.toLocaleTimeString()})`);
     
     for (const [id, feed] of this.feeds.entries()) {
       try {
         // Sprawdź czy feed powinien zostać uruchomiony na podstawie harmonogramu CRON
-        if (this.shouldRunCron(feed, now)) {
+        if (this.shouldRunCron(feed, currentMinute)) {
+          // Sprawdź czy już nie wykonaliśmy tego feed w tej minucie
+          const lastExecuted = this.lastExecuted.get(id);
+          if (lastExecuted && lastExecuted.getTime() === currentMinute.getTime()) {
+            logger.debug(`Feed "${feed.name}" już został wykonany w tej minucie, pomijam`);
+            continue;
+          }
+          
           logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
           await this.executeFeed(feed);
           
-          // Aktualizuj czas ostatniego uruchomienia
-          feed.lastRun = now;
+          // Zapisz czas wykonania w pamięci i bazie danych
+          this.lastExecuted.set(id, new Date(currentMinute));
+          feed.lastRun = currentMinute;
           feed.calculateNextRun(); // Oblicz następny czas uruchomienia
           await feed.save();
           
@@ -113,15 +133,6 @@ class LiveFeedManager {
       return parseInt(pattern) === value;
     }
     
-    // Debugowanie - wypisz szczegóły sprawdzania
-    logger.debug(`Sprawdzanie harmonogramu dla feed "${feed.name}" (ID: ${feed._id}):
-      Czas sprawdzania: ${date.toISOString()}
-      Minuta: ${minute} vs ${feed.schedule.minute} -> ${matchesCronPattern(minute, feed.schedule.minute) ? 'TAK' : 'NIE'}
-      Godzina: ${hour} vs ${feed.schedule.hour} -> ${matchesCronPattern(hour, feed.schedule.hour) ? 'TAK' : 'NIE'}
-      Dzień miesiąca: ${dayOfMonth} vs ${feed.schedule.dayOfMonth} -> ${matchesCronPattern(dayOfMonth, feed.schedule.dayOfMonth) ? 'TAK' : 'NIE'}
-      Miesiąc: ${month} vs ${feed.schedule.month} -> ${matchesCronPattern(month, feed.schedule.month) ? 'TAK' : 'NIE'}
-      Dzień tygodnia: ${dayOfWeek} vs ${feed.schedule.dayOfWeek} -> ${matchesCronPattern(dayOfWeek, feed.schedule.dayOfWeek) ? 'TAK' : 'NIE'}`);
-    
     // Sprawdź, czy wszystkie komponenty daty pasują do harmonogramu
     const minuteMatches = matchesCronPattern(minute, feed.schedule.minute);
     const hourMatches = matchesCronPattern(hour, feed.schedule.hour);
@@ -131,10 +142,16 @@ class LiveFeedManager {
     
     const result = minuteMatches && hourMatches && dayMatches && monthMatches && weekdayMatches;
     
-    // Jeśli feed powinien zostać uruchomiony, zaloguj ten fakt
+    // Debugowanie tylko gdy result jest true
     if (result) {
       logger.info(`Feed "${feed.name}" (ID: ${feed._id}) powinien zostać uruchomiony o ${date.toISOString()}!`);
-      logger.info(`(harmonogram: ${feed.schedule.minute} ${feed.schedule.hour} ${feed.schedule.dayOfMonth} ${feed.schedule.month} ${feed.schedule.dayOfWeek})`);
+      logger.debug(`Sprawdzanie harmonogramu dla feed "${feed.name}" (ID: ${feed._id}):
+        Czas sprawdzania: ${date.toISOString()}
+        Minuta: ${minute} vs ${feed.schedule.minute} -> ${minuteMatches ? 'TAK' : 'NIE'}
+        Godzina: ${hour} vs ${feed.schedule.hour} -> ${hourMatches ? 'TAK' : 'NIE'}
+        Dzień miesiąca: ${dayOfMonth} vs ${feed.schedule.dayOfMonth} -> ${dayMatches ? 'TAK' : 'NIE'}
+        Miesiąc: ${month} vs ${feed.schedule.month} -> ${monthMatches ? 'TAK' : 'NIE'}
+        Dzień tygodnia: ${dayOfWeek} vs ${feed.schedule.dayOfWeek} -> ${weekdayMatches ? 'TAK' : 'NIE'}`);
     }
     
     return result;
@@ -153,6 +170,12 @@ class LiveFeedManager {
       const channel = guild.channels.cache.get(feed.channelId);
       if (!channel) {
         logger.warn(`Kanał ${feed.channelId} nie został znaleziony dla live feed ${feed._id}`);
+        return;
+      }
+      
+      // Sprawdź uprawnienia bota do pisania na kanale
+      if (!channel.permissionsFor(guild.members.me)?.has('SendMessages')) {
+        logger.warn(`Bot nie ma uprawnień do pisania na kanale ${channel.name} dla live feed ${feed._id}`);
         return;
       }
       
@@ -217,6 +240,7 @@ class LiveFeedManager {
         this.feeds.set(feed._id.toString(), feed);
       } else {
         this.feeds.delete(feed._id.toString());
+        this.lastExecuted.delete(feed._id.toString());
       }
       
       logger.info(`Zaktualizowano live feed "${feed.name}" (ID: ${feed._id})`);
@@ -235,8 +259,9 @@ class LiveFeedManager {
         throw new Error(`Live feed o ID ${feedId} nie został znaleziony`);
       }
       
-      // Usuń z mapy
+      // Usuń z map
       this.feeds.delete(feedId);
+      this.lastExecuted.delete(feedId);
       
       logger.info(`Usunięto live feed "${result.name}" (ID: ${feedId})`);
       return result;

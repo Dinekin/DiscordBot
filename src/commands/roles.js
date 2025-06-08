@@ -38,19 +38,18 @@ module.exports = {
             .setRequired(true)))
     .addSubcommand(subcommand =>
         subcommand
-                  .setName('expiry')
-                  .setDescription('Ustawia czas wygaśnięcia zapisanych ról użytkownika')
-                  .addUserOption(option =>
-                    option.setName('user')
-                      .setDescription('Użytkownik, którego czas wygaśnięcia chcesz ustawić')
-                      .setRequired(true))
-                  .addIntegerOption(option =>
-                    option.setName('days')
-                      .setDescription('Liczba dni do wygaśnięcia (0 = nigdy)')
-                      .setRequired(true)
-                      .setMinValue(0)
-                      .setMaxValue(365))),
-            
+          .setName('expiry')
+          .setDescription('Ustawia czas wygaśnięcia zapisanych ról użytkownika')
+          .addUserOption(option =>
+            option.setName('user')
+              .setDescription('Użytkownik, którego czas wygaśnięcia chcesz ustawić')
+              .setRequired(true))
+          .addIntegerOption(option =>
+            option.setName('days')
+              .setDescription('Liczba dni do wygaśnięcia (0 = nigdy)')
+              .setRequired(true)
+              .setMinValue(0)
+              .setMaxValue(365))),
 
   async execute(interaction) {
     try {
@@ -93,6 +92,14 @@ module.exports = {
         
         if (userRoleData.nickname) {
           embed.addFields({ name: 'Zapisany pseudonim', value: userRoleData.nickname });
+        }
+        
+        // Dodaj informację o wygaśnięciu jeśli ustawione
+        if (userRoleData.expiresAt) {
+          embed.addFields({ 
+            name: 'Wygasają', 
+            value: `<t:${Math.floor(userRoleData.expiresAt.getTime() / 1000)}:R>` 
+          });
         }
         
         return interaction.reply({ embeds: [embed] });
@@ -175,16 +182,8 @@ module.exports = {
           ephemeral: true
         });
       }
-    } catch (error) {
-      logger.error(`Błąd podczas wykonywania komendy roles: ${error.stack}`);
       
-      return interaction.reply({
-        content: `Wystąpił błąd podczas wykonywania komendy: ${error.message}`,
-        ephemeral: true
-      });
-    }
-
-    if (subcommand === 'expiry') {
+      if (subcommand === 'expiry') {
         const days = interaction.options.getInteger('days');
         
         if (!userRoleData) {
@@ -208,5 +207,13 @@ module.exports = {
           ephemeral: true
         });
       }
+    } catch (error) {
+      logger.error(`Błąd podczas wykonywania komendy roles: ${error.stack}`);
+      
+      return interaction.reply({
+        content: `Wystąpił błąd podczas wykonywania komendy: ${error.message}`,
+        ephemeral: true
+      });
+    }
   }
 };

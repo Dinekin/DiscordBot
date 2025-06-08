@@ -30,19 +30,19 @@ module.exports = {
             .setRequired(true))
         .addStringOption(option =>
           option.setName('minute')
-            .setDescription('Minuta (0-59, * dla każdej, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Minuta (0-59, * dla każdej, przecinek dla wielu wartości)'))
         .addStringOption(option =>
           option.setName('hour')
-            .setDescription('Godzina (0-23, * dla każdej, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Godzina (0-23, * dla każdej, przecinek dla wielu wartości)'))
         .addStringOption(option =>
           option.setName('day')
-            .setDescription('Dzień miesiąca (1-31, * dla każdego, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Dzień miesiąca (1-31, * dla każdego, przecinek dla wielu)'))
         .addStringOption(option =>
           option.setName('month')
-            .setDescription('Miesiąc (1-12, * dla każdego, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Miesiąc (1-12, * dla każdego, przecinek dla wielu)'))
         .addStringOption(option =>
           option.setName('weekday')
-            .setDescription('Dzień tygodnia (0-6, 0=niedziela, * dla każdego, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Dzień tygodnia (0-6, 0=niedziela, * dla każdego)'))
         .addBooleanOption(option =>
           option.setName('embed')
             .setDescription('Czy wysłać jako osadzoną wiadomość (embed)'))
@@ -80,19 +80,19 @@ module.exports = {
             .setDescription('Treść wiadomości do wysłania'))
         .addStringOption(option =>
           option.setName('minute')
-            .setDescription('Minuta (0-59, * dla każdej, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Minuta (0-59, * dla każdej, przecinek dla wielu wartości)'))
         .addStringOption(option =>
           option.setName('hour')
-            .setDescription('Godzina (0-23, * dla każdej, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Godzina (0-23, * dla każdej, przecinek dla wielu wartości)'))
         .addStringOption(option =>
           option.setName('day')
-            .setDescription('Dzień miesiąca (1-31, * dla każdego, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Dzień miesiąca (1-31, * dla każdego, przecinek dla wielu)'))
         .addStringOption(option =>
           option.setName('month')
-            .setDescription('Miesiąc (1-12, * dla każdego, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Miesiąc (1-12, * dla każdego, przecinek dla wielu)'))
         .addStringOption(option =>
           option.setName('weekday')
-            .setDescription('Dzień tygodnia (0-6, 0=niedziela, * dla każdego, można podać wiele wartości oddzielonych przecinkiem)'))
+            .setDescription('Dzień tygodnia (0-6, 0=niedziela, * dla każdego)'))
         .addBooleanOption(option =>
           option.setName('embed')
             .setDescription('Czy wysłać jako osadzoną wiadomość (embed)'))
@@ -206,7 +206,7 @@ module.exports = {
         const scheduleText = formatSchedule(newFeed.schedule);
         
         // Odpowiedź
-        const embedReply = new EmbedBuilder()
+        const createEmbed = new EmbedBuilder()
           .setTitle('Utworzono nowy Live Feed')
           .setColor('#2ecc71')
           .setDescription(`Harmonogram "${name}" został utworzony pomyślnie!`)
@@ -218,7 +218,7 @@ module.exports = {
           )
           .setTimestamp();
         
-        await interaction.editReply({ embeds: [embedReply] });
+        await interaction.editReply({ embeds: [createEmbed] });
       }
       
       // Wyświetl listę harmonogramów
@@ -233,7 +233,7 @@ module.exports = {
         }
         
         // Przygotuj odpowiedź
-        const embed = new EmbedBuilder()
+        const listEmbed = new EmbedBuilder()
           .setTitle('Live Feed - Lista harmonogramów')
           .setColor('#3498db')
           .setDescription(`Znaleziono ${feeds.length} harmonogramów na tym serwerze:`)
@@ -244,13 +244,13 @@ module.exports = {
           const scheduleText = formatSchedule(feed.schedule);
           const statusText = feed.isActive ? '✅ Aktywny' : '⏸️ Wstrzymany';
           
-          embed.addFields({
+          listEmbed.addFields({
             name: `${index + 1}. ${feed.name} (${statusText})`,
             value: `ID: \`${feed._id}\`\nKanał: <#${feed.channelId}>\nHarmonogram: ${scheduleText}\nOstatnie uruchomienie: ${feed.lastRun ? `<t:${Math.floor(feed.lastRun.getTime() / 1000)}:R>` : 'Nigdy'}`
           });
         });
         
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [listEmbed] });
       }
       
       // Pokaż szczegóły harmonogramu
@@ -285,7 +285,7 @@ module.exports = {
         }
         
         // Odpowiedź
-        const embed = new EmbedBuilder()
+        const infoEmbed = new EmbedBuilder()
           .setTitle(`Live Feed - ${feed.name}`)
           .setColor(feed.embed ? feed.embedColor : '#3498db')
           .setDescription(`Status: ${statusText}`)
@@ -302,7 +302,7 @@ module.exports = {
           )
           .setTimestamp();
         
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [infoEmbed] });
       }
       
       // Edytuj istniejący harmonogram
@@ -398,8 +398,8 @@ module.exports = {
         }
         
         // Embed
-        const embed = interaction.options.getBoolean('embed');
-        if (embed !== null) updateData.embed = embed;
+        const embedOption = interaction.options.getBoolean('embed');
+        if (embedOption !== null) updateData.embed = embedOption;
         
         // Kolor
         const color = interaction.options.getString('color');
@@ -417,7 +417,7 @@ module.exports = {
         const scheduleText = formatSchedule(updatedFeed.schedule);
         
         // Odpowiedź
-        const embed = new EmbedBuilder()
+        const editEmbed = new EmbedBuilder()
           .setTitle('Live Feed został zaktualizowany')
           .setColor('#f39c12')
           .setDescription(`Harmonogram "${updatedFeed.name}" został pomyślnie zaktualizowany!`)
@@ -429,7 +429,7 @@ module.exports = {
           )
           .setTimestamp();
         
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [editEmbed] });
       }
       
       // Usuń harmonogram
