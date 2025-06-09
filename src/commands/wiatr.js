@@ -1,9 +1,15 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('wiatr')
         .setDescription('Wyświetla informacje o wybranym wietrze z odpowiednimi rolami')
+        .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  )
         .addStringOption(option =>
             option.setName('typ')
                 .setDescription('Wybierz typ wiatru')

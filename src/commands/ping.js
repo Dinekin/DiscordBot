@@ -1,9 +1,15 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
     .setName('ping')
-    .setDescription('Sprawdza opóźnienie i czas odpowiedzi bota'),
+    .setDescription('Sprawdza opóźnienie i czas odpowiedzi bota')
+        .setDefaultMemberPermissions(
+      PermissionFlagsBits.Administrator | 
+      PermissionFlagsBits.ManageGuild | 
+      PermissionFlagsBits.ManageRoles | 
+      PermissionFlagsBits.ManageMessages
+  ),
 
     cooldown: 5, // Cooldown w sekundach
 
