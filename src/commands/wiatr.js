@@ -86,68 +86,68 @@ module.exports = {
             const windPatterns = {
                 boreasz: {
                     roles: ['boreasz', 'trakiusz', 'iapis', 'skiron', 'kajkias'],
-                    pattern: (r) => `${r.boreasz} +7 ${r.trakiusz} | ${r.iapis} +6 ${r.skiron} | ${r.kajkias} +5`
+                    pattern: (r) => `${r.boreasz} +7 \n${r.trakiusz} | ${r.iapis} +6 \n${r.skiron} | ${r.kajkias} +5`
                 },
                 euros: {
                     roles: ['euros', 'kajkias', 'apeliotes', 'iapis', 'euronotos'],
-                    pattern: (r) => `${r.euros} +7 ${r.kajkias} | ${r.apeliotes} +5 ${r.iapis} | ${r.euronotos} +4`
+                    pattern: (r) => `${r.euros} +7 \n${r.kajkias} | ${r.apeliotes} +5 \n${r.iapis} | ${r.euronotos} +4`
                 },
                 notos: {
                     roles: ['notos', 'libonotos', 'euronotos', 'lips', 'apeliotes'],
-                    pattern: (r) => `${r.notos} +7 ${r.libonotos} | ${r.euronotos} +6 ${r.lips} | ${r.apeliotes} +5`
+                    pattern: (r) => `${r.notos} +7 \n${r.libonotos} | ${r.euronotos} +6 \n${r.lips} | ${r.apeliotes} +5`
                 },
                 zefir: {
                     roles: ['zefir', 'skiron', 'lips', 'trakiusz', 'libonotos'],
-                    pattern: (r) => `${r.zefir} +7 ${r.skiron} | ${r.lips} +5 ${r.trakiusz} | ${r.libonotos} +4`
+                    pattern: (r) => `${r.zefir} +7 \n${r.skiron} | ${r.lips} +5 \n${r.trakiusz} | ${r.libonotos} +4`
                 },
                 iapis: {
                     roles: ['iapis', 'boreasz', 'kajkias', 'trakiusz', 'euros', 'skiron'],
-                    pattern: (r) => `${r.iapis} +7 ${r.boreasz} | ${r.kajkias} +6 ${r.trakiusz} +5 ${r.euros} | ${r.skiron} +4`
+                    pattern: (r) => `${r.iapis} +7 \n${r.boreasz} | ${r.kajkias} +6 \n${r.trakiusz} +5 \n${r.euros} | ${r.skiron} +4`
                 },
                 kajkias: {
                     roles: ['kajkias', 'iapis', 'boreasz', 'euros', 'trakiusz'],
-                    pattern: (r) => `${r.kajkias} +7 ${r.iapis} +6 ${r.boreasz} | ${r.euros} +5 ${r.trakiusz} +4`
+                    pattern: (r) => `${r.kajkias} +7 \n${r.iapis} +6 \n${r.boreasz} | ${r.euros} +5 \n${r.trakiusz} +4`
                 },
                 apeliotes: {
                     roles: ['apeliotes', 'euronotos', 'notos', 'euros', 'libonotos'],
-                    pattern: (r) => `${r.apeliotes} +7 ${r.euronotos} +6 ${r.notos} | ${r.euros} +5 ${r.libonotos} +4`
+                    pattern: (r) => `${r.apeliotes} +7 \n${r.euronotos} +6 \n${r.notos} | ${r.euros} +5 \n${r.libonotos} +4`
                 },
                 euronotos: {
                     roles: ['euronotos', 'notos', 'apeliotes', 'libonotos', 'lips', 'euros'],
-                    pattern: (r) => `${r.euronotos} +7 ${r.notos} | ${r.apeliotes} +6 ${r.libonotos} +5 ${r.lips} | ${r.euros} +4`
+                    pattern: (r) => `${r.euronotos} +7 \n${r.notos} | ${r.apeliotes} +6 \n${r.libonotos} +5 \n${r.lips} | ${r.euros} +4`
                 },
                 libonotos: {
                     roles: ['libonotos', 'lips', 'notos', 'euronotos', 'zefir', 'apeliotes'],
-                    pattern: (r) => `${r.libonotos} +7 ${r.lips} | ${r.notos} +6 ${r.euronotos} +5 ${r.zefir} | ${r.apeliotes} +4`
+                    pattern: (r) => `${r.libonotos} +7 \n${r.lips} | ${r.notos} +6 \n${r.euronotos} +5 \n${r.zefir} | ${r.apeliotes} +4`
                 },
                 lips: {
                     roles: ['lips', 'libonotos', 'zefir', 'notos', 'euronotos'],
-                    pattern: (r) => `${r.lips} +7 ${r.libonotos} +6 ${r.zefir} | ${r.notos} +5 ${r.euronotos} +4`
+                    pattern: (r) => `${r.lips} +7 \n${r.libonotos} +6 \n${r.zefir} | ${r.notos} +5 \n${r.euronotos} +4`
                 },
                 skiron: {
                     roles: ['skiron', 'trakiusz', 'zefir', 'boreasz', 'iapis'],
-                    pattern: (r) => `${r.skiron} +7 ${r.trakiusz} +6 ${r.zefir} | ${r.boreasz} +5 ${r.iapis} +4`
+                    pattern: (r) => `${r.skiron} +7 \n${r.trakiusz} +6 \n${r.zefir} | ${r.boreasz} +5 \n${r.iapis} +4`
                 },
                 trakiusz: {
                     roles: ['trakiusz', 'skiron', 'boreasz', 'iapis', 'zefir', 'kajkias'],
-                    pattern: (r) => `${r.trakiusz} +7 ${r.skiron} | ${r.boreasz} +6 ${r.iapis} +5 ${r.zefir} | ${r.kajkias} +4`
+                    pattern: (r) => `${r.trakiusz} +7 \n${r.skiron} | ${r.boreasz} +6 \n${r.iapis} +5 \n${r.zefir} | ${r.kajkias} +4`
                 },
                 // Kombinacje
                 ek: {
                     roles: ['kajkias', 'euros', 'iapis', 'boreasz', 'apeliotes'],
-                    pattern: (r) => `${r.kajkias} | ${r.euros} +6 ${r.iapis} +5 ${r.boreasz} | ${r.apeliotes} +4`
+                    pattern: (r) => `${r.kajkias} | ${r.euros} +6 \n${r.iapis} +5 \n${r.boreasz} | ${r.apeliotes} +4`
                 },
                 ea: {
                     roles: ['euros', 'apeliotes', 'euronotos', 'kajkias', 'notos'],
-                    pattern: (r) => `${r.euros} | ${r.apeliotes} +6 ${r.euronotos} +5 ${r.kajkias} | ${r.notos} +4`
+                    pattern: (r) => `${r.euros} | ${r.apeliotes} +6 \n${r.euronotos} +5 \n${r.kajkias} | ${r.notos} +4`
                 },
                 zl: {
                     roles: ['zefir', 'lips', 'libonotos', 'skiron', 'notos'],
-                    pattern: (r) => `${r.zefir} | ${r.lips} +6 ${r.libonotos} +5 ${r.skiron} | ${r.notos} +4`
+                    pattern: (r) => `${r.zefir} | ${r.lips} +6 \n${r.libonotos} +5 \n${r.skiron} | ${r.notos} +4`
                 },
                 zs: {
                     roles: ['skiron', 'zefir', 'trakiusz', 'boreasz', 'lips'],
-                    pattern: (r) => `${r.skiron} | ${r.zefir} +6 ${r.trakiusz} +5 ${r.boreasz} | ${r.lips} +4`
+                    pattern: (r) => `${r.skiron} | ${r.zefir} +6 \n${r.trakiusz} +5 \n${r.boreasz} | ${r.lips} +4`
                 }
             };
 

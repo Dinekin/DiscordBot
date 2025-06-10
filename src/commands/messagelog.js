@@ -12,7 +12,7 @@ module.exports = {
       PermissionFlagsBits.ManageGuild | 
       PermissionFlagsBits.ManageRoles | 
       PermissionFlagsBits.ManageMessages
-  )
+    )
     .addSubcommand(subcommand =>
       subcommand
         .setName('search')
@@ -44,7 +44,27 @@ module.exports = {
         .addBooleanOption(option =>
           option.setName('enabled')
             .setDescription('Czy logowanie wiadomości jest włączone')
-            .setRequired(true))),
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('exclude')
+        .setDescription('Dodaj kanał do listy wykluczonych z logowania')
+        .addChannelOption(option =>
+          option.setName('channel')
+            .setDescription('Kanał do wykluczenia z logowania')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('include')
+        .setDescription('Usuń kanał z listy wykluczonych')
+        .addChannelOption(option =>
+          option.setName('channel')
+            .setDescription('Kanał do przywrócenia logowania')
+            .setRequired(true)))
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('excluded')
+        .setDescription('Wyświetl listę wykluczonych kanałów')),
   
   async execute(interaction) {
     logger.info(`Rozpoczęto wykonywanie komendy messagelog przez ${interaction.user.tag}`);
@@ -201,6 +221,128 @@ module.exports = {
         logger.error(`Błąd podczas przełączania logowania wiadomości: ${error.stack}`);
         return interaction.reply({
           content: `Wystąpił błąd podczas zmiany ustawień logowania wiadomości: ${error.message}`,
+          ephemeral: true
+        });
+      }
+    }
+    
+    else if (subcommand === 'exclude') {
+      logger.debug(`Wykonywanie podkomendy exclude`);
+      const channel = interaction.options.getChannel('channel');
+      
+      // Sprawdź typ kanału
+      if (channel.type !== 0) { // 0 = kanał tekstowy
+        logger.warn(`Użytkownik próbował wykluczyć kanał typu ${channel.type}`);
+        return interaction.reply({
+          content: 'Można wykluczyć tylko kanały tekstowe!',
+          ephemeral: true
+        });
+      }
+      
+      try {
+        // Sprawdź czy kanał już jest wykluczony
+        if (guildSettings.excludedChannels && guildSettings.excludedChannels.includes(channel.id)) {
+          return interaction.reply({
+            content: `Kanał ${channel} jest już wykluczony z logowania.`,
+            ephemeral: true
+          });
+        }
+        
+        // Dodaj kanał do listy wykluczonych
+        if (!guildSettings.excludedChannels) {
+          guildSettings.excludedChannels = [];
+        }
+        guildSettings.excludedChannels.push(channel.id);
+        await guildSettings.save();
+        
+        logger.info(`Kanał ${channel.id} dodany do wykluczonych na serwerze ${interaction.guildId}`);
+        
+        await interaction.reply({
+          content: `✅ Kanał ${channel} został wykluczony z logowania wiadomości.`,
+          ephemeral: true
+        });
+      } catch (error) {
+        logger.error(`Błąd podczas wykluczania kanału: ${error.stack}`);
+        return interaction.reply({
+          content: `Wystąpił błąd podczas wykluczania kanału: ${error.message}`,
+          ephemeral: true
+        });
+      }
+    }
+    
+    else if (subcommand === 'include') {
+      logger.debug(`Wykonywanie podkomendy include`);
+      const channel = interaction.options.getChannel('channel');
+      
+      try {
+        // Sprawdź czy kanał jest wykluczony
+        if (!guildSettings.excludedChannels || !guildSettings.excludedChannels.includes(channel.id)) {
+          return interaction.reply({
+            content: `Kanał ${channel} nie jest wykluczony z logowania.`,
+            ephemeral: true
+          });
+        }
+        
+        // Usuń kanał z listy wykluczonych
+        guildSettings.excludedChannels = guildSettings.excludedChannels.filter(id => id !== channel.id);
+        await guildSettings.save();
+        
+        logger.info(`Kanał ${channel.id} usunięty z wykluczonych na serwerze ${interaction.guildId}`);
+        
+        await interaction.reply({
+          content: `✅ Przywrócono logowanie wiadomości dla kanału ${channel}.`,
+          ephemeral: true
+        });
+      } catch (error) {
+        logger.error(`Błąd podczas przywracania logowania kanału: ${error.stack}`);
+        return interaction.reply({
+          content: `Wystąpił błąd podczas przywracania logowania kanału: ${error.message}`,
+          ephemeral: true
+        });
+      }
+    }
+    
+    else if (subcommand === 'excluded') {
+      logger.debug(`Wykonywanie podkomendy excluded`);
+      
+      try {
+        if (!guildSettings.excludedChannels || guildSettings.excludedChannels.length === 0) {
+          return interaction.reply({
+            content: 'Nie ma żadnych wykluczonych kanałów.',
+            ephemeral: true
+          });
+        }
+        
+        // Przygotuj listę wykluczonych kanałów
+        const excludedList = [];
+        for (const channelId of guildSettings.excludedChannels) {
+          try {
+            const channel = await interaction.guild.channels.fetch(channelId);
+            if (channel) {
+              excludedList.push(`• <#${channelId}> (${channel.name})`);
+            } else {
+              excludedList.push(`• Nieistniejący kanał (${channelId})`);
+            }
+          } catch (fetchError) {
+            excludedList.push(`• Nieistniejący kanał (${channelId})`);
+          }
+        }
+        
+        const embed = new EmbedBuilder()
+          .setColor(0x3498db)
+          .setTitle('🚫 Wykluczone kanały z logowania')
+          .setDescription(excludedList.join('\n'))
+          .setFooter({ text: `Łącznie wykluczonych: ${guildSettings.excludedChannels.length}` })
+          .setTimestamp();
+        
+        await interaction.reply({
+          embeds: [embed],
+          ephemeral: true
+        });
+      } catch (error) {
+        logger.error(`Błąd podczas wyświetlania wykluczonych kanałów: ${error.stack}`);
+        return interaction.reply({
+          content: `Wystąpił błąd podczas wyświetlania wykluczonych kanałów: ${error.message}`,
           ephemeral: true
         });
       }

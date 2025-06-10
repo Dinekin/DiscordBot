@@ -54,6 +54,11 @@ const GuildSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+    // Lista wykluczonych kanałów z logowania
+  excludedChannels: [{
+    type: String,
+    default: null
+  }],
   language: {
     type: String,
     default: 'pl'
