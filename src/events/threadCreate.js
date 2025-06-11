@@ -3,6 +3,63 @@ const { Events, EmbedBuilder } = require('discord.js');
 const Guild = require('../models/Guild');
 const logger = require('../utils/logger');
 
+// Funkcja do pobierania treści pierwszej wiadomości z wątku
+async function getThreadStarterMessage(thread) {
+  try {
+    // Sprawdź czy to wątek forum
+    if (thread.parent?.type === 15) { // GUILD_FORUM
+      // Dla wątków forum, spróbuj pobrać pierwszą wiadomość
+      const messages = await thread.messages.fetch({ limit: 1 });
+      const starterMessage = messages.first();
+      
+      if (starterMessage) {
+        let content = [];
+        
+        // Dodaj treść tekstową
+        if (starterMessage.content && starterMessage.content.trim()) {
+          content.push(starterMessage.content);
+        }
+        
+        // Dodaj informacje o załącznikach
+        if (starterMessage.attachments && starterMessage.attachments.size > 0) {
+          const attachmentNames = Array.from(starterMessage.attachments.values())
+            .map(a => `📎 ${a.name}`)
+            .join(', ');
+          content.push(`Załączniki: ${attachmentNames}`);
+        }
+        
+        // Dodaj informacje o embeddach
+        if (starterMessage.embeds && starterMessage.embeds.length > 0) {
+          const embedInfo = starterMessage.embeds.map(embed => {
+            let info = [];
+            if (embed.title) info.push(`"${embed.title}"`);
+            if (embed.description) info.push(embed.description.substring(0, 100) + (embed.description.length > 100 ? '...' : ''));
+            return info.join(' - ');
+          }).join('; ');
+          content.push(`📋 Embeddy: ${embedInfo}`);
+        }
+        
+        // Dodaj informacje o naklejkach
+        if (starterMessage.stickers && starterMessage.stickers.size > 0) {
+          const stickerNames = Array.from(starterMessage.stickers.values())
+            .map(s => `🏷️ ${s.name}`)
+            .join(', ');
+          content.push(`Naklejki: ${stickerNames}`);
+        }
+        
+        if (content.length > 0) {
+          return content.join('\n');
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania pierwszej wiadomości wątku: ${error.message}`);
+    return null;
+  }
+}
+
 module.exports = {
   name: Events.ThreadCreate,
   async execute(thread) {
@@ -21,11 +78,14 @@ module.exports = {
           // Nie logujemy zdarzeń z kanału logów
           if (logChannel.id === thread.parent?.id) return;
           
+          // Pobierz treść pierwszej wiadomości z wątku
+          const starterContent = await getThreadStarterMessage(thread);
+          
           // Przygotowanie embedu z informacjami o nowej nitce
           const logEmbed = new EmbedBuilder()
             .setColor(0x3498db)
             .setTitle('Utworzono nową nitkę')
-            .setDescription(`Nazwa: **${thread.name}**`)
+            .setDescription(`**Nazwa:** ${thread.name}`)
             .addFields(
               { name: 'Kanał nadrzędny', value: thread.parent ? `<#${thread.parent.id}>` : 'Nieznany' },
               { name: 'Typ', value: getThreadTypeText(thread.type) }
@@ -43,6 +103,14 @@ module.exports = {
             }
           }
           
+          // Dodaj treść pierwszej wiadomości jeśli dostępna
+          if (starterContent) {
+            const truncatedContent = starterContent.length > 1024 
+              ? starterContent.substring(0, 1021) + '...' 
+              : starterContent;
+            logEmbed.addFields({ name: 'Treść pierwszej wiadomości', value: truncatedContent });
+          }
+          
           // Dodaj informacje o wątku forum jeśli to wątek forum
           if (thread.parent?.type === 15) { // 15 = GUILD_FORUM
             logEmbed.setTitle('Utworzono nowy wątek forum')
@@ -57,7 +125,29 @@ module.exports = {
               
               logEmbed.addFields({ name: 'Tagi', value: tagsText || 'Brak tagów' });
             }
+            
+            // Dodaj informacje o ustawieniach automatycznej archiwizacji
+            if (thread.autoArchiveDuration) {
+              logEmbed.addFields({ 
+                name: 'Auto-archiwizacja', 
+                value: formatArchiveDuration(thread.autoArchiveDuration) 
+              });
+            }
           }
+          
+          // Dodaj informacje o slowmode jeśli jest ustawiony
+          if (thread.rateLimitPerUser && thread.rateLimitPerUser > 0) {
+            logEmbed.addFields({ 
+              name: 'Slowmode', 
+              value: `${thread.rateLimitPerUser} sekund` 
+            });
+          }
+          
+          // Dodaj link do wątku
+          logEmbed.addFields({ 
+            name: 'Link', 
+            value: `[Przejdź do wątku](https://discord.com/channels/${thread.guild.id}/${thread.id})` 
+          });
           
           await logChannel.send({ embeds: [logEmbed] });
         }
@@ -76,4 +166,16 @@ function getThreadTypeText(type) {
     case 13: return 'Ogłoszenie (ANNOUNCEMENT_THREAD)';
     default: return `Nieznany (${type})`;
   }
+}
+
+// Funkcja pomocnicza do formatowania czasu archiwizacji
+function formatArchiveDuration(minutes) {
+  if (!minutes) return 'Nieznany';
+  
+  if (minutes === 60) return '1 godzina';
+  if (minutes === 1440) return '1 dzień';
+  if (minutes === 4320) return '3 dni';
+  if (minutes === 10080) return '1 tydzień';
+  
+  return `${minutes} minut`;
 }

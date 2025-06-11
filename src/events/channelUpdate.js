@@ -30,13 +30,30 @@ module.exports = {
       
       // Przygotuj listę zmian, które wystąpiły
       const changes = [];
+      let importantChange = false;
+      const isForum = newChannel.type === ChannelType.GuildForum;
       
       // Sprawdź czy zmieniła się nazwa
       if (oldChannel.name !== newChannel.name) {
         changes.push({
-          name: 'Nazwa',
-          value: `**Przed:** ${oldChannel.name}\n**Po:** ${newChannel.name}`
+          name: '📝 Nazwa',
+          value: `**Przed:** ${oldChannel.name}\n**Po:** ${newChannel.name}`,
+          inline: false
         });
+        importantChange = true;
+      }
+      
+      // Sprawdź czy zmienił się temat/opis
+      if (oldChannel.topic !== newChannel.topic) {
+        const oldTopic = oldChannel.topic || '*Brak*';
+        const newTopic = newChannel.topic || '*Brak*';
+        
+        changes.push({
+          name: isForum ? '📋 Opis forum' : '📝 Temat kanału',
+          value: `**Przed:** ${oldTopic.length > 100 ? oldTopic.substring(0, 97) + '...' : oldTopic}\n**Po:** ${newTopic.length > 100 ? newTopic.substring(0, 97) + '...' : newTopic}`,
+          inline: false
+        });
+        importantChange = true;
       }
       
       // Sprawdź czy zmieniła się kategoria nadrzędna
@@ -55,71 +72,201 @@ module.exports = {
         }
         
         changes.push({
-          name: 'Kategoria',
-          value: `**Przed:** ${oldParentName}\n**Po:** ${newParentName}`
+          name: '📁 Kategoria',
+          value: `**Przed:** ${oldParentName}\n**Po:** ${newParentName}`,
+          inline: false
         });
+        importantChange = true;
       }
       
-      // Sprawdź czy zmieniły się uprawnienia
+      // Sprawdź czy zmieniły się uprawnienia (podstawowe sprawdzenie)
       if (oldChannel.permissionOverwrites.cache.size !== newChannel.permissionOverwrites.cache.size) {
         changes.push({
-          name: 'Uprawnienia',
-          value: `Zmieniono uprawnienia kanału.`
+          name: '🔐 Uprawnienia',
+          value: `Zmieniono liczbę nadpisań uprawnień: ${oldChannel.permissionOverwrites.cache.size} → ${newChannel.permissionOverwrites.cache.size}`,
+          inline: false
         });
       }
       
-      // Dla forów sprawdź zmiany w dostępnych tagach
-      if (newChannel.type === ChannelType.GuildForum) {
+      // Sprawdzenia specyficzne dla forów
+      if (isForum) {
         // Sprawdź zmiany w dostępnych tagach
-        if (oldChannel.availableTags?.length !== newChannel.availableTags?.length) {
+        const oldTagsCount = oldChannel.availableTags?.length || 0;
+        const newTagsCount = newChannel.availableTags?.length || 0;
+        
+        if (oldTagsCount !== newTagsCount) {
           changes.push({
-            name: 'Tagi forum',
-            value: `Zmieniono dostępne tagi (${oldChannel.availableTags?.length || 0} → ${newChannel.availableTags?.length || 0})`
+            name: '🏷️ Tagi forum',
+            value: `Zmieniono liczbę dostępnych tagów: ${oldTagsCount} → ${newTagsCount}`,
+            inline: true
           });
+        } else if (oldChannel.availableTags && newChannel.availableTags) {
+          // Sprawdź czy zmieniły się nazwy/emoji tagów
+          const oldTagNames = oldChannel.availableTags.map(t => t.name).sort().join(', ');
+          const newTagNames = newChannel.availableTags.map(t => t.name).sort().join(', ');
+          
+          if (oldTagNames !== newTagNames) {
+            changes.push({
+              name: '🏷️ Nazwy tagów',
+              value: 'Zmieniono nazwy lub kolejność tagów forum',
+              inline: true
+            });
+          }
         }
         
         // Sprawdź zmiany w domyślnej reakcji
-        if (oldChannel.defaultReactionEmoji?.id !== newChannel.defaultReactionEmoji?.id ||
-            oldChannel.defaultReactionEmoji?.name !== newChannel.defaultReactionEmoji?.name) {
-          
+        const oldReaction = oldChannel.defaultReactionEmoji;
+        const newReaction = newChannel.defaultReactionEmoji;
+        
+        if (oldReaction?.id !== newReaction?.id || oldReaction?.name !== newReaction?.name) {
           let oldEmoji = 'Brak';
           let newEmoji = 'Brak';
           
-          if (oldChannel.defaultReactionEmoji) {
-            oldEmoji = oldChannel.defaultReactionEmoji.id
-              ? `<:emoji:${oldChannel.defaultReactionEmoji.id}>`
-              : oldChannel.defaultReactionEmoji.name;
+          if (oldReaction) {
+            oldEmoji = oldReaction.id
+              ? `<:${oldReaction.name}:${oldReaction.id}>`
+              : oldReaction.name;
           }
           
-          if (newChannel.defaultReactionEmoji) {
-            newEmoji = newChannel.defaultReactionEmoji.id
-              ? `<:emoji:${newChannel.defaultReactionEmoji.id}>`
-              : newChannel.defaultReactionEmoji.name;
+          if (newReaction) {
+            newEmoji = newReaction.id
+              ? `<:${newReaction.name}:${newReaction.id}>`
+              : newReaction.name;
           }
           
           changes.push({
-            name: 'Domyślna reakcja',
-            value: `**Przed:** ${oldEmoji}\n**Po:** ${newEmoji}`
+            name: '👍 Domyślna reakcja',
+            value: `**Przed:** ${oldEmoji}\n**Po:** ${newEmoji}`,
+            inline: true
+          });
+        }
+        
+        // Sprawdź zmiany w domyślnej auto-archiwizacji
+        if (oldChannel.defaultAutoArchiveDuration !== newChannel.defaultAutoArchiveDuration) {
+          const oldDuration = formatArchiveDuration(oldChannel.defaultAutoArchiveDuration);
+          const newDuration = formatArchiveDuration(newChannel.defaultAutoArchiveDuration);
+          
+          changes.push({
+            name: '📁 Domyślna auto-archiwizacja',
+            value: `**Przed:** ${oldDuration}\n**Po:** ${newDuration}`,
+            inline: true
+          });
+        }
+        
+        // Sprawdź zmiany w domyślnym slowmode wątków
+        if (oldChannel.defaultThreadRateLimitPerUser !== newChannel.defaultThreadRateLimitPerUser) {
+          const oldRate = oldChannel.defaultThreadRateLimitPerUser || 0;
+          const newRate = newChannel.defaultThreadRateLimitPerUser || 0;
+          
+          changes.push({
+            name: '🐌 Domyślny slowmode wątków',
+            value: `**Przed:** ${oldRate === 0 ? 'Wyłączony' : `${oldRate} sekund`}\n**Po:** ${newRate === 0 ? 'Wyłączony' : `${newRate} sekund`}`,
+            inline: true
+          });
+        }
+        
+        // Sprawdź zmiany w sortowaniu
+        if (oldChannel.defaultSortOrder !== newChannel.defaultSortOrder) {
+          const sortTexts = {
+            0: 'Najnowsza aktywność',
+            1: 'Data utworzenia'
+          };
+          
+          const oldSort = sortTexts[oldChannel.defaultSortOrder] || `Nieznane (${oldChannel.defaultSortOrder})`;
+          const newSort = sortTexts[newChannel.defaultSortOrder] || `Nieznane (${newChannel.defaultSortOrder})`;
+          
+          changes.push({
+            name: '📊 Domyślne sortowanie',
+            value: `**Przed:** ${oldSort}\n**Po:** ${newSort}`,
+            inline: true
+          });
+        }
+        
+        // Sprawdź zmiany w layoutcie forum
+        if (oldChannel.defaultForumLayout !== newChannel.defaultForumLayout) {
+          const layoutTexts = {
+            0: 'Niespecyfikowany',
+            1: 'Widok listy',
+            2: 'Widok galerii'
+          };
+          
+          const oldLayout = layoutTexts[oldChannel.defaultForumLayout] || `Nieznany (${oldChannel.defaultForumLayout})`;
+          const newLayout = layoutTexts[newChannel.defaultForumLayout] || `Nieznany (${newChannel.defaultForumLayout})`;
+          
+          changes.push({
+            name: '🖼️ Layout forum',
+            value: `**Przed:** ${oldLayout}\n**Po:** ${newLayout}`,
+            inline: true
           });
         }
       }
       
-      // Sprawdź czy zmieniło się ograniczenie szybkości
-      if (oldChannel.rateLimitPerUser !== newChannel.rateLimitPerUser) {
-        const oldLimit = oldChannel.rateLimitPerUser ? `${oldChannel.rateLimitPerUser} sekund` : 'Brak';
-        const newLimit = newChannel.rateLimitPerUser ? `${newChannel.rateLimitPerUser} sekund` : 'Brak';
+      // Sprawdzenia dla kanałów tekstowych i ogłoszeń
+      if (newChannel.type === ChannelType.GuildText || newChannel.type === ChannelType.GuildAnnouncement) {
+        // Sprawdź czy zmieniło się ograniczenie szybkości
+        if (oldChannel.rateLimitPerUser !== newChannel.rateLimitPerUser) {
+          const oldLimit = oldChannel.rateLimitPerUser ? `${oldChannel.rateLimitPerUser} sekund` : 'Brak';
+          const newLimit = newChannel.rateLimitPerUser ? `${newChannel.rateLimitPerUser} sekund` : 'Brak';
+          
+          changes.push({
+            name: '🐌 Slowmode',
+            value: `**Przed:** ${oldLimit}\n**Po:** ${newLimit}`,
+            inline: true
+          });
+        }
         
-        changes.push({
-          name: 'Ograniczenie szybkości',
-          value: `**Przed:** ${oldLimit}\n**Po:** ${newLimit}`
-        });
+        // Sprawdź czy zmienił się status NSFW
+        if (oldChannel.nsfw !== newChannel.nsfw) {
+          changes.push({
+            name: '🔞 NSFW',
+            value: `**Przed:** ${oldChannel.nsfw ? 'Tak' : 'Nie'}\n**Po:** ${newChannel.nsfw ? 'Tak' : 'Nie'}`,
+            inline: true
+          });
+        }
+      }
+      
+      // Sprawdzenia dla kanałów głosowych
+      if (newChannel.type === ChannelType.GuildVoice || newChannel.type === ChannelType.GuildStageVoice) {
+        // Sprawdź zmiany w limicie użytkowników
+        if (oldChannel.userLimit !== newChannel.userLimit) {
+          const oldLimit = oldChannel.userLimit === 0 ? 'Brak limitu' : oldChannel.userLimit.toString();
+          const newLimit = newChannel.userLimit === 0 ? 'Brak limitu' : newChannel.userLimit.toString();
+          
+          changes.push({
+            name: '👥 Limit użytkowników',
+            value: `**Przed:** ${oldLimit}\n**Po:** ${newLimit}`,
+            inline: true
+          });
+        }
+        
+        // Sprawdź zmiany w bitrate
+        if (oldChannel.bitrate !== newChannel.bitrate) {
+          changes.push({
+            name: '🔊 Bitrate',
+            value: `**Przed:** ${oldChannel.bitrate / 1000} kbps\n**Po:** ${newChannel.bitrate / 1000} kbps`,
+            inline: true
+          });
+        }
+        
+        // Sprawdź zmiany w regionie
+        if (oldChannel.rtcRegion !== newChannel.rtcRegion) {
+          const oldRegion = oldChannel.rtcRegion || 'Automatyczny';
+          const newRegion = newChannel.rtcRegion || 'Automatyczny';
+          
+          changes.push({
+            name: '🌍 Region głosowy',
+            value: `**Przed:** ${oldRegion}\n**Po:** ${newRegion}`,
+            inline: true
+          });
+        }
       }
       
       // Sprawdź czy zmieniła się pozycja
       if (oldChannel.position !== newChannel.position) {
         changes.push({
-          name: 'Pozycja',
-          value: `**Przed:** ${oldChannel.position}\n**Po:** ${newChannel.position}`
+          name: '📍 Pozycja',
+          value: `**Przed:** ${oldChannel.position}\n**Po:** ${newChannel.position}`,
+          inline: true
         });
       }
       
@@ -148,15 +295,22 @@ module.exports = {
         logger.error(`Błąd podczas pobierania dziennika audytu dla aktualizacji kanału: ${error.message}`);
       }
       
-      // Określ typ kanału
+      // Określ typ kanału i kolor
       const channelTypeText = getChannelTypeText(newChannel.type);
-      const isForum = newChannel.type === ChannelType.GuildForum;
+      let embedColor = 0xF1C40F; // Żółty dla zwykłych zmian
+      if (isForum) embedColor = 0x9B59B6; // Fioletowy dla forów
+      else if (importantChange) embedColor = 0x3498DB; // Niebieski dla ważnych zmian
       
       // Przygotuj embed z informacjami o aktualizacji kanału
       const embed = new EmbedBuilder()
-        .setTitle(`Zaktualizowano kanał${isForum ? ' forum' : ''}`)
-        .setColor(0xF1C40F)
+        .setTitle(`${isForum ? '🗂️ Zaktualizowano forum' : '📁 Zaktualizowano kanał'}`)
+        .setColor(embedColor)
         .setDescription(`**Kanał:** ${newChannel.name} (<#${newChannel.id}>)`)
+        .addFields({ 
+          name: '📋 Typ', 
+          value: channelTypeText,
+          inline: true 
+        })
         .setTimestamp()
         .setFooter({ text: `ID kanału: ${newChannel.id}` });
       
@@ -166,11 +320,51 @@ module.exports = {
       });
       
       if (executor) {
-        embed.addFields({ name: 'Zaktualizowany przez', value: `${executor.tag} (${executor.id})` });
+        embed.addFields({ 
+          name: '👤 Zaktualizowany przez', 
+          value: `${executor.tag} (${executor.id})`,
+          inline: true 
+        });
       }
       
       if (reason !== "Nie podano powodu") {
-        embed.addFields({ name: 'Powód', value: reason });
+        embed.addFields({ 
+          name: '📝 Powód', 
+          value: reason,
+          inline: false 
+        });
+      }
+      
+      // Dodaj link do kanału
+      embed.addFields({ 
+        name: '🔗 Link', 
+        value: `<#${newChannel.id}>`,
+        inline: true 
+      });
+      
+      // Dodaj szczegółowe informacje o tagach forum jeśli się zmieniły
+      if (isForum && newChannel.availableTags && newChannel.availableTags.length > 0) {
+        const tagsDescription = newChannel.availableTags
+          .map(tag => {
+            let tagInfo = `• **${tag.name}**`;
+            if (tag.emoji) {
+              const emojiText = tag.emoji.id 
+                ? `<:${tag.emoji.name}:${tag.emoji.id}>` 
+                : tag.emoji.name;
+              tagInfo = `${emojiText} ${tagInfo}`;
+            }
+            if (tag.moderated) tagInfo += ' (moderowany)';
+            return tagInfo;
+          })
+          .join('\n');
+        
+        if (tagsDescription.length <= 1024) {
+          embed.addFields({ 
+            name: `🏷️ Aktualne tagi (${newChannel.availableTags.length})`, 
+            value: tagsDescription,
+            inline: false 
+          });
+        }
       }
       
       await logChannel.send({ embeds: [embed] });
@@ -192,6 +386,19 @@ function getChannelTypeText(type) {
     case ChannelType.PrivateThread: return 'Prywatna nitka';
     case ChannelType.GuildStageVoice: return 'Kanał sceniczny';
     case ChannelType.GuildForum: return 'Forum';
+    case ChannelType.GuildDirectory: return 'Katalog';
     default: return `Nieznany (${type})`;
   }
+}
+
+// Funkcja pomocnicza do formatowania czasu archiwizacji
+function formatArchiveDuration(minutes) {
+  if (!minutes) return 'Nieznany';
+  
+  if (minutes === 60) return '1 godzina';
+  if (minutes === 1440) return '1 dzień';
+  if (minutes === 4320) return '3 dni';
+  if (minutes === 10080) return '1 tydzień';
+  
+  return `${minutes} minut`;
 }

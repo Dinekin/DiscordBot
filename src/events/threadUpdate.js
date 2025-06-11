@@ -21,13 +21,16 @@ module.exports = {
       
       // Przygotuj listę zmian, które wystąpiły
       const changes = [];
+      let importantChange = false; // Flaga dla ważnych zmian
       
       // Sprawdź czy zmieniła się nazwa
       if (oldThread.name !== newThread.name) {
         changes.push({
-          name: 'Nazwa',
-          value: `**Przed:** ${oldThread.name}\n**Po:** ${newThread.name}`
+          name: '📝 Nazwa',
+          value: `**Przed:** ${oldThread.name}\n**Po:** ${newThread.name}`,
+          inline: false
         });
+        importantChange = true;
       }
       
       // Sprawdź czy zmieniono tagi (dla wątków forum)
@@ -50,49 +53,90 @@ module.exports = {
         }
         
         changes.push({
-          name: 'Tagi',
-          value: `**Przed:** ${oldTags}\n**Po:** ${newTags}`
+          name: '🏷️ Tagi',
+          value: `**Przed:** ${oldTags}\n**Po:** ${newTags}`,
+          inline: false
         });
+        importantChange = true;
       }
       
       // Sprawdź czy zmieniono ustawienia archiwizacji
       if (oldThread.autoArchiveDuration !== newThread.autoArchiveDuration) {
         changes.push({
-          name: 'Czas automatycznej archiwizacji',
-          value: `**Przed:** ${formatArchiveDuration(oldThread.autoArchiveDuration)}\n**Po:** ${formatArchiveDuration(newThread.autoArchiveDuration)}`
+          name: '⏱️ Czas automatycznej archiwizacji',
+          value: `**Przed:** ${formatArchiveDuration(oldThread.autoArchiveDuration)}\n**Po:** ${formatArchiveDuration(newThread.autoArchiveDuration)}`,
+          inline: true
+        });
+      }
+      
+      // Sprawdź czy zmieniono slowmode
+      if (oldThread.rateLimitPerUser !== newThread.rateLimitPerUser) {
+        const oldRate = oldThread.rateLimitPerUser ? `${oldThread.rateLimitPerUser} sekund` : 'Wyłączony';
+        const newRate = newThread.rateLimitPerUser ? `${newThread.rateLimitPerUser} sekund` : 'Wyłączony';
+        
+        changes.push({
+          name: '🐌 Slowmode',
+          value: `**Przed:** ${oldRate}\n**Po:** ${newRate}`,
+          inline: true
         });
       }
       
       // Sprawdź czy nitka została zarchiwizowana
       if (!oldThread.archived && newThread.archived) {
         changes.push({
-          name: 'Stan',
-          value: '**Nitka została zarchiwizowana**'
+          name: '📁 Stan',
+          value: '**Nitka została zarchiwizowana**',
+          inline: false
         });
+        importantChange = true;
       }
       
       // Sprawdź czy nitka została odarchiwizowana
       if (oldThread.archived && !newThread.archived) {
         changes.push({
-          name: 'Stan',
-          value: '**Nitka została odarchiwizowana**'
+          name: '📂 Stan',
+          value: '**Nitka została odarchiwizowana**',
+          inline: false
         });
+        importantChange = true;
       }
       
       // Sprawdź czy nitka została zablokowana
       if (!oldThread.locked && newThread.locked) {
         changes.push({
-          name: 'Stan',
-          value: '**Nitka została zablokowana**'
+          name: '🔒 Stan',
+          value: '**Nitka została zablokowana**',
+          inline: false
         });
+        importantChange = true;
       }
       
       // Sprawdź czy nitka została odblokowana
       if (oldThread.locked && !newThread.locked) {
         changes.push({
-          name: 'Stan',
-          value: '**Nitka została odblokowana**'
+          name: '🔓 Stan',
+          value: '**Nitka została odblokowana**',
+          inline: false
         });
+        importantChange = true;
+      }
+      
+      // Sprawdź czy zmieniono przypięcie (dla forum)
+      if (oldThread.pinned !== newThread.pinned) {
+        if (newThread.pinned) {
+          changes.push({
+            name: '📌 Stan',
+            value: '**Wątek został przypięty**',
+            inline: false
+          });
+        } else {
+          changes.push({
+            name: '📌 Stan',
+            value: '**Wątek został odpięty**',
+            inline: false
+          });
+        }
+        importantChange = true;
       }
       
       // Jeśli nie wykryto zmian, zakończ
@@ -106,17 +150,62 @@ module.exports = {
           // Nie logujemy zdarzeń z kanału logów
           if (logChannel.id === newThread.parent?.id) return;
           
+          // Określ kolor na podstawie typu zmiany
+          let embedColor = 0xf1c40f; // Żółty dla zwykłych zmian
+          if (newThread.archived) embedColor = 0x95a5a6; // Szary dla zarchiwizowanych
+          else if (newThread.locked) embedColor = 0xe74c3c; // Czerwony dla zablokowanych
+          else if (importantChange) embedColor = 0x3498db; // Niebieski dla ważnych zmian
+          
           // Przygotowanie embedu z informacjami o aktualizacji nitki
           const logEmbed = new EmbedBuilder()
-            .setColor(0xf1c40f)
-            .setTitle('Zaktualizowano nitkę')
-            .setDescription(`Nitka: **${newThread.name}**`)
+            .setColor(embedColor)
+            .setTitle(`${newThread.parent?.type === 15 ? 'Zaktualizowano wątek forum' : 'Zaktualizowano nitkę'}`)
+            .setDescription(`**Nitka:** ${newThread.name}`)
             .addFields({ name: 'Kanał nadrzędny', value: newThread.parent ? `<#${newThread.parent.id}>` : 'Nieznany' });
           
           // Dodaj wykryte zmiany
           changes.forEach(change => {
             logEmbed.addFields(change);
           });
+          
+          // Dodaj link do wątku
+          logEmbed.addFields({ 
+            name: '🔗 Link', 
+            value: `[Przejdź do wątku](https://discord.com/channels/${newThread.guild.id}/${newThread.id})`,
+            inline: true
+          });
+          
+          // Dodaj informacje o liczbie wiadomości jeśli dostępne
+          if (newThread.messageCount !== undefined && newThread.messageCount !== null) {
+            logEmbed.addFields({ 
+              name: '💬 Wiadomości', 
+              value: newThread.messageCount.toString(),
+              inline: true
+            });
+          }
+          
+          // Dodaj informacje o liczbie uczestników jeśli dostępne
+          if (newThread.memberCount !== undefined && newThread.memberCount !== null) {
+            logEmbed.addFields({ 
+              name: '👥 Uczestnicy', 
+              value: newThread.memberCount.toString(),
+              inline: true
+            });
+          }
+          
+          // Dodaj status wątku
+          let statusParts = [];
+          if (newThread.archived) statusParts.push('📁 Zarchiwizowany');
+          if (newThread.locked) statusParts.push('🔒 Zablokowany');
+          if (newThread.pinned) statusParts.push('📌 Przypięty');
+          
+          if (statusParts.length > 0) {
+            logEmbed.addFields({ 
+              name: '📊 Status', 
+              value: statusParts.join(' | '),
+              inline: false
+            });
+          }
           
           logEmbed.setFooter({ text: `ID nitki: ${newThread.id}` })
             .setTimestamp();

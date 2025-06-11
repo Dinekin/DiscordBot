@@ -3,6 +3,88 @@ const MessageLog = require('../models/MessageLog');
 const Guild = require('../models/Guild');
 const logger = require('../utils/logger');
 
+// Funkcja do lepszego formatowania treści wiadomości
+function getMessageContentDescription(message) {
+  let parts = [];
+  
+  // Sprawdź treść tekstową
+  if (message.content && message.content.trim()) {
+    parts.push(message.content);
+  }
+  
+  // Sprawdź embeddy
+  if (message.embeds && message.embeds.length > 0) {
+    const embedDescriptions = message.embeds.map(embed => {
+      let embedInfo = [];
+      if (embed.title) embedInfo.push(`Tytuł: "${embed.title}"`);
+      if (embed.description) embedInfo.push(`Opis: "${embed.description.substring(0, 100)}${embed.description.length > 100 ? '...' : ''}"`);
+      if (embed.url) embedInfo.push(`URL: ${embed.url}`);
+      return `[Embed: ${embedInfo.join(', ') || 'Bez treści'}]`;
+    });
+    parts.push(...embedDescriptions);
+  }
+  
+  // Sprawdź załączniki
+  if (message.attachments && message.attachments.size > 0) {
+    const attachmentNames = Array.from(message.attachments.values())
+      .map(a => `📎 ${a.name}`)
+      .join(', ');
+    parts.push(`Załączniki: ${attachmentNames}`);
+  }
+  
+  // Sprawdź naklejki
+  if (message.stickers && message.stickers.size > 0) {
+    const stickerNames = Array.from(message.stickers.values())
+      .map(s => `🏷️ ${s.name}`)
+      .join(', ');
+    parts.push(`Naklejki: ${stickerNames}`);
+  }
+  
+  // Sprawdź typ wiadomości
+  if (message.type !== 0) { // 0 = DEFAULT
+    const messageTypes = {
+      1: 'Dodano odbiorcę',
+      2: 'Usunięto odbiorcę', 
+      3: 'Połączenie',
+      4: 'Zmiana nazwy kanału',
+      5: 'Zmiana ikony kanału',
+      6: 'Przypięto wiadomość',
+      7: 'Dołączenie do serwera',
+      8: 'Server boost',
+      9: 'Server boost (poziom 1)',
+      10: 'Server boost (poziom 2)',
+      11: 'Server boost (poziom 3)',
+      12: 'Nowy kanał ogłoszeń',
+      14: 'Nowa wiadomość w wątku',
+      15: 'Odpowiedź',
+      18: 'Slash command',
+      19: 'Wiadomość startowa wątku',
+      20: 'Zaproszenie do aktywności',
+      21: 'Aplikacja'
+    };
+    
+    const typeName = messageTypes[message.type] || `Typ ${message.type}`;
+    parts.push(`[${typeName}]`);
+  }
+  
+  // Sprawdź interakcję (slash commands)
+  if (message.interaction) {
+    parts.push(`[Slash Command: /${message.interaction.commandName}]`);
+  }
+  
+  // Sprawdź referencję (odpowiedź na wiadomość)
+  if (message.reference) {
+    parts.push('[Odpowiedź na wiadomość]');
+  }
+  
+  // Jeśli nadal nie ma treści, zwróć informację o tym
+  if (parts.length === 0) {
+    parts.push('*Wiadomość systemowa bez treści*');
+  }
+  
+  return parts.join('\n');
+}
+
 // Pomocnicza funkcja do wykrywania linków do GIF-ów
 function extractGifInfo(message) {
   if (!message.content) return null;
@@ -166,7 +248,7 @@ async function processReference(message) {
     
     // Jeśli wiadomość została pomyślnie pobrana, zapisz więcej informacji
     if (referencedMessage) {
-      const content = referencedMessage.content;
+      const content = getMessageContentDescription(referencedMessage);
       // Skróć treść, jeśli jest za długa
       const shortContent = content?.length > 200 ? `${content.substring(0, 197)}...` : content;
       
@@ -190,7 +272,7 @@ async function processReference(message) {
 module.exports = {
   name: Events.MessageCreate,
   async execute(message) {
-    // Ignorowanie wiadomości od botów
+    // Ignorowanie wiadomości od botów (opcjonalnie można to zmienić na logowanie również wiadomości botów)
     if (message.author.bot) return;
     
     try {
@@ -238,84 +320,95 @@ module.exports = {
       // Zapisz log w bazie danych
       await MessageLog.create(messageData);
       
-// Opcjonalnie wysyłanie logu na wyznaczony kanał
-if (guildSettings.messageLogChannel) {
-    const logChannel = await message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
-    
-    if (logChannel) {
-      // Nie logujemy wiadomości z kanału logów
-      if (logChannel.id === message.channel.id) return;
-      
-      // Sprawdź, czy mamy logować tylko usunięte wiadomości
-      if (guildSettings.logDeletedOnly) {
-        // Jeśli tak, nie logujemy tworzenia wiadomości
-        return;
-      }
-      
-      // Przygotowanie embedu z informacjami o wiadomości
-      const logEmbed = {
-        color: 0x3498db,
-        author: {
-          name: message.author.tag,
-          icon_url: message.author.displayAvatarURL({ dynamic: true })
-        },
-        description: `**Wiadomość wysłana w <#${message.channel.id}>**\n${message.content || (messageData.stickers.length > 0 ? '*Naklejka bez tekstu*' : '*Brak treści*')}`,
-        fields: [],
-        footer: {
-          text: `ID: ${message.id}`
-        },
-        timestamp: new Date()
-      };
-      
-      // Dodanie informacji o załącznikach
-      if (attachments.length > 0) {
-        logEmbed.fields.push({
-          name: `📎 Załączniki (${attachments.length})`,
-          value: attachments.map(a => `[${a.name}](${a.url}) ${a.contentType ? `(${a.contentType})` : ''}`).join('\n')
-        });
+      // Opcjonalnie wysyłanie logu na wyznaczony kanał
+      if (guildSettings.messageLogChannel) {
+        const logChannel = await message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
         
-        // Dodanie obrazka do embedu jeśli to obrazek
-        const imageAttachment = attachments.find(a => 
-          a.contentType && a.contentType.startsWith('image/')
-        );
-        
-        if (imageAttachment) {
-          logEmbed.image = { url: imageAttachment.url };
+        if (logChannel) {
+          // Nie logujemy wiadomości z kanału logów
+          if (logChannel.id === message.channel.id) return;
+          
+          // Sprawdź, czy mamy logować tylko usunięte wiadomości
+          if (guildSettings.logDeletedOnly) {
+            // Jeśli tak, nie logujemy tworzenia wiadomości
+            return;
+          }
+          
+          // Używamy nowej funkcji do lepszego opisu wiadomości
+          const messageDescription = getMessageContentDescription(message);
+          
+          // Przygotowanie embedu z informacjami o wiadomości
+          const logEmbed = {
+            color: 0x3498db,
+            author: {
+              name: message.author.tag,
+              icon_url: message.author.displayAvatarURL({ dynamic: true })
+            },
+            description: `**Wiadomość wysłana w <#${message.channel.id}>**\n${messageDescription}`,
+            fields: [],
+            footer: {
+              text: `ID: ${message.id} | Typ: ${message.type}`
+            },
+            timestamp: new Date()
+          };
+          
+          // Dodanie informacji o załącznikach
+          if (attachments.length > 0) {
+            logEmbed.fields.push({
+              name: `📎 Załączniki (${attachments.length})`,
+              value: attachments.map(a => `[${a.name}](${a.url}) ${a.contentType ? `(${a.contentType})` : ''}`).join('\n')
+            });
+            
+            // Dodanie obrazka do embedu jeśli to obrazek
+            const imageAttachment = attachments.find(a => 
+              a.contentType && a.contentType.startsWith('image/')
+            );
+            
+            if (imageAttachment) {
+              logEmbed.image = { url: imageAttachment.url };
+            }
+          }
+          
+          // Dodanie informacji o naklejkach
+          if (messageData.stickers.length > 0) {
+            logEmbed.fields.push({
+              name: `🏷️ Naklejki (${messageData.stickers.length})`,
+              value: messageData.stickers.map(s => s.url ? `[${s.name}](${s.url})` : s.name).join('\n')
+            });
+            
+            // Dodaj obraz naklejki, jeśli nie dodano już innego obrazu i naklejka ma URL
+            if (!logEmbed.image && messageData.stickers[0].url) {
+              logEmbed.image = { url: messageData.stickers[0].url };
+            }
+          }
+          
+          // Dodanie informacji o gifie
+          if (messageData.gifAttachment) {
+            logEmbed.fields.push({
+              name: '🎬 GIF',
+              value: `[${messageData.gifAttachment.platform}](${messageData.gifAttachment.url})`
+            });
+          }
+          
+          // Dodanie informacji o referencji
+          if (messageData.reference) {
+            logEmbed.fields.push({
+              name: '↩️ Odpowiedź na',
+              value: `Wiadomość od ${messageData.reference.authorTag || 'nieznanego użytkownika'}: ${messageData.reference.content || '[brak treści]'}`
+            });
+          }
+          
+          // Dodanie informacji o interakcji (slash commands)
+          if (message.interaction) {
+            logEmbed.fields.push({
+              name: '⚡ Interakcja',
+              value: `Slash Command: \`/${message.interaction.commandName}\` przez ${message.interaction.user.tag}`
+            });
+          }
+          
+          await logChannel.send({ embeds: [logEmbed] });
         }
       }
-      
-      // Dodanie informacji o naklejkach
-      if (messageData.stickers.length > 0) {
-        logEmbed.fields.push({
-          name: `🏷️ Naklejki (${messageData.stickers.length})`,
-          value: messageData.stickers.map(s => s.url ? `[${s.name}](${s.url})` : s.name).join('\n')
-        });
-        
-        // Dodaj obraz naklejki, jeśli nie dodano już innego obrazu i naklejka ma URL
-        if (!logEmbed.image && messageData.stickers[0].url) {
-          logEmbed.image = { url: messageData.stickers[0].url };
-        }
-      }
-      
-      // Dodanie informacji o gifie
-      if (messageData.gifAttachment) {
-        logEmbed.fields.push({
-          name: '🎬 GIF',
-          value: `[${messageData.gifAttachment.platform}](${messageData.gifAttachment.url})`
-        });
-      }
-      
-      // Dodanie informacji o referencji
-      if (messageData.reference) {
-        logEmbed.fields.push({
-          name: '↩️ Odpowiedź na',
-          value: `Wiadomość od ${messageData.reference.authorTag || 'nieznanego użytkownika'}: ${messageData.reference.content || '[brak treści]'}`
-        });
-      }
-      
-      await logChannel.send({ embeds: [logEmbed] });
-    }
-  }
     } catch (error) {
       logger.error(`Błąd podczas logowania wiadomości: ${error}`);
     }

@@ -3,6 +3,88 @@ const MessageLog = require('../models/MessageLog');
 const Guild = require('../models/Guild');
 const logger = require('../utils/logger');
 
+// Funkcja do lepszego formatowania treści wiadomości
+function getMessageContentDescription(message) {
+  let parts = [];
+  
+  // Sprawdź treść tekstową
+  if (message.content && message.content.trim()) {
+    parts.push(message.content);
+  }
+  
+  // Sprawdź embeddy
+  if (message.embeds && message.embeds.length > 0) {
+    const embedDescriptions = message.embeds.map(embed => {
+      let embedInfo = [];
+      if (embed.title) embedInfo.push(`Tytuł: "${embed.title}"`);
+      if (embed.description) embedInfo.push(`Opis: "${embed.description.substring(0, 100)}${embed.description.length > 100 ? '...' : ''}"`);
+      if (embed.url) embedInfo.push(`URL: ${embed.url}`);
+      return `[Embed: ${embedInfo.join(', ') || 'Bez treści'}]`;
+    });
+    parts.push(...embedDescriptions);
+  }
+  
+  // Sprawdź załączniki
+  if (message.attachments && message.attachments.size > 0) {
+    const attachmentNames = Array.from(message.attachments.values())
+      .map(a => `📎 ${a.name}`)
+      .join(', ');
+    parts.push(`Załączniki: ${attachmentNames}`);
+  }
+  
+  // Sprawdź naklejki
+  if (message.stickers && message.stickers.size > 0) {
+    const stickerNames = Array.from(message.stickers.values())
+      .map(s => `🏷️ ${s.name}`)
+      .join(', ');
+    parts.push(`Naklejki: ${stickerNames}`);
+  }
+  
+  // Sprawdź typ wiadomości
+  if (message.type && message.type !== 0) { // 0 = DEFAULT
+    const messageTypes = {
+      1: 'Dodano odbiorcę',
+      2: 'Usunięto odbiorcę', 
+      3: 'Połączenie',
+      4: 'Zmiana nazwy kanału',
+      5: 'Zmiana ikony kanału',
+      6: 'Przypięto wiadomość',
+      7: 'Dołączenie do serwera',
+      8: 'Server boost',
+      9: 'Server boost (poziom 1)',
+      10: 'Server boost (poziom 2)',
+      11: 'Server boost (poziom 3)',
+      12: 'Nowy kanał ogłoszeń',
+      14: 'Nowa wiadomość w wątku',
+      15: 'Odpowiedź',
+      18: 'Slash command',
+      19: 'Wiadomość startowa wątku',
+      20: 'Zaproszenie do aktywności',
+      21: 'Aplikacja'
+    };
+    
+    const typeName = messageTypes[message.type] || `Typ ${message.type}`;
+    parts.push(`[${typeName}]`);
+  }
+  
+  // Sprawdź interakcję (slash commands)
+  if (message.interaction) {
+    parts.push(`[Slash Command: /${message.interaction.commandName}]`);
+  }
+  
+  // Sprawdź referencję (odpowiedź na wiadomość)
+  if (message.reference) {
+    parts.push('[Odpowiedź na wiadomość]');
+  }
+  
+  // Jeśli nadal nie ma treści, zwróć informację o tym
+  if (parts.length === 0) {
+    parts.push('*Wiadomość systemowa bez treści*');
+  }
+  
+  return parts.join('\n');
+}
+
 // Pomocnicza funkcja do wykrywania linków do GIF-ów - taka sama jak w messageCreate.js
 function extractGifInfo(message) {
   if (!message.content) return null;
@@ -141,29 +223,15 @@ module.exports = {
     // Ignorowanie wiadomości od botów
     if (newMessage.author?.bot) return;
     
-    // Jeśli oba obiekty wiadomości nie mają treści lub są identyczne, zignoruj
-    if (
-      (!oldMessage.content && !newMessage.content) ||
-      oldMessage.content === newMessage.content
-    ) {
-      // Jednak, sprawdź czy inne elementy (jak załączniki, naklejki) mogły ulec zmianie
-      const oldAttachmentCount = oldMessage.attachments?.size || 0;
-      const newAttachmentCount = newMessage.attachments?.size || 0;
-      
-      const oldStickerCount = oldMessage.stickers?.size || 0;
-      const newStickerCount = newMessage.stickers?.size || 0;
-      
-      const oldEmbedCount = oldMessage.embeds?.length || 0;
-      const newEmbedCount = newMessage.embeds?.length || 0;
-      
-      // Jeśli żadne elementy nie uległy zmianie, zignoruj
-      if (
-        oldAttachmentCount === newAttachmentCount &&
-        oldStickerCount === newStickerCount &&
-        oldEmbedCount === newEmbedCount
-      ) {
-        return;
-      }
+    // Sprawdź czy są jakieś zmiany w treści lub elementach
+    const hasContentChange = oldMessage.content !== newMessage.content;
+    const hasAttachmentChange = (oldMessage.attachments?.size || 0) !== (newMessage.attachments?.size || 0);
+    const hasStickerChange = (oldMessage.stickers?.size || 0) !== (newMessage.stickers?.size || 0);
+    const hasEmbedChange = (oldMessage.embeds?.length || 0) !== (newMessage.embeds?.length || 0);
+    
+    // Jeśli nie ma żadnych zmian, zignoruj
+    if (!hasContentChange && !hasAttachmentChange && !hasStickerChange && !hasEmbedChange) {
+      return;
     }
     
     try {
@@ -225,90 +293,111 @@ module.exports = {
         logger.debug(`Utworzono nowy log dla edytowanej wiadomości ${newMessage.id}`);
       }
       
-// Opcjonalnie wysyłanie logu na wyznaczony kanał
-if (guildSettings.messageLogChannel) {
-    const logChannel = await newMessage.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
-    
-    if (logChannel) {
-      // Nie logujemy wiadomości z kanału logów
-      if (logChannel.id === newMessage.channel.id) return;
-      
-      // Sprawdź, czy mamy logować tylko usunięte wiadomości
-      if (guildSettings.logDeletedOnly) {
-        // Jeśli tak, nie logujemy edycji wiadomości
-        return;
-      }
-      
-      //Przygotowanie embedu z informacjami o edycji wiadomości
-      const logEmbed = {
-          color: 0xf1c40f,
-          author: {
-          name: newMessage.author.tag,
-          icon_url: newMessage.author.displayAvatarURL({ dynamic: true })
-          },
-          description: `**Wiadomość edytowana w <#${newMessage.channel.id}>**\n[[Link do wiadomości]](${newMessage.url})`,
-          fields: [
-          {
-              name: 'Przed',
-              value: oldMessage.content ? oldMessage.content.substring(0, 1024) : 
-                  (oldMessage.stickers?.size > 0 ? '*Naklejka bez tekstu*' : '*Brak treści*')
-          },
-          {
-              name: 'Po',
-              value: newMessage.content ? newMessage.content.substring(0, 1024) : 
-                  (newMessage.stickers?.size > 0 ? '*Naklejka bez tekstu*' : '*Brak treści*')
-          }
-          ],
-          footer: {
-            text: `ID: ${newMessage.id}`
-          },
-          timestamp: new Date()
-        };
+      // Opcjonalnie wysyłanie logu na wyznaczony kanał
+      if (guildSettings.messageLogChannel) {
+        const logChannel = await newMessage.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
         
-        // Sprawdź, czy załączniki zostały dodane/usunięte
-        const oldAttachmentCount = oldMessage.attachments?.size || 0;
-        const newAttachmentCount = attachments.length;
-        
-        if (oldAttachmentCount !== newAttachmentCount) {
-          logEmbed.fields.push({
-            name: '📎 Załączniki',
-            value: `Zmieniono liczbę załączników: ${oldAttachmentCount} → ${newAttachmentCount}`
-          });
+        if (logChannel) {
+          // Nie logujemy wiadomości z kanału logów
+          if (logChannel.id === newMessage.channel.id) return;
           
-          // Dodanie obrazka do embedu jeśli jest nowy obrazek
-          if (newAttachmentCount > 0) {
-            const imageAttachment = attachments.find(a => 
-              a.contentType && a.contentType.startsWith('image/')
-            );
+          // Sprawdź, czy mamy logować tylko usunięte wiadomości
+          if (guildSettings.logDeletedOnly) {
+            // Jeśli tak, nie logujemy edycji wiadomości
+            return;
+          }
+          
+          // Używamy nowej funkcji do lepszego opisu wiadomości
+          const oldMessageDescription = getMessageContentDescription(oldMessage);
+          const newMessageDescription = getMessageContentDescription(newMessage);
+          
+          // Przygotowanie embedu z informacjami o edycji wiadomości
+          const logEmbed = {
+            color: 0xf1c40f,
+            author: {
+              name: newMessage.author.tag,
+              icon_url: newMessage.author.displayAvatarURL({ dynamic: true })
+            },
+            description: `**Wiadomość edytowana w <#${newMessage.channel.id}>**\n[[Link do wiadomości]](${newMessage.url})`,
+            fields: [
+              {
+                name: 'Przed',
+                value: oldMessageDescription.length > 1024 ? oldMessageDescription.substring(0, 1021) + '...' : oldMessageDescription
+              },
+              {
+                name: 'Po',
+                value: newMessageDescription.length > 1024 ? newMessageDescription.substring(0, 1021) + '...' : newMessageDescription
+              }
+            ],
+            footer: {
+              text: `ID: ${newMessage.id} | Typ: ${newMessage.type || 0}`
+            },
+            timestamp: new Date()
+          };
+          
+          // Sprawdź, czy załączniki zostały dodane/usunięte
+          const oldAttachmentCount = oldMessage.attachments?.size || 0;
+          const newAttachmentCount = attachments.length;
+          
+          if (oldAttachmentCount !== newAttachmentCount) {
+            logEmbed.fields.push({
+              name: '📎 Załączniki',
+              value: `Zmieniono liczbę załączników: ${oldAttachmentCount} → ${newAttachmentCount}`
+            });
             
-            if (imageAttachment && !logEmbed.image) {
-              logEmbed.image = { url: imageAttachment.url };
+            // Dodanie obrazka do embedu jeśli jest nowy obrazek
+            if (newAttachmentCount > 0) {
+              const imageAttachment = attachments.find(a => 
+                a.contentType && a.contentType.startsWith('image/')
+              );
+              
+              if (imageAttachment && !logEmbed.image) {
+                logEmbed.image = { url: imageAttachment.url };
+              }
             }
           }
-        }
-        
-        // Sprawdź, czy naklejki zostały dodane/usunięte
-        const oldStickerCount = oldMessage.stickers?.size || 0;
-        const newStickerCount = newMessage.stickers?.size || 0;
-        
-        if (oldStickerCount !== newStickerCount) {
-          logEmbed.fields.push({
-            name: '🏷️ Naklejki',
-            value: `Zmieniono liczbę naklejek: ${oldStickerCount} → ${newStickerCount}`
-          });
           
-          // Dodaj obraz naklejki, jeśli nie dodano już innego obrazu
-          if (newStickerCount > 0 && !logEmbed.image) {
-            const stickers = processStickers(newMessage);
-            if (stickers[0].url) {
-              logEmbed.image = { url: stickers[0].url };
+          // Sprawdź, czy naklejki zostały dodane/usunięte
+          const oldStickerCount = oldMessage.stickers?.size || 0;
+          const newStickerCount = newMessage.stickers?.size || 0;
+          
+          if (oldStickerCount !== newStickerCount) {
+            logEmbed.fields.push({
+              name: '🏷️ Naklejki',
+              value: `Zmieniono liczbę naklejek: ${oldStickerCount} → ${newStickerCount}`
+            });
+            
+            // Dodaj obraz naklejki, jeśli nie dodano już innego obrazu
+            if (newStickerCount > 0 && !logEmbed.image) {
+              const stickers = processStickers(newMessage);
+              if (stickers[0].url) {
+                logEmbed.image = { url: stickers[0].url };
+              }
             }
           }
+          
+          // Sprawdź, czy embeddy zostały dodane/usunięte
+          const oldEmbedCount = oldMessage.embeds?.length || 0;
+          const newEmbedCount = newMessage.embeds?.length || 0;
+          
+          if (oldEmbedCount !== newEmbedCount) {
+            logEmbed.fields.push({
+              name: '📋 Embeddy',
+              value: `Zmieniono liczbę embeddów: ${oldEmbedCount} → ${newEmbedCount}`
+            });
+          }
+          
+          // Dodanie informacji o interakcji (slash commands) jeśli istnieje
+          if (newMessage.interaction) {
+            logEmbed.fields.push({
+              name: '⚡ Interakcja',
+              value: `Slash Command: \`/${newMessage.interaction.commandName}\` przez ${newMessage.interaction.user.tag}`
+            });
+          }
+          
+          await logChannel.send({ embeds: [logEmbed] });
         }
-        
-        await logChannel.send({ embeds: [logEmbed] });
-    }
-  }
+      }
     } catch (error) {
       logger.error(`Błąd podczas logowania edycji wiadomości: ${error.stack}`);
     }
