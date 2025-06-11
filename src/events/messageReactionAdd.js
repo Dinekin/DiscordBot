@@ -1,6 +1,7 @@
-// src/events/messageReactionAdd.js - z ochroną przed automatycznym dodawaniem ról czasowych
+// src/events/messageReactionAdd.js - z logowaniem reakcji i ochroną przed automatycznym dodawaniem ról czasowych
 const { Events } = require('discord.js');
 const ReactionRole = require('../models/ReactionRole');
+const MessageLog = require('../models/MessageLog');
 const Guild = require('../models/Guild');
 const { canAddAsTempRole } = require('../utils/checkExpiredRoles');
 const logger = require('../utils/logger');
@@ -24,14 +25,21 @@ module.exports = {
           return;
         }
       }
-      
-      // Pobierz informacje o serwerze
+
+      // Pobierz ustawienia serwera
       const guildSettings = await Guild.findOne({ guildId: reaction.message.guildId });
+      
+      // === LOGOWANIE REAKCJI ===
+      if (guildSettings && guildSettings.modules?.messageLog) {
+        await logReactionAdd(reaction, user, guildSettings);
+      }
+      
+      // === SYSTEM RÓL REAKCJI ===
       logger.debug(`Ustawienia serwera: ${JSON.stringify(guildSettings ? guildSettings.modules : 'brak')}`);
       
       // Sprawdź czy moduł reaction roles jest włączony
       if (guildSettings && guildSettings.modules && guildSettings.modules.reactionRoles === false) {
-        logger.debug('Moduł reaction roles jest wyłączony, przerywam');
+        logger.debug('Moduł reaction roles jest wyłączony, przerywam obsługę ról');
         return;
       }
       
@@ -145,3 +153,96 @@ module.exports = {
     }
   },
 };
+
+// Funkcja pomocnicza do logowania dodania reakcji
+async function logReactionAdd(reaction, user, guildSettings) {
+  try {
+    // Sprawdź czy kanał logów istnieje i czy to nie jest kanał logów
+    if (!guildSettings.messageLogChannel) return;
+    
+    const logChannel = await reaction.message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
+    if (!logChannel || logChannel.id === reaction.message.channel.id) return;
+    
+    // Sprawdź, czy mamy logować tylko usunięte wiadomości
+    if (guildSettings.logDeletedOnly) return;
+    
+    // Znajdź lub utwórz log wiadomości
+    let messageLog = await MessageLog.findOne({ messageId: reaction.message.id });
+    
+    if (!messageLog) {
+      // Jeśli nie ma logu wiadomości, stwórz podstawowy
+      messageLog = await MessageLog.create({
+        guildId: reaction.message.guild.id,
+        channelId: reaction.message.channel.id,
+        messageId: reaction.message.id,
+        authorId: reaction.message.author?.id || 'unknown',
+        authorTag: reaction.message.author?.tag || 'Unknown User',
+        content: reaction.message.content || '',
+        reactions: [],
+        createdAt: reaction.message.createdAt || new Date()
+      });
+    }
+    
+    // Przygotuj informacje o emoji
+    const emoji = reaction.emoji;
+    const emojiInfo = {
+      name: emoji.name,
+      id: emoji.id,
+      count: reaction.count,
+      isCustom: !!emoji.id,
+      animated: emoji.animated || false,
+      url: emoji.id ? `https://cdn.discordapp.com/emojis/${emoji.id}.${emoji.animated ? 'gif' : 'png'}` : null,
+      users: []
+    };
+    
+    // Znajdź istniejącą reakcję lub dodaj nową
+    const existingReactionIndex = messageLog.reactions.findIndex(r => 
+      (r.id && r.id === emoji.id) || (!r.id && r.name === emoji.name)
+    );
+    
+    if (existingReactionIndex !== -1) {
+      // Aktualizuj istniejącą reakcję
+      messageLog.reactions[existingReactionIndex].count = reaction.count;
+      if (!messageLog.reactions[existingReactionIndex].users.includes(user.id)) {
+        messageLog.reactions[existingReactionIndex].users.push(user.id);
+      }
+    } else {
+      // Dodaj nową reakcję
+      emojiInfo.users.push(user.id);
+      messageLog.reactions.push(emojiInfo);
+    }
+    
+    await messageLog.save();
+    
+    // Wyślij log na kanał (opcjonalnie)
+    const emojiDisplay = emoji.id 
+      ? `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`
+      : emoji.name;
+    
+    const logEmbed = {
+      color: 0x2ecc71,
+      author: {
+        name: user.tag,
+        icon_url: user.displayAvatarURL({ dynamic: true })
+      },
+      description: `**Dodano reakcję ${emojiDisplay} do [wiadomości](${reaction.message.url}) w <#${reaction.message.channel.id}>**`,
+      fields: [
+        {
+          name: 'Łączna liczba tej reakcji',
+          value: reaction.count.toString(),
+          inline: true
+        }
+      ],
+      footer: {
+        text: `Wiadomość ID: ${reaction.message.id} | User ID: ${user.id}`
+      },
+      timestamp: new Date()
+    };
+    
+    await logChannel.send({ embeds: [logEmbed] });
+    
+    logger.debug(`Zalogowano dodanie reakcji ${emojiDisplay} przez ${user.tag}`);
+  } catch (error) {
+    logger.error(`Błąd podczas logowania dodania reakcji: ${error.stack}`);
+  }
+}

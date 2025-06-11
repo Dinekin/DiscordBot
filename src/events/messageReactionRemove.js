@@ -1,5 +1,7 @@
+// src/events/messageReactionRemove.js - z logowaniem reakcji
 const { Events } = require('discord.js');
 const ReactionRole = require('../models/ReactionRole');
+const MessageLog = require('../models/MessageLog');
 const Guild = require('../models/Guild');
 const logger = require('../utils/logger');
 
@@ -27,9 +29,15 @@ module.exports = {
             const guildSettings = await Guild.findOne({ guildId: reaction.message.guildId });
             logger.debug(`Ustawienia serwera: ${JSON.stringify(guildSettings ? guildSettings.modules : 'brak')}`);
             
+            // === LOGOWANIE REAKCJI ===
+            if (guildSettings && guildSettings.modules?.messageLog) {
+                await logReactionRemove(reaction, user, guildSettings);
+            }
+            
+            // === SYSTEM RÓL REAKCJI ===
             // Sprawdź czy moduł reaction roles jest włączony
             if (guildSettings && guildSettings.modules && guildSettings.modules.reactionRoles === false) {
-                logger.debug('Moduł reaction roles jest wyłączony, przerywam');
+                logger.debug('Moduł reaction roles jest wyłączony, przerywam obsługę ról');
                 return;
             }
 
@@ -96,3 +104,79 @@ module.exports = {
         }
     },
 };
+
+// Funkcja pomocnicza do logowania usunięcia reakcji
+async function logReactionRemove(reaction, user, guildSettings) {
+    try {
+        // Sprawdź czy kanał logów istnieje i czy to nie jest kanał logów
+        if (!guildSettings.messageLogChannel) return;
+        
+        const logChannel = await reaction.message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
+        if (!logChannel || logChannel.id === reaction.message.channel.id) return;
+        
+        // Sprawdź, czy mamy logować tylko usunięte wiadomości
+        if (guildSettings.logDeletedOnly) return;
+        
+        // Znajdź log wiadomości
+        const messageLog = await MessageLog.findOne({ messageId: reaction.message.id });
+        
+        if (messageLog) {
+            // Przygotuj informacje o emoji
+            const emoji = reaction.emoji;
+            
+            // Znajdź reakcję w logu
+            const reactionIndex = messageLog.reactions.findIndex(r => 
+                (r.id && r.id === emoji.id) || (!r.id && r.name === emoji.name)
+            );
+            
+            if (reactionIndex !== -1) {
+                // Aktualizuj reakcję
+                messageLog.reactions[reactionIndex].count = reaction.count;
+                
+                // Usuń użytkownika z listy jeśli tam jest
+                const userIndex = messageLog.reactions[reactionIndex].users.indexOf(user.id);
+                if (userIndex !== -1) {
+                    messageLog.reactions[reactionIndex].users.splice(userIndex, 1);
+                }
+                
+                // Jeśli nie ma więcej tej reakcji, usuń ją z logu
+                if (reaction.count === 0) {
+                    messageLog.reactions.splice(reactionIndex, 1);
+                }
+                
+                await messageLog.save();
+            }
+        }
+        
+        // Wyślij log na kanał (opcjonalnie)
+        const emojiDisplay = emoji.id 
+            ? `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`
+            : emoji.name;
+        
+        const logEmbed = {
+            color: 0xe74c3c,
+            author: {
+                name: user.tag,
+                icon_url: user.displayAvatarURL({ dynamic: true })
+            },
+            description: `**Usunął reakcję ${emojiDisplay} z [wiadomości](${reaction.message.url}) w <#${reaction.message.channel.id}>**`,
+            fields: [
+                {
+                    name: 'Pozostała liczba tej reakcji',
+                    value: reaction.count.toString(),
+                    inline: true
+                }
+            ],
+            footer: {
+                text: `Wiadomość ID: ${reaction.message.id} | User ID: ${user.id}`
+            },
+            timestamp: new Date()
+        };
+        
+        await logChannel.send({ embeds: [logEmbed] });
+        
+        logger.debug(`Zalogowano usunięcie reakcji ${emojiDisplay} przez ${user.tag}`);
+    } catch (error) {
+        logger.error(`Błąd podczas logowania usunięcia reakcji: ${error.stack}`);
+    }
+}
