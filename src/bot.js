@@ -6,6 +6,7 @@ const { setupGiveawaysManager } = require('./utils/giveawayManager');
 const logger = require('./utils/logger');
 const { startExpiredRoleChecker, getExpiredRoleCheckerStatus } = require('./utils/checkExpiredRoles');
 const { LiveFeedManager } = require('./utils/liveFeedManager');
+const { startReminderChecker, getReminderCheckerStatus, cleanupOldReminders } = require('./utils/reminderChecker');
 
 // Konfiguracja klienta Discord z odpowiednimi uprawnieniami
 const client = new Client({
@@ -31,6 +32,7 @@ client.cooldowns = new Collection();
 
 // Zmienne do przechowywania intervalów
 let expiredRoleCheckerInterval = null;
+let reminderCheckerInterval = null;
 
 // Funkcja do ładowania komend
 function loadCommands() {
@@ -144,15 +146,39 @@ async function startBot() {
     logger.info('🚀 Inicjalizacja systemu ról czasowych...');
     expiredRoleCheckerInterval = startExpiredRoleChecker(client, 1); // sprawdzaj co 1 minutę
     
-    // Sprawdź czy system się uruchomił
+    // Uruchomienie automatycznego sprawdzania przypomnień
+    logger.info('🚀 Inicjalizacja systemu przypomnień...');
+    reminderCheckerInterval = startReminderChecker(client, 1); // sprawdzaj co 1 minutę
+    
+    // Sprawdź czy systemy się uruchomiły
     setTimeout(() => {
-      const status = getExpiredRoleCheckerStatus();
-      if (status.isRunning) {
+      const roleStatus = getExpiredRoleCheckerStatus();
+      const reminderStatus = getReminderCheckerStatus();
+      
+      if (roleStatus.isRunning) {
         logger.info('✅ System ról czasowych został pomyślnie uruchomiony (sprawdzanie co 1 minutę)');
       } else {
         logger.error('❌ BŁĄD: System ról czasowych nie został uruchomiony!');
       }
+      
+      if (reminderStatus.isRunning) {
+        logger.info('✅ System przypomnień został pomyślnie uruchomiony (sprawdzanie co 1 minutę)');
+      } else {
+        logger.error('❌ BŁĄD: System przypomnień nie został uruchomiony!');
+      }
     }, 5000);
+    
+    // Uruchom czyszczenie starych przypomnień raz dziennie
+    setInterval(async () => {
+      try {
+        const cleaned = await cleanupOldReminders(30); // Usuń przypomnienia starsze niż 30 dni
+        if (cleaned > 0) {
+          logger.info(`🧹 Wyczyszczono ${cleaned} starych przypomnień`);
+        }
+      } catch (error) {
+        logger.error(`❌ Błąd podczas czyszczenia starych przypomnień: ${error.message}`);
+      }
+    }, 24 * 60 * 60 * 1000); // 24 godziny
     
     logger.info(`Bot został uruchomiony pomyślnie i obsługuje ${client.guilds.cache.size} serwerów`);
   } catch (error) {
@@ -169,6 +195,12 @@ process.on('SIGINT', () => {
   if (expiredRoleCheckerInterval) {
     clearInterval(expiredRoleCheckerInterval);
     logger.info('Zatrzymano sprawdzanie wygasłych ról');
+  }
+  
+  // Zatrzymaj sprawdzanie przypomnień
+  if (reminderCheckerInterval) {
+    clearInterval(reminderCheckerInterval);
+    logger.info('Zatrzymano sprawdzanie przypomnień');
   }
   
   // Zatrzymaj Live Feed Manager
@@ -190,6 +222,12 @@ process.on('SIGTERM', () => {
   if (expiredRoleCheckerInterval) {
     clearInterval(expiredRoleCheckerInterval);
     logger.info('Zatrzymano sprawdzanie wygasłych ról');
+  }
+  
+  // Zatrzymaj sprawdzanie przypomnień
+  if (reminderCheckerInterval) {
+    clearInterval(reminderCheckerInterval);
+    logger.info('Zatrzymano sprawdzanie przypomnień');
   }
   
   // Zatrzymaj Live Feed Manager

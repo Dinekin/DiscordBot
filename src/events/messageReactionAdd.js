@@ -1,4 +1,4 @@
-// src/events/messageReactionAdd.js - z logowaniem reakcji i ochroną przed automatycznym dodawaniem ról czasowych
+// src/events/messageReactionAdd.js - naprawiona wersja z lepszym logowaniem
 const { Events } = require('discord.js');
 const ReactionRole = require('../models/ReactionRole');
 const MessageLog = require('../models/MessageLog');
@@ -13,15 +13,26 @@ module.exports = {
     if (user.bot) return;
     
     try {
-      logger.debug(`Reakcja otrzymana: ${user.tag} dodał emoji ${reaction.emoji.name || reaction.emoji.id} do wiadomości ${reaction.message.id}`);
+      logger.debug(`Dodano reakcję: ${user.tag} dodał emoji ${reaction.emoji.name || reaction.emoji.id} do wiadomości ${reaction.message.id}`);
       
       // Sprawdź, czy reakcja jest częściowa i załaduj ją w całości
       if (reaction.partial) {
         try {
           await reaction.fetch();
-          logger.debug('Reakcja częściowa została pobrana w całości');
+          logger.debug('Częściowa reakcja została pobrana w całości');
         } catch (error) {
           logger.error(`Błąd podczas pobierania reakcji: ${error.message}`);
+          return;
+        }
+      }
+
+      // Sprawdź, czy wiadomość jest częściowa i załaduj ją
+      if (reaction.message.partial) {
+        try {
+          await reaction.message.fetch();
+          logger.debug('Częściowa wiadomość została pobrana w całości');
+        } catch (error) {
+          logger.error(`Błąd podczas pobierania wiadomości: ${error.message}`);
           return;
         }
       }
@@ -32,6 +43,8 @@ module.exports = {
       // === LOGOWANIE REAKCJI ===
       if (guildSettings && guildSettings.modules?.messageLog) {
         await logReactionAdd(reaction, user, guildSettings);
+      } else {
+        logger.debug(`Logowanie reakcji wyłączone lub brak ustawień serwera dla ${reaction.message.guildId}`);
       }
       
       // === SYSTEM RÓL REAKCJI ===
@@ -154,17 +167,32 @@ module.exports = {
   },
 };
 
-// Funkcja pomocnicza do logowania dodania reakcji
+// Funkcja pomocnicza do logowania dodania reakcji - ulepszona wersja
 async function logReactionAdd(reaction, user, guildSettings) {
   try {
-    // Sprawdź czy kanał logów istnieje i czy to nie jest kanał logów
-    if (!guildSettings.messageLogChannel) return;
+    // Sprawdź czy kanał logów istnieje
+    if (!guildSettings.messageLogChannel) {
+      logger.debug('Brak kanału logów w ustawieniach serwera');
+      return;
+    }
     
     const logChannel = await reaction.message.guild.channels.fetch(guildSettings.messageLogChannel).catch(() => null);
-    if (!logChannel || logChannel.id === reaction.message.channel.id) return;
+    if (!logChannel) {
+      logger.warn(`Kanał logów ${guildSettings.messageLogChannel} nie istnieje`);
+      return;
+    }
+    
+    // Nie loguj jeśli to jest ten sam kanał
+    if (logChannel.id === reaction.message.channel.id) {
+      logger.debug('Pomijam logowanie - to jest kanał logów');
+      return;
+    }
     
     // Sprawdź, czy mamy logować tylko usunięte wiadomości
-    if (guildSettings.logDeletedOnly) return;
+    if (guildSettings.logDeletedOnly) {
+      logger.debug('Logowanie tylko usuniętych wiadomości - pomijam reakcje');
+      return;
+    }
     
     // Znajdź lub utwórz log wiadomości
     let messageLog = await MessageLog.findOne({ messageId: reaction.message.id });
@@ -181,6 +209,7 @@ async function logReactionAdd(reaction, user, guildSettings) {
         reactions: [],
         createdAt: reaction.message.createdAt || new Date()
       });
+      logger.debug(`Utworzono nowy log wiadomości dla ${reaction.message.id}`);
     }
     
     // Przygotuj informacje o emoji
@@ -213,22 +242,24 @@ async function logReactionAdd(reaction, user, guildSettings) {
     }
     
     await messageLog.save();
+    logger.debug(`Zaktualizowano log reakcji dla wiadomości ${reaction.message.id}`);
     
-    // Wyślij log na kanał (opcjonalnie)
+    // Przygotuj informacje o emoji do wyświetlenia
     const emojiDisplay = emoji.id 
       ? `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`
       : emoji.name;
     
+    // Przygotuj embed z logiem
     const logEmbed = {
-      color: 0x2ecc71,
+      color: 0x2ecc71, // Zielony dla dodania
       author: {
         name: user.tag,
         icon_url: user.displayAvatarURL({ dynamic: true })
       },
-      description: `**Dodano reakcję ${emojiDisplay} do [wiadomości](${reaction.message.url}) w <#${reaction.message.channel.id}>**`,
+      description: `**Dodał reakcję ${emojiDisplay} do [wiadomości](${reaction.message.url}) w <#${reaction.message.channel.id}>**`,
       fields: [
         {
-          name: 'Łączna liczba tej reakcji',
+          name: '🔢 Łączna liczba tej reakcji',
           value: reaction.count.toString(),
           inline: true
         }
@@ -239,10 +270,34 @@ async function logReactionAdd(reaction, user, guildSettings) {
       timestamp: new Date()
     };
     
+    // Dodaj informacje o autorze oryginalnej wiadomości jeśli dostępne
+    if (reaction.message.author) {
+      logEmbed.fields.push({
+        name: '👤 Autor wiadomości',
+        value: `${reaction.message.author.tag}`,
+        inline: true
+      });
+    }
+    
+    // Dodaj fragment treści wiadomości jeśli dostępna
+    if (reaction.message.content && reaction.message.content.trim()) {
+      const contentPreview = reaction.message.content.length > 100 
+        ? reaction.message.content.substring(0, 97) + '...' 
+        : reaction.message.content;
+      
+      logEmbed.fields.push({
+        name: '💬 Fragment wiadomości',
+        value: contentPreview,
+        inline: false
+      });
+    }
+    
+    // Wyślij log
     await logChannel.send({ embeds: [logEmbed] });
     
-    logger.debug(`Zalogowano dodanie reakcji ${emojiDisplay} przez ${user.tag}`);
+    logger.info(`✅ Zalogowano dodanie reakcji ${emojiDisplay} przez ${user.tag} do wiadomości ${reaction.message.id}`);
+    
   } catch (error) {
-    logger.error(`Błąd podczas logowania dodania reakcji: ${error.stack}`);
+    logger.error(`❌ Błąd podczas logowania dodania reakcji: ${error.stack}`);
   }
 }
