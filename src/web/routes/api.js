@@ -1166,18 +1166,14 @@ router.get('/guilds/:guildId/message-logs', hasGuildPermission, async (req, res)
   try {
     // Buduj filtr wyszukiwania
     const filter = { guildId };
-    
-    // Najpierw sprawdź czy mamy bezpośrednio userId
+    // --- POPRAWKA: Filtrowanie po użytkowniku ---
     if (userId) {
       filter.authorId = userId;
-    } 
-    // Jeśli nie ma userId, ale jest zapytanie o użytkownika, spróbuj go znaleźć na serwerze
-    else if (userQuery) {
+    } else if (userQuery) {
       const guild = client.guilds.cache.get(guildId);
-      
+      let found = false;
       if (guild) {
         try {
-          // Pobierz użytkowników, którzy pasują do zapytania
           const members = await guild.members.fetch();
           const matchingMembers = members.filter(member => 
             member.user.username.toLowerCase().includes(userQuery.toLowerCase()) ||
@@ -1185,322 +1181,122 @@ router.get('/guilds/:guildId/message-logs', hasGuildPermission, async (req, res)
             member.user.tag.toLowerCase().includes(userQuery.toLowerCase()) ||
             member.id.includes(userQuery)
           );
-          
           if (matchingMembers.size > 0) {
-            // Jeśli znaleziono użytkowników, stwórz tablicę ich ID
             const userIds = matchingMembers.map(member => member.id);
-            
-            // Użyj operatora $in do filtrowania po wielu ID
-            if (userIds.length === 1) {
-              filter.authorId = userIds[0];
-            } else {
-              filter.authorId = { $in: userIds };
-            }
-            
+            filter.authorId = userIds.length === 1 ? userIds[0] : { $in: userIds };
+            found = true;
             logger.debug(`Znaleziono ${userIds.length} użytkowników pasujących do zapytania "${userQuery}"`);
-          } else {
-            // Jeśli nie znaleziono użytkowników, zwróć pustą listę
-            logger.debug(`Nie znaleziono użytkowników pasujących do zapytania "${userQuery}"`);
-            return res.json({
-              success: true,
-              logs: [],
-              page: parseInt(page),
-              totalPages: 0,
-              totalDocs: 0,
-              channels: {},
-              users: {}
-            });
           }
         } catch (error) {
           logger.error(`Błąd podczas wyszukiwania użytkowników: ${error.message}`);
-          // Jeśli wystąpił błąd, kontynuuj bez filtra użytkownika
         }
       }
+      // Jeśli nie znaleziono użytkownika na serwerze, spróbuj potraktować query jako ID
+      if (!found) {
+        filter.authorId = userQuery;
+      }
     }
-    
-    // Filtruj po kanale
-    if (channelId) {
-      filter.channelId = channelId;
-    }
-    
-    // Filtruj po statusie
+    // --- KONIEC POPRAWKI ---
+    if (channelId) filter.channelId = channelId;
     if (status) {
-      if (status === 'deleted') {
-        filter.deletedAt = { $ne: null };
-      } else if (status === 'edited') {
-        filter.editedAt = { $ne: null };
-      } else if (status === 'created') {
+      if (status === 'deleted') filter.deletedAt = { $ne: null };
+      else if (status === 'edited') filter.editedAt = { $ne: null };
+      else if (status === 'created') {
         filter.deletedAt = null;
         filter.editedAt = null;
       }
     }
-    
-    // Filtruj po typie logu
+    // --- POPRAWKA: Filtrowanie po typie logu ---
     if (logType && logType !== 'all') {
       if (logType === 'message') {
-        // Zwykłe wiadomości - nie mają specjalnych pól
-        filter.modActions = { $size: 0 };
-        filter.channelLogs = { $size: 0 };
-        filter.threadLogs = { $size: 0 };
-        filter.nicknameChanges = { $size: 0 };
-        filter.roleChanges = { $size: 0 };
+        filter.$and = [
+          { $or: [ { modActions: { $exists: false } }, { modActions: { $size: 0 } } ] },
+          { $or: [ { channelLogs: { $exists: false } }, { channelLogs: { $size: 0 } } ] },
+          { $or: [ { threadLogs: { $exists: false } }, { threadLogs: { $size: 0 } } ] },
+          { $or: [ { nicknameChanges: { $exists: false } }, { nicknameChanges: { $size: 0 } } ] },
+          { $or: [ { roleChanges: { $exists: false } }, { roleChanges: { $size: 0 } } ] }
+        ];
       } else if (logType === 'member') {
-        // Logi użytkowników - mają akcje moderacyjne lub zmiany nicku/roli
         filter.$or = [
           { modActions: { $exists: true, $ne: [] } },
           { nicknameChanges: { $exists: true, $ne: [] } },
           { roleChanges: { $exists: true, $ne: [] } }
         ];
       } else if (logType === 'channel') {
-        // Logi kanałów
         filter.channelLogs = { $exists: true, $ne: [] };
       } else if (logType === 'thread') {
-        // Logi wątków
         filter.threadLogs = { $exists: true, $ne: [] };
       } else if (logType === 'role') {
-        // Logi ról
         filter.roleChanges = { $exists: true, $ne: [] };
       }
     }
-    
-    // Filtruj po treści
-    if (contentSearch) {
-      // Użyj indeksu tekstowego, jeśli istnieje, lub prostego wyrażenia regularnego
-      filter.content = { $regex: contentSearch, $options: 'i' };
-    }
-    
-    // Filtruj po zakresie dat
+    // --- KONIEC POPRAWKI ---
+    if (contentSearch) filter.content = { $regex: contentSearch, $options: 'i' };
     if (dateRange) {
       const now = new Date();
       let startDate;
-      
-      if (dateRange === 'today') {
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      } else if (dateRange === 'yesterday') {
+      if (dateRange === 'today') startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      else if (dateRange === 'yesterday') {
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
         const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         filter.createdAt = { $gte: startDate, $lt: endDate };
-      } else if (dateRange === 'week') {
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-      } else if (dateRange === 'month') {
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-      }
-      
-      if (startDate && dateRange !== 'yesterday') {
-        filter.createdAt = { $gte: startDate };
-      }
+      } else if (dateRange === 'week') startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+      else if (dateRange === 'month') startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      if (startDate && dateRange !== 'yesterday') filter.createdAt = { $gte: startDate };
     }
-    
-    // Filtruj po załącznikach
+    // --- POPRAWKA: Filtrowanie po załącznikach/reakcjach ---
     if (hasAttachments) {
-      if (hasAttachments === 'yes') {
-        filter['attachments.0'] = { $exists: true };
-      } else if (hasAttachments === 'no') {
+      if (hasAttachments === 'yes') filter['attachments.0'] = { $exists: true };
+      else if (hasAttachments === 'no') {
         filter.$or = [
           { attachments: { $exists: false } },
           { attachments: { $size: 0 } }
         ];
       }
     }
-    
-    // Filtruj po reakcjach
     if (hasReactions) {
-      if (hasReactions === 'yes') {
-        filter['reactions.0'] = { $exists: true };
-      } else if (hasReactions === 'no') {
+      if (hasReactions === 'yes') filter['reactions.0'] = { $exists: true };
+      else if (hasReactions === 'no') {
         filter.$or = [
           { reactions: { $exists: false } },
           { reactions: { $size: 0 } }
         ];
       }
     }
-    
     logger.debug(`Filtr wyszukiwania logów: ${JSON.stringify(filter)}`);
-
-    // Pobieranie informacji o użytkownikach, którzy dodali reakcję
-router.get('/guilds/:guildId/messages/:messageId/reactions/:emojiName/users', hasGuildPermission, async (req, res) => {
-  const { guildId, messageId, emojiName } = req.params;
-  const emojiId = req.query.id; // ID emoji dla customowych emoji
-  
-  try {
-    // Sprawdź, czy wiadomość istnieje w logach
-    const messageLog = await MessageLog.findOne({ guildId, messageId });
-    
-    if (!messageLog) {
-      return res.status(404).json({ success: false, error: 'Wiadomość nie została znaleziona w bazie danych' });
+    // --- POPRAWKA: Helper do inicjalizacji tablic ---
+    function ensureArrays(log) {
+      log.attachments = Array.isArray(log.attachments) ? log.attachments : [];
+      log.embeds = Array.isArray(log.embeds) ? log.embeds : [];
+      log.reactions = Array.isArray(log.reactions) ? log.reactions : [];
+      log.stickers = Array.isArray(log.stickers) ? log.stickers : [];
+      log.modActions = Array.isArray(log.modActions) ? log.modActions : [];
+      log.nicknameChanges = Array.isArray(log.nicknameChanges) ? log.nicknameChanges : [];
+      log.roleChanges = Array.isArray(log.roleChanges) ? log.roleChanges : [];
+      log.channelLogs = Array.isArray(log.channelLogs) ? log.channelLogs : [];
+      log.threadLogs = Array.isArray(log.threadLogs) ? log.threadLogs : [];
+      return log;
     }
-    
-    // Znajdź reakcję
-    const reaction = messageLog.reactions.find(r => 
-      (emojiId && r.id === emojiId) || (!emojiId && r.name === emojiName)
-    );
-    
-    if (!reaction) {
-      return res.status(404).json({ success: false, error: 'Reakcja nie została znaleziona w bazie danych' });
-    }
-    
-    // Sprawdź, czy mamy listę użytkowników
-    if (!reaction.users || reaction.users.length === 0) {
-      // Spróbuj pobrać listę użytkowników z Discorda
-      try {
-        const guild = client.guilds.cache.get(guildId);
-        if (!guild) {
-          return res.status(404).json({ success: false, error: 'Serwer nie został znaleziony' });
-        }
-        
-        // Spróbuj znaleźć kanał i wiadomość
-        const channel = guild.channels.cache.get(messageLog.channelId);
-        if (!channel) {
-          return res.json({ 
-            success: true, 
-            message: 'Kanał nie jest już dostępny na Discordzie, brak możliwości pobrania użytkowników', 
-            users: [] 
-          });
-        }
-        
-        let message;
-        try {
-          message = await channel.messages.fetch(messageId);
-        } catch (error) {
-          logger.warn(`Nie można pobrać wiadomości ${messageId}: ${error.message}`);
-          return res.json({ 
-            success: true, 
-            message: 'Wiadomość nie jest już dostępna na Discordzie, brak możliwości pobrania użytkowników', 
-            users: [] 
-          });
-        }
-        
-        // Pobierz reakcję
-        const emojiToUse = emojiId ? `${emojiName}:${emojiId}` : emojiName;
-        const discordReaction = message.reactions.cache.get(emojiToUse);
-        
-        if (!discordReaction) {
-          return res.json({ 
-            success: true, 
-            message: 'Reakcja nie jest już dostępna na Discordzie, brak możliwości pobrania użytkowników', 
-            users: [] 
-          });
-        }
-        
-        // Pobierz użytkowników, którzy dodali reakcję
-        const reactionUsers = await discordReaction.users.fetch();
-        const users = [];
-        
-        // Aktualizuj listę użytkowników w bazie danych
-        reaction.users = [];
-        
-        for (const [userId, user] of reactionUsers) {
-          reaction.users.push(userId);
-          
-          users.push({
-            id: userId,
-            username: user.tag,
-            avatar: user.displayAvatarURL({ dynamic: true })
-          });
-        }
-        
-        // Zapisz zaktualizowane dane
-        await messageLog.save();
-        
-        return res.json({
-          success: true,
-          message: 'Pobrano listę użytkowników z Discorda',
-          users: users
-        });
-      } catch (error) {
-        logger.error(`Błąd podczas pobierania użytkowników z Discorda: ${error.stack}`);
-        return res.json({ 
-          success: true, 
-          message: 'Wystąpił błąd podczas pobierania użytkowników z Discorda', 
-          users: [] 
-        });
-      }
-    }
-    
-    // Jeśli mamy listę użytkowników w bazie, spróbuj pobrać ich dane
-    const guild = client.guilds.cache.get(guildId);
-    const users = [];
-    
-    if (guild) {
-      // Pobierz informacje o każdym użytkowniku
-      for (const userId of reaction.users) {
-        try {
-          const member = await guild.members.fetch(userId).catch(() => null);
-          
-          if (member) {
-            users.push({
-              id: userId,
-              username: member.user.tag,
-              avatar: member.user.displayAvatarURL({ dynamic: true })
-            });
-          } else {
-            // Użytkownik prawdopodobnie opuścił serwer
-            users.push({
-              id: userId,
-              username: 'Nieznany użytkownik',
-              avatar: null
-            });
-          }
-        } catch (error) {
-          logger.warn(`Nie można pobrać informacji o użytkowniku ${userId}: ${error.message}`);
-          users.push({
-            id: userId,
-            username: 'Nieznany użytkownik',
-            avatar: null
-          });
-        }
-      }
-    } else {
-      // Jeśli nie mamy dostępu do serwera, zwróć tylko ID użytkowników
-      for (const userId of reaction.users) {
-        users.push({
-          id: userId,
-          username: null,
-          avatar: null
-        });
-      }
-    }
-    
-    res.json({
-      success: true,
-      message: 'Pobrano listę użytkowników z bazy danych',
-      users: users
-    });
-  } catch (error) {
-    logger.error(`Błąd podczas pobierania użytkowników z reakcją: ${error.stack}`);
-    res.status(500).json({
-      success: false,
-      error: 'Wystąpił błąd podczas pobierania użytkowników'
-    });
-  }
-});
-    
+    // --- KONIEC POPRAWKI ---
     // Pobierz dane z paginacją
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const logs = await MessageLog.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
-    
     const totalDocs = await MessageLog.countDocuments(filter);
     const totalPages = Math.ceil(totalDocs / parseInt(limit));
-    
     logger.debug(`Znaleziono ${logs.length} logów, totalDocs: ${totalDocs}, totalPages: ${totalPages}`);
-    
     // Pobierz informacje o kanałach i użytkownikach dla wygodnego renderowania
     const guild = client.guilds.cache.get(guildId);
     const channels = {};
     const users = {};
-    
     if (guild) {
-      // Wypełnij informacje o kanałach
       guild.channels.cache.forEach(channel => {
-        if (channel.type === 0) { // Tylko kanały tekstowe
+        if (channel.type === 0) {
           channels[channel.id] = channel.name;
         }
       });
-      
-      // Pobierz informacje o użytkownikach
       const uniqueUserIds = [...new Set(logs.map(log => log.authorId))];
       for (const userId of uniqueUserIds) {
         try {
@@ -1512,16 +1308,16 @@ router.get('/guilds/:guildId/messages/:messageId/reactions/:emojiName/users', ha
             };
           }
         } catch (error) {
-          // Użytkownik mógł opuścić serwer
-          logger.debug(`Nie można znaleźć użytkownika ${userId}: ${error.message}`);
           users[userId] = null;
         }
       }
     }
-    
+    // --- POPRAWKA: Zainicjalizuj tablice w każdym logu ---
+    const safeLogs = logs.map(ensureArrays);
+    // --- KONIEC POPRAWKI ---
     res.json({
       success: true,
-      logs,
+      logs: safeLogs,
       page: parseInt(page),
       totalPages,
       totalDocs,
@@ -2173,7 +1969,8 @@ router.post('/guilds/:guildId/livefeeds', hasGuildPermission, async (req, res) =
     month, 
     weekday, 
     embed, 
-    color 
+    color,
+    category
   } = req.body;
   
   try {
@@ -2255,7 +2052,8 @@ router.post('/guilds/:guildId/livefeeds', hasGuildPermission, async (req, res) =
       },
       embed: embed === 'true' || embed === true,
       embedColor: color || '#3498db',
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      category: category || 'Inne'
     };
     
     // Dodaj feed
@@ -2288,7 +2086,8 @@ router.put('/guilds/:guildId/livefeeds/:feedId', hasGuildPermission, async (req,
     month, 
     weekday, 
     embed, 
-    color 
+    color,
+    category
   } = req.body;
   
   try {
@@ -2435,6 +2234,9 @@ router.put('/guilds/:guildId/livefeeds/:feedId', hasGuildPermission, async (req,
     
     // Kolor
     if (color) updateData.embedColor = color;
+    
+    // Kategoria
+    if (category) updateData.category = category;
     
     // Sprawdź czy są jakieś zmiany
     if (Object.keys(updateData).length === 0) {
@@ -2677,3 +2479,232 @@ router.post('/guilds/:guildId/livefeeds/:feedId/test', hasGuildPermission, async
 });
 
 module.exports = router;
+
+// --- PATCH: DIAGNOSTICS & SAFE FALLBACK FOR REACTION USERS ---
+router.get('/guilds/:guildId/messages/:messageId/reactions/:emojiName/users', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId, emojiName } = req.params;
+  const emojiId = req.query.id; // ID emoji dla customowych emoji
+  logger.info(`[REACTION USERS] guildId=${guildId}, messageId=${messageId}, emojiName=${emojiName}, emojiId=${emojiId}`);
+  try {
+    const messageLog = await MessageLog.findOne({ guildId, messageId });
+    if (!messageLog) {
+      logger.warn(`[REACTION USERS] Brak logu wiadomości w bazie: guildId=${guildId}, messageId=${messageId}`);
+      return res.json({ success: true, users: [], message: 'Brak logu wiadomości w bazie' });
+    }
+    logger.info(`[REACTION USERS] Log znaleziony, reactions: ${JSON.stringify(messageLog.reactions)}`);
+    const reaction = messageLog.reactions.find(r => (emojiId && r.id === emojiId) || (!emojiId && r.name === emojiName));
+    if (!reaction) {
+      logger.warn(`[REACTION USERS] Brak reakcji w logu: emojiName=${emojiName}, emojiId=${emojiId}`);
+      return res.json({ success: true, users: [], message: 'Brak reakcji w logu' });
+    }
+    logger.info(`[REACTION USERS] Reakcja znaleziona, users: ${JSON.stringify(reaction.users)}`);
+    // Jeśli nie ma listy użytkowników lub jest pusta, spróbuj pobrać z Discorda
+    if (!reaction.users || reaction.users.length === 0) {
+      try {
+        const guild = client.guilds.cache.get(guildId);
+        if (!guild) {
+          logger.warn(`[REACTION USERS] Brak serwera w cache Discorda: ${guildId}`);
+          return res.json({ success: true, users: [], message: 'Brak serwera w cache Discorda' });
+        }
+        const channel = guild.channels.cache.get(messageLog.channelId);
+        if (!channel) {
+          logger.warn(`[REACTION USERS] Brak kanału w cache Discorda: ${messageLog.channelId}`);
+          return res.json({ success: true, users: [], message: 'Brak kanału w cache Discorda' });
+        }
+        let message;
+        try {
+          message = await channel.messages.fetch(messageId);
+        } catch (error) {
+          logger.warn(`[REACTION USERS] Nie można pobrać wiadomości z Discorda: ${error.message}`);
+          return res.json({ success: true, users: [], message: 'Nie można pobrać wiadomości z Discorda' });
+        }
+        const emojiToUse = emojiId ? `${emojiName}:${emojiId}` : emojiName;
+        const discordReaction = message.reactions.cache.get(emojiToUse);
+        if (!discordReaction) {
+          logger.warn(`[REACTION USERS] Brak reakcji na wiadomości Discord: ${emojiToUse}`);
+          return res.json({ success: true, users: [], message: 'Brak reakcji na wiadomości Discord' });
+        }
+        const reactionUsers = await discordReaction.users.fetch();
+        const users = [];
+        reaction.users = [];
+        for (const [userId, user] of reactionUsers) {
+          reaction.users.push(userId);
+          users.push({ id: userId, username: user.tag, avatar: user.displayAvatarURL({ dynamic: true }) });
+        }
+        await messageLog.save();
+        logger.info(`[REACTION USERS] Pobrano użytkowników z Discorda: ${users.length}`);
+        return res.json({ success: true, users, message: 'Pobrano z Discorda' });
+      } catch (error) {
+        logger.error(`[REACTION USERS] Błąd podczas pobierania z Discorda: ${error.stack}`);
+        return res.json({ success: true, users: [], message: 'Błąd podczas pobierania z Discorda: ' + error.message });
+      }
+    }
+    // Jeśli mamy listę użytkowników w bazie, spróbuj pobrać ich dane
+    const guild = client.guilds.cache.get(guildId);
+    const users = [];
+    if (guild) {
+      for (const userId of reaction.users) {
+        try {
+          const member = await guild.members.fetch(userId).catch(() => null);
+          if (member) {
+            users.push({ id: userId, username: member.user.tag, avatar: member.user.displayAvatarURL({ dynamic: true }) });
+          } else {
+            users.push({ id: userId, username: 'Nieznany użytkownik', avatar: null });
+          }
+        } catch (error) {
+          logger.warn(`[REACTION USERS] Nie można pobrać info o użytkowniku ${userId}: ${error.message}`);
+          users.push({ id: userId, username: 'Nieznany użytkownik', avatar: null });
+        }
+      }
+    } else {
+      for (const userId of reaction.users) {
+        users.push({ id: userId, username: null, avatar: null });
+      }
+    }
+    logger.info(`[REACTION USERS] Zwracam użytkowników z bazy: ${users.length}`);
+    return res.json({ success: true, users, message: 'Pobrano z bazy' });
+  } catch (error) {
+    logger.error(`[REACTION USERS] Błąd ogólny: ${error.stack}`);
+    return res.json({ success: true, users: [], message: 'Błąd ogólny: ' + error.message });
+  }
+});
+
+// Edycja tytułu i opisu wiadomości reaction role
+router.patch('/guilds/:guildId/reaction-roles/:messageId', hasGuildPermission, async (req, res) => {
+  const { guildId, messageId } = req.params;
+  const { title, description } = req.body;
+
+  try {
+    // Znajdź reaction role w bazie danych
+    const reactionRole = await ReactionRole.findOne({
+      guildId: guildId,
+      messageId: messageId
+    });
+
+    if (!reactionRole) {
+      return res.status(404).json({ success: false, error: 'Wiadomość nie została znaleziona' });
+    }
+
+    if (typeof title === 'string') reactionRole.title = title;
+    if (typeof description === 'string') reactionRole.description = description;
+    await reactionRole.save();
+
+    // Spróbuj zaktualizować embed na Discordzie
+    try {
+      const guild = client.guilds.cache.get(guildId);
+      const channel = guild.channels.cache.get(reactionRole.channelId);
+      const message = await channel.messages.fetch(messageId);
+      const embed = EmbedBuilder.from(message.embeds[0]);
+      if (typeof title === 'string') embed.setTitle(title);
+      if (typeof description === 'string') embed.setDescription(description);
+      await message.edit({ embeds: [embed] });
+    } catch (err) {
+      logger.warn(`Nie można zaktualizować embed na Discordzie: ${err.message}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Wiadomość została zaktualizowana',
+      reactionRole: {
+        title: reactionRole.title,
+        description: reactionRole.description
+      }
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas edycji reaction role: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas edycji wiadomości'
+    });
+  }
+});
+
+// SZYBKA ZMIANA KATEGORII LIVEFEED
+router.put('/guilds/:guildId/livefeeds/:feedId/category', hasGuildPermission, async (req, res) => {
+  const { guildId, feedId } = req.params;
+  const { category } = req.body;
+
+  if (!category || typeof category !== 'string') {
+    return res.status(400).json({ success: false, error: 'Brak lub nieprawidłowa kategoria' });
+  }
+
+  try {
+    const { client } = require('../../bot');
+    if (!client.liveFeedManager) {
+      return res.status(500).json({ success: false, error: 'System Live Feed nie jest jeszcze zainicjalizowany.' });
+    }
+    const feed = await client.liveFeedManager.getFeed(feedId);
+    if (!feed) {
+      return res.status(404).json({ success: false, error: 'Nie znaleziono harmonogramu o podanym ID' });
+    }
+    // Sprawdź czy feed należy do tego serwera
+    if (feed.guildId !== guildId) {
+      return res.status(403).json({ success: false, error: 'Ten harmonogram nie należy do tego serwera' });
+    }
+    // Zmień kategorię
+    feed.category = category;
+    await feed.save();
+    // (Opcjonalnie) zaktualizuj w managerze
+    if (feed.isActive && client.liveFeedManager.feeds) {
+      client.liveFeedManager.feeds.set(feed._id.toString(), feed);
+    }
+    return res.json({ success: true, message: 'Kategoria została zaktualizowana', feed });
+  } catch (error) {
+    logger.error(`Błąd podczas zmiany kategorii LiveFeed: ${error.stack}`);
+    return res.status(500).json({ success: false, error: 'Wystąpił błąd podczas zmiany kategorii' });
+  }
+});
+
+// KATEGORIE LIVEFEEDÓW
+const LiveFeed = require('../../models/LiveFeed');
+
+// Pobierz listę kategorii
+router.get('/guilds/:guildId/livefeed-categories', hasGuildPermission, async (req, res) => {
+  const { guildId } = req.params;
+  try {
+    const guild = await Guild.findOne({ guildId });
+    if (!guild) return res.status(404).json({ success: false, error: 'Nie znaleziono serwera' });
+    res.json({ success: true, categories: guild.categories || [] });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania kategorii: ${error.stack}`);
+    res.status(500).json({ success: false, error: 'Wystąpił błąd podczas pobierania kategorii' });
+  }
+});
+
+// Dodaj kategorię
+router.post('/guilds/:guildId/livefeed-categories', hasGuildPermission, async (req, res) => {
+  const { guildId } = req.params;
+  const { name } = req.body;
+  if (!name || typeof name !== 'string') return res.status(400).json({ success: false, error: 'Brak lub nieprawidłowa nazwa kategorii' });
+  try {
+    const guild = await Guild.findOne({ guildId });
+    if (!guild) return res.status(404).json({ success: false, error: 'Nie znaleziono serwera' });
+    if (guild.categories.includes(name)) return res.status(400).json({ success: false, error: 'Kategoria już istnieje' });
+    guild.categories.push(name);
+    await guild.save();
+    res.json({ success: true, categories: guild.categories });
+  } catch (error) {
+    logger.error(`Błąd podczas dodawania kategorii: ${error.stack}`);
+    res.status(500).json({ success: false, error: 'Wystąpił błąd podczas dodawania kategorii' });
+  }
+});
+
+// Usuń kategorię
+router.delete('/guilds/:guildId/livefeed-categories/:category', hasGuildPermission, async (req, res) => {
+  const { guildId, category } = req.params;
+  try {
+    const guild = await Guild.findOne({ guildId });
+    if (!guild) return res.status(404).json({ success: false, error: 'Nie znaleziono serwera' });
+    if (!guild.categories.includes(category)) return res.status(404).json({ success: false, error: 'Kategoria nie istnieje' });
+    // Nie pozwalaj usuwać domyślnej kategorii "Inne"
+    if (category === 'Inne') return res.status(400).json({ success: false, error: 'Nie można usunąć domyślnej kategorii "Inne"' });
+    guild.categories = guild.categories.filter(cat => cat !== category);
+    await guild.save();
+    // Przenieś feedy do "Inne"
+    await LiveFeed.updateMany({ guildId, category }, { $set: { category: 'Inne' } });
+    res.json({ success: true, categories: guild.categories });
+  } catch (error) {
+    logger.error(`Błąd podczas usuwania kategorii: ${error.stack}`);
+    res.status(500).json({ success: false, error: 'Wystąpił błąd podczas usuwania kategorii' });
+  }
+});

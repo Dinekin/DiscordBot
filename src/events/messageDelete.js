@@ -223,7 +223,12 @@ module.exports = {
           stickers: processStickers(message),
           gifAttachment: extractGifInfo(message),
           createdAt: message.createdAt || new Date(),
-          deletedAt: new Date()
+          deletedAt: new Date(),
+          modActions: [],
+          nicknameChanges: [],
+          roleChanges: [],
+          channelLogs: [],
+          threadLogs: []
         };
         
         await MessageLog.create(messageData);

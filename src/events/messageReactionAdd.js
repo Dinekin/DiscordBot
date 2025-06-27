@@ -207,7 +207,16 @@ async function logReactionAdd(reaction, user, guildSettings) {
         authorTag: reaction.message.author?.tag || 'Unknown User',
         content: reaction.message.content || '',
         reactions: [],
-        createdAt: reaction.message.createdAt || new Date()
+        attachments: [],
+        embeds: [],
+        stickers: [],
+        gifAttachment: null,
+        createdAt: reaction.message.createdAt || new Date(),
+        modActions: [],
+        nicknameChanges: [],
+        roleChanges: [],
+        channelLogs: [],
+        threadLogs: []
       });
       logger.debug(`Utworzono nowy log wiadomości dla ${reaction.message.id}`);
     }

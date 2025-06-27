@@ -71,6 +71,10 @@ const GuildSchema = new mongoose.Schema({
       reactionRoles: true,
       notifications: true
     })
+  },
+  categories: {
+    type: [String],
+    default: ['Ogłoszenia', 'Przypomnienia', 'Cykliczne', 'Inne']
   }
 }, { timestamps: true });
 

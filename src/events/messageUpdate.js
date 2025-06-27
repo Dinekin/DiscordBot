@@ -286,7 +286,12 @@ module.exports = {
           reactions: processReactions(newMessage),
           stickers: processStickers(newMessage),
           gifAttachment: extractGifInfo(newMessage),
-          createdAt: newMessage.createdAt
+          createdAt: newMessage.createdAt,
+          modActions: [],
+          nicknameChanges: [],
+          roleChanges: [],
+          channelLogs: [],
+          threadLogs: []
         };
         
         await MessageLog.create(messageData);
