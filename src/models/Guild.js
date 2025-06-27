@@ -75,6 +75,20 @@ const GuildSchema = new mongoose.Schema({
   categories: {
     type: [String],
     default: ['Ogłoszenia', 'Przypomnienia', 'Cykliczne', 'Inne']
+  },
+  livefeedCategoryOrder: {
+    type: [String],
+    default: []
+  },
+  livefeedOrder: {
+    type: Map,
+    of: [String],
+    default: {}
+  },
+  livefeedCategoryCollapse: {
+    type: Map,
+    of: Boolean,
+    default: {}
   }
 }, { timestamps: true });
 

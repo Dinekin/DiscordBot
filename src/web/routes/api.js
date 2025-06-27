@@ -2708,3 +2708,38 @@ router.delete('/guilds/:guildId/livefeed-categories/:category', hasGuildPermissi
     res.status(500).json({ success: false, error: 'Wystąpił błąd podczas usuwania kategorii' });
   }
 });
+
+// Layout livefeedów (kolejność i stan rozwinięcia)
+router.get('/guilds/:guildId/livefeed-layout', hasGuildPermission, async (req, res) => {
+  const { guildId } = req.params;
+  try {
+    const guild = await Guild.findOne({ guildId });
+    if (!guild) return res.status(404).json({ success: false, error: 'Nie znaleziono serwera' });
+    res.json({
+      success: true,
+      categoryOrder: guild.livefeedCategoryOrder || [],
+      feedOrder: guild.livefeedOrder || {},
+      categoryCollapse: guild.livefeedCategoryCollapse || {}
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania layoutu livefeedów: ${error.stack}`);
+    res.status(500).json({ success: false, error: 'Wystąpił błąd podczas pobierania layoutu' });
+  }
+});
+
+router.post('/guilds/:guildId/livefeed-layout', hasGuildPermission, async (req, res) => {
+  const { guildId } = req.params;
+  const { categoryOrder, feedOrder, categoryCollapse } = req.body;
+  try {
+    const guild = await Guild.findOne({ guildId });
+    if (!guild) return res.status(404).json({ success: false, error: 'Nie znaleziono serwera' });
+    if (Array.isArray(categoryOrder)) guild.livefeedCategoryOrder = categoryOrder;
+    if (typeof feedOrder === 'object') guild.livefeedOrder = feedOrder;
+    if (typeof categoryCollapse === 'object') guild.livefeedCategoryCollapse = categoryCollapse;
+    await guild.save();
+    res.json({ success: true });
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania layoutu livefeedów: ${error.stack}`);
+    res.status(500).json({ success: false, error: 'Wystąpił błąd podczas zapisywania layoutu' });
+  }
+});

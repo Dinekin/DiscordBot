@@ -673,8 +673,7 @@
     });
 
     // Zwijanie/rozwijanie kategorii
-    const toggles = document.querySelectorAll('.toggle-category');
-    toggles.forEach(btn => {
+    document.querySelectorAll('.toggle-category').forEach(btn => {
       btn.addEventListener('click', function() {
         const cat = this.getAttribute('data-category');
         const group = document.querySelector('.category-group[data-category="' + cat + '"]');
@@ -689,6 +688,7 @@
           icon.classList.remove('fa-chevron-down');
           icon.classList.add('fa-chevron-right');
         }
+        saveLayoutToServer();
       });
     });
 
@@ -699,9 +699,7 @@
       animation: 150,
       draggable: '.category-group',
       onEnd: function (evt) {
-        // Możesz tu dodać kod do zapisu nowej kolejności kategorii (np. do backendu)
-        // const newOrder = [...document.querySelectorAll('.category-group')].map(el => el.getAttribute('data-category'));
-        // fetch('/api/save-category-order', { method: 'POST', body: JSON.stringify({ order: newOrder }) })
+        saveLayoutToServer();
       }
     });
 
@@ -730,6 +728,8 @@
             if (!result.success) {
               alert('Błąd przy zmianie kategorii: ' + result.error);
               location.reload();
+            } else {
+              saveLayoutToServer();
             }
           } catch (e) {
             alert('Błąd sieci przy zmianie kategorii');
@@ -741,6 +741,7 @@
 
     // Zarządzanie kategoriami
     let livefeedCategories = [];
+    let livefeedLayout = { categoryOrder: [], feedOrder: {}, categoryCollapse: {} };
 
     async function fetchCategories() {
       const res = await fetch(`/api/guilds/<%= guild.id %>/livefeed-categories`);
@@ -879,6 +880,93 @@
           setTimeout(() => e.target.classList.remove('border-success'), 800);
         }
       }
+    });
+
+    async function fetchLayout() {
+      const res = await fetch(`/api/guilds/<%= guild.id %>/livefeed-layout`);
+      const data = await res.json();
+      if (data.success) {
+        livefeedLayout = data;
+      }
+    }
+
+    function getCurrentLayoutFromDOM() {
+      const categoryOrder = Array.from(document.querySelectorAll('.category-group')).map(g => g.getAttribute('data-category'));
+      const feedOrder = {};
+      categoryOrder.forEach(cat => {
+        const group = document.querySelector(`.category-group[data-category='${CSS.escape(cat)}'] .category-feeds`);
+        if (group) {
+          feedOrder[cat] = Array.from(group.querySelectorAll('.livefeed-card')).map(card => {
+            const dropdown = card.querySelector('.dropdown-toggle');
+            return dropdown ? dropdown.id.replace('dropdownMenuButton-', '') : null;
+          }).filter(Boolean);
+        }
+      });
+      const categoryCollapse = {};
+      categoryOrder.forEach(cat => {
+        const group = document.querySelector(`.category-group[data-category='${CSS.escape(cat)}']`);
+        if (group) {
+          const feeds = group.querySelector('.category-feeds');
+          categoryCollapse[cat] = feeds.style.display === 'none';
+        }
+      });
+      return { categoryOrder, feedOrder, categoryCollapse };
+    }
+
+    async function saveLayoutToServer() {
+      const layout = getCurrentLayoutFromDOM();
+      await fetch(`/api/guilds/<%= guild.id %>/livefeed-layout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(layout)
+      });
+    }
+
+    function applyLayoutToDOM() {
+      // Kolejność kategorii
+      if (livefeedLayout.categoryOrder && livefeedLayout.categoryOrder.length) {
+        const catList = document.getElementById('category-list');
+        livefeedLayout.categoryOrder.forEach(cat => {
+          const group = catList.querySelector(`.category-group[data-category='${CSS.escape(cat)}']`);
+          if (group) catList.appendChild(group);
+        });
+      }
+      // Kolejność feedów
+      if (livefeedLayout.feedOrder) {
+        Object.entries(livefeedLayout.feedOrder).forEach(([cat, feedIds]) => {
+          const group = document.querySelector(`.category-group[data-category='${CSS.escape(cat)}'] .category-feeds`);
+          if (group && Array.isArray(feedIds)) {
+            feedIds.forEach(fid => {
+              const card = group.querySelector(`.livefeed-card .dropdown-toggle[id='dropdownMenuButton-${fid}']`);
+              if (card) group.appendChild(card.closest('.livefeed-card'));
+            });
+          }
+        });
+      }
+      // Stan rozwinięcia/zwiniecia
+      if (livefeedLayout.categoryCollapse) {
+        Object.entries(livefeedLayout.categoryCollapse).forEach(([cat, collapsed]) => {
+          const group = document.querySelector(`.category-group[data-category='${CSS.escape(cat)}']`);
+          if (group) {
+            const feeds = group.querySelector('.category-feeds');
+            const icon = group.querySelector('.toggle-category i');
+            if (collapsed) {
+              feeds.style.display = 'none';
+              if (icon) { icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-right'); }
+            } else {
+              feeds.style.display = '';
+              if (icon) { icon.classList.remove('fa-chevron-right'); icon.classList.add('fa-chevron-down'); }
+            }
+          }
+        });
+      }
+    }
+
+    // --- Przy starcie ---
+    document.addEventListener('DOMContentLoaded', async function() {
+      await fetchCategories();
+      await fetchLayout();
+      applyLayoutToDOM();
     });
   </script>
   <style>
