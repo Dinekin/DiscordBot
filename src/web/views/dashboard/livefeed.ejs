@@ -26,6 +26,9 @@
                 <i class="fas fa-plus"></i> Utwórz nowy
               </button>
             </div>
+            <div class="mb-3">
+              <button class="btn btn-outline-secondary btn-sm" id="addCategoryBtn"><i class="fas fa-folder-plus me-1"></i> Dodaj kategorię</button>
+            </div>
             <p class="card-text">
               Live Feed pozwala na automatyczne wysyłanie wiadomości zgodnie z określonym harmonogramem.
               Można ustawić wiadomości cykliczne, przypomnienia, ogłoszenia i inne komunikaty, które będą
@@ -35,87 +38,124 @@
         </div>
 
         <% if (feeds && feeds.length > 0) { %>
-          <% feeds.forEach(feed => { %>
-            <div class="card shadow-sm mb-4">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><%= feed.name %></h5>
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton-<%= feed._id %>" data-bs-toggle="dropdown" aria-expanded="false">
-                    Akcje
+          <% 
+            // Grupowanie feedów po kategorii
+            const feedsByCategory = {};
+            feeds.forEach(feed => {
+              const cat = feed.category || 'Inne';
+              if (!feedsByCategory[cat]) feedsByCategory[cat] = [];
+              feedsByCategory[cat].push(feed);
+            });
+            const categories = Object.keys(feedsByCategory).sort();
+          %>
+          <div id="category-list">
+            <% categories.forEach(category => { %>
+              <div class="category-group mb-2" data-category="<%= category %>">
+                <div class="d-flex align-items-center mb-1">
+                  <button class="btn btn-link p-0 me-2 toggle-category" type="button" data-category="<%= category %>">
+                    <i class="fas fa-chevron-down"></i>
                   </button>
-                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton-<%= feed._id %>">
-                    <li><button class="dropdown-item" onclick="editFeed('<%= feed._id %>')"><i class="fas fa-edit me-2"></i>Edytuj</button></li>
-                    <li><button class="dropdown-item" onclick="testFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-paper-plane me-2"></i>Testuj</button></li>
-                    <% if (feed.isActive) { %>
-                      <li><button class="dropdown-item" onclick="pauseFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-pause me-2"></i>Wstrzymaj</button></li>
-                    <% } else { %>
-                      <li><button class="dropdown-item" onclick="resumeFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-play me-2"></i>Wznów</button></li>
-                    <% } %>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><button class="dropdown-item text-danger" onclick="deleteFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-trash me-2"></i>Usuń</button></li>
-                  </ul>
+                  <h5 class="mb-0 flex-grow-1" style="font-size:1.1rem;"><i class="fas fa-folder-open me-2"></i><%= category %></h5>
+                  <span class="handle-category ms-2" style="cursor: grab;"><i class="fas fa-arrows-alt"></i></span>
                 </div>
-              </div>
-              <div class="card-body">
-                <div class="row">
-                  <div class="col-md-6">
-                    <p>
-                      <i class="fas fa-hashtag me-2 text-muted"></i>
-                      <strong>Kanał:</strong> 
-                      <% if (guild.channels.cache.get(feed.channelId)) { %>
-                        <span class="text-primary">#<%= guild.channels.cache.get(feed.channelId).name %></span>
-                      <% } else { %>
-                        <span class="text-danger">Nieznany kanał</span>
-                      <% } %>
-                    </p>
-                    <p>
-                      <i class="fas fa-calendar-alt me-2 text-muted"></i>
-                      <strong>Harmonogram:</strong> 
-                      <%= formatSchedule(feed.schedule) %>
-                    </p>
-                    <p>
-                      <i class="fas fa-clock me-2 text-muted"></i>
-                      <strong>Ostatnie uruchomienie:</strong> 
-                      <% if (feed.nextRun) { %>
-                        <span title="<%= new Date(feed.nextRun).toLocaleString() %>"><%= timeAgo(feed.lastRun) %></span>
-                      <% } else { %>
-                        Nieznane
-                      <% } %>
-                    <p>
-                      <i class="fas fa-calendar-check me-2 text-muted"></i>
-                      <strong>Następne uruchomienie:</strong> 
-                      <% if (feed.nextRun) { %>
-                        <span title="<%= new Date(feed.nextRun).toLocaleString() %>"><%= timeAgo(feed.nextRun) %></span>
-                      <% } else { %>
-                        Nieznane
-                      <% } %>
-                    <p>
-                      <i class="fas fa-toggle-on me-2 text-muted"></i>
-                      <strong>Status:</strong> 
-                      <% if (feed.isActive) { %>
-                        <span class="badge bg-success">Aktywny</span>
-                      <% } else { %>
-                        <span class="badge bg-warning text-dark">Wstrzymany</span>
-                      <% } %>
-                    </p>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="card bg-light">
-                      <div class="card-header">
-                        <strong>Treść wiadomości</strong>
-                        <% if (feed.embed) { %><span class="badge bg-info ms-2">Embed</span><% } %>
+                <div class="category-feeds">
+                  <% feedsByCategory[category].forEach(feed => { %>
+                    <div class="card shadow-sm mb-2 livefeed-card">
+                      <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                        <h6 class="mb-0" style="font-size:1rem;"><%= feed.name %></h6>
+                        <div class="d-flex align-items-center">
+                          <span class="handle-feed me-2" style="cursor: grab;"><i class="fas fa-arrows-alt"></i></span>
+                          <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton-<%= feed._id %>" data-bs-toggle="dropdown" aria-expanded="false">
+                              Akcje
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton-<%= feed._id %>">
+                              <li><button class="dropdown-item" onclick="editFeed('<%= feed._id %>')"><i class="fas fa-edit me-2"></i>Edytuj</button></li>
+                              <li><button class="dropdown-item" onclick="testFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-paper-plane me-2"></i>Testuj</button></li>
+                              <% if (feed.isActive) { %>
+                                <li><button class="dropdown-item" onclick="pauseFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-pause me-2"></i>Wstrzymaj</button></li>
+                              <% } else { %>
+                                <li><button class="dropdown-item" onclick="resumeFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-play me-2"></i>Wznów</button></li>
+                              <% } %>
+                              <li><hr class="dropdown-divider"></li>
+                              <li><button class="dropdown-item text-danger" onclick="deleteFeed('<%= guild.id %>', '<%= feed._id %>')"><i class="fas fa-trash me-2"></i>Usuń</button></li>
+                            </ul>
+                          </div>
+                        </div>
                       </div>
-                      <div class="card-body">
-                        <div style="max-height: 150px; overflow-y: auto;">
-                          <%= feed.message %>
+                      <div class="card-body py-2 px-3">
+                        <div class="row g-1">
+                          <div class="col-12 col-md-6 mb-1 mb-md-0">
+                            <div class="d-flex align-items-center mb-2">
+                              <label for="quickCategory-<%= feed._id %>" class="me-2 mb-0" style="font-size:0.95rem;"><i class='fas fa-folder-open me-1'></i>Kategoria:</label>
+                              <select class="form-select form-select-sm quick-category-select" data-feed-id="<%= feed._id %>" id="quickCategory-<%= feed._id %>" style="width:auto; min-width:120px;"></select>
+                            </div>
+                            <p class="mb-1" style="font-size:0.95rem;">
+                              <i class="fas fa-hashtag me-2 text-muted"></i>
+                              <strong>Kanał:</strong> 
+                              <% if (guild.channels.cache.get(feed.channelId)) { %>
+                                <span class="text-primary">#<%= guild.channels.cache.get(feed.channelId).name %></span>
+                              <% } else { %>
+                                <span class="text-danger">Nieznany kanał</span>
+                              <% } %>
+                            </p>
+                            <p class="mb-1" style="font-size:0.95rem;">
+                              <i class="fas fa-calendar-alt me-2 text-muted"></i>
+                              <strong>Harmonogram:</strong> 
+                              <%= formatSchedule(feed.schedule) %>
+                            </p>
+                            <p class="mb-1" style="font-size:0.95rem;">
+                              <i class="fas fa-clock me-2 text-muted"></i>
+                              <strong>Ostatnie uruchomienie:</strong> 
+                              <% if (feed.nextRun) { %>
+                                <span title="<%= new Date(feed.nextRun).toLocaleString() %>"><%= timeAgo(feed.lastRun) %></span>
+                              <% } else { %>
+                                Nieznane
+                              <% } %>
+                            </p>
+                            <p class="mb-1" style="font-size:0.95rem;">
+                              <i class="fas fa-calendar-check me-2 text-muted"></i>
+                              <strong>Następne uruchomienie:</strong> 
+                              <% if (feed.nextRun) { %>
+                                <span title="<%= new Date(feed.nextRun).toLocaleString() %>"><%= timeAgo(feed.nextRun) %></span>
+                                <% if (!feed.isActive) { %>
+                                  <span class="text-warning">(WSTRZYMANE)</span>
+                                <% } %>
+                              <% } else { %>
+                                Nieznane
+                              <% } %>
+                            </p>
+                            <p class="mb-1" style="font-size:0.95rem;">
+                              <i class="fas fa-toggle-on me-2 text-muted"></i>
+                              <strong>Status:</strong> 
+                              <% if (feed.isActive) { %>
+                                <span class="badge bg-success">Aktywny</span>
+                              <% } else { %>
+                                <span class="badge bg-warning text-dark">Wstrzymany</span>
+                              <% } %>
+                            </p>
+                          </div>
+                          <div class="col-12 col-md-6">
+                            <div class="card bg-light mb-0" style="font-size:0.95rem;">
+                              <div class="card-header py-1 px-2">
+                                <strong>Treść wiadomości</strong>
+                                <% if (feed.embed) { %><span class="badge bg-info ms-2">Embed</span><% } %>
+                              </div>
+                              <div class="card-body py-1 px-2">
+                                <div style="max-height: 100px; overflow-y: auto;">
+                                  <%= feed.message %>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  <% }); %>
                 </div>
               </div>
-            </div>
-          <% }); %>
+            <% }); %>
+          </div>
         <% } else { %>
           <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
@@ -148,6 +188,17 @@
                   <% channels.forEach(channel => { %>
                     <option value="<%= channel.id %>">#<%= channel.name %></option>
                   <% }); %>
+                </select>
+              </div>
+            </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="category" class="form-label">Kategoria</label>
+                <select class="form-select" id="category" name="category">
+                  <option value="Ogłoszenia">Ogłoszenia</option>
+                  <option value="Przypomnienia">Przypomnienia</option>
+                  <option value="Cykliczne">Cykliczne</option>
+                  <option value="Inne">Inne</option>
                 </select>
               </div>
             </div>
@@ -249,6 +300,17 @@
                 </select>
               </div>
             </div>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="editCategory" class="form-label">Kategoria</label>
+                <select class="form-select" id="editCategory" name="category">
+                  <option value="Ogłoszenia">Ogłoszenia</option>
+                  <option value="Przypomnienia">Przypomnienia</option>
+                  <option value="Cykliczne">Cykliczne</option>
+                  <option value="Inne">Inne</option>
+                </select>
+              </div>
+            </div>
             <div class="mb-3">
               <label for="editMessage" class="form-label">Treść wiadomości</label>
               <textarea class="form-control" id="editMessage" name="message" rows="5" required></textarea>
@@ -321,8 +383,28 @@
     </div>
   </div>
 
+  <!-- Modal dodawania kategorii -->
+  <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Dodaj kategorię</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" class="form-control" id="newCategoryName" placeholder="Nazwa kategorii">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-primary" id="saveCategoryBtn">Dodaj</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
   <script src="/js/dark-mode.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
   <script>
     // Funkcje obsługi modalu dla Embed
@@ -392,7 +474,8 @@
         month: formData.get('month') || '*',
         weekday: formData.get('weekday') || '*',
         embed: formData.get('embed') ? true : false,
-        color: formData.get('color') || '#3498db'
+        color: formData.get('color') || '#3498db',
+        category: formData.get('category') || 'Inne'
       };
       
       try {
@@ -440,6 +523,7 @@
           document.getElementById('editWeekday').value = feed.schedule.dayOfWeek || '*';
           document.getElementById('editEmbed').checked = feed.embed;
           document.getElementById('editColor').value = feed.embedColor || '#3498db';
+          document.getElementById('editCategory').value = feed.category || 'Inne';
           
           // Pokaż/ukryj pole koloru
           document.getElementById('editColorContainer').style.display = feed.embed ? 'block' : 'none';
@@ -474,7 +558,8 @@
         month: formData.get('month') || '*',
         weekday: formData.get('weekday') || '*',
         embed: formData.get('embed') ? true : false,
-        color: formData.get('color') || '#3498db'
+        color: formData.get('color') || '#3498db',
+        category: formData.get('category') || 'Inne'
       };
       
       try {
@@ -586,6 +671,233 @@
     document.addEventListener('DOMContentLoaded', function() {
       updateScheduleSummary();
     });
+
+    // Zwijanie/rozwijanie kategorii
+    const toggles = document.querySelectorAll('.toggle-category');
+    toggles.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const cat = this.getAttribute('data-category');
+        const group = document.querySelector('.category-group[data-category="' + cat + '"]');
+        const feeds = group.querySelector('.category-feeds');
+        const icon = this.querySelector('i');
+        if (feeds.style.display === 'none') {
+          feeds.style.display = '';
+          icon.classList.remove('fa-chevron-right');
+          icon.classList.add('fa-chevron-down');
+        } else {
+          feeds.style.display = 'none';
+          icon.classList.remove('fa-chevron-down');
+          icon.classList.add('fa-chevron-right');
+        }
+      });
+    });
+
+    // Przeciąganie/przesuwanie kategorii
+    const categoryList = document.getElementById('category-list');
+    Sortable.create(categoryList, {
+      handle: '.handle-category',
+      animation: 150,
+      draggable: '.category-group',
+      onEnd: function (evt) {
+        // Możesz tu dodać kod do zapisu nowej kolejności kategorii (np. do backendu)
+        // const newOrder = [...document.querySelectorAll('.category-group')].map(el => el.getAttribute('data-category'));
+        // fetch('/api/save-category-order', { method: 'POST', body: JSON.stringify({ order: newOrder }) })
+      }
+    });
+
+    // Przeciąganie/przesuwanie livefeedów między kategoriami
+    // Dodaj Sortable do każdej listy feedów
+
+    document.querySelectorAll('.category-feeds').forEach(feedList => {
+      Sortable.create(feedList, {
+        group: 'feeds',
+        animation: 150,
+        draggable: '.livefeed-card',
+        handle: '.handle-feed',
+        onEnd: async function (evt) {
+          const feedCard = evt.item;
+          const dropdown = feedCard.querySelector('.dropdown-toggle');
+          if (!dropdown) return;
+          const feedId = dropdown.id.replace('dropdownMenuButton-', '');
+          const newCategory = feedCard.closest('.category-group').getAttribute('data-category');
+          try {
+            const response = await fetch(`/api/guilds/<%= guild.id %>/livefeeds/${feedId}/category`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ category: newCategory })
+            });
+            const result = await response.json();
+            if (!result.success) {
+              alert('Błąd przy zmianie kategorii: ' + result.error);
+              location.reload();
+            }
+          } catch (e) {
+            alert('Błąd sieci przy zmianie kategorii');
+            location.reload();
+          }
+        }
+      });
+    });
+
+    // Zarządzanie kategoriami
+    let livefeedCategories = [];
+
+    async function fetchCategories() {
+      const res = await fetch(`/api/guilds/<%= guild.id %>/livefeed-categories`);
+      const data = await res.json();
+      if (data.success) {
+        livefeedCategories = data.categories;
+        updateCategorySelects();
+        renderCategoryListUI();
+      }
+    }
+
+    function updateCategorySelects() {
+      const selects = [document.getElementById('category'), document.getElementById('editCategory')];
+      selects.forEach(sel => {
+        if (!sel) return;
+        sel.innerHTML = '';
+        livefeedCategories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat;
+          sel.appendChild(opt);
+        });
+      });
+      // Szybka zmiana kategorii na kartach
+      document.querySelectorAll('.quick-category-select').forEach(sel => {
+        const feedId = sel.getAttribute('data-feed-id');
+        const current = sel.getAttribute('data-current');
+        sel.innerHTML = '';
+        livefeedCategories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat;
+          if (cat === current) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      });
+    }
+
+    function renderCategoryListUI() {
+      // Dodaj przycisk usuwania do każdej kategorii oprócz 'Inne'
+      document.querySelectorAll('.category-group').forEach(group => {
+        const cat = group.getAttribute('data-category');
+        let delBtn = group.querySelector('.delete-category-btn');
+        if (cat !== 'Inne' && !delBtn) {
+          const btn = document.createElement('button');
+          btn.className = 'btn btn-sm btn-danger ms-2 delete-category-btn';
+          btn.innerHTML = '<i class="fas fa-trash"></i>';
+          btn.onclick = () => deleteCategory(cat);
+          group.querySelector('.d-flex.align-items-center').appendChild(btn);
+        }
+        if (cat === 'Inne' && delBtn) delBtn.remove();
+      });
+      setQuickCategoryValues();
+      updateCategorySelects();
+    }
+
+    document.getElementById('addCategoryBtn').addEventListener('click', function() {
+      document.getElementById('newCategoryName').value = '';
+      const modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+      modal.show();
+    });
+
+    document.getElementById('saveCategoryBtn').addEventListener('click', async function() {
+      const name = document.getElementById('newCategoryName').value.trim();
+      if (!name) return alert('Podaj nazwę kategorii!');
+      const res = await fetch(`/api/guilds/<%= guild.id %>/livefeed-categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      const data = await res.json();
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('addCategoryModal')).hide();
+        await fetchCategories();
+      } else {
+        alert('Błąd: ' + data.error);
+      }
+    });
+
+    async function deleteCategory(cat) {
+      if (!confirm(`Czy na pewno chcesz usunąć kategorię "${cat}"? Wszystkie feedy z tej kategorii zostaną przeniesione do "Inne".`)) return;
+      const res = await fetch(`/api/guilds/<%= guild.id %>/livefeed-categories/${encodeURIComponent(cat)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchCategories();
+        location.reload();
+      } else {
+        alert('Błąd: ' + data.error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchCategories);
+
+    function setQuickCategoryValues() {
+      document.querySelectorAll('.quick-category-select').forEach(sel => {
+        const feedId = sel.getAttribute('data-feed-id');
+        const card = sel.closest('.livefeed-card');
+        if (card) {
+          const cat = card.closest('.category-group').getAttribute('data-category');
+          sel.setAttribute('data-current', cat);
+        }
+      });
+    }
+
+    document.addEventListener('change', async function(e) {
+      if (e.target.classList.contains('quick-category-select')) {
+        const feedId = e.target.getAttribute('data-feed-id');
+        const newCategory = e.target.value;
+        const res = await fetch(`/api/guilds/<%= guild.id %>/livefeeds/${feedId}/category`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ category: newCategory })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          alert('Błąd przy zmianie kategorii: ' + data.error);
+          location.reload();
+        } else {
+          // Przenieś kartę do nowej kategorii w DOM
+          const card = e.target.closest('.livefeed-card');
+          const oldGroup = card.closest('.category-group');
+          const newGroupFeeds = document.querySelector(`.category-group[data-category='${CSS.escape(newCategory)}'] .category-feeds`);
+          if (newGroupFeeds) {
+            newGroupFeeds.appendChild(card);
+            // Jeśli stara kategoria jest pusta, możesz ją ukryć lub pokazać info
+            if (oldGroup.querySelectorAll('.livefeed-card').length === 0) {
+              // Możesz np. dodać info lub ukryć całą kategorię
+            }
+          }
+          // Zaktualizuj atrybut data-current
+          e.target.setAttribute('data-current', newCategory);
+          // Efekt potwierdzenia
+          e.target.classList.add('border-success');
+          setTimeout(() => e.target.classList.remove('border-success'), 800);
+        }
+      }
+    });
   </script>
+  <style>
+    @media (max-width: 768px) {
+      .livefeed-card .card-header, .livefeed-card .card-body {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+      }
+      .livefeed-card .card-header h6 {
+        font-size: 0.95rem !important;
+      }
+      .livefeed-card .card-body {
+        font-size: 0.9rem !important;
+      }
+    }
+    .livefeed-card.sortable-chosen {
+      background: #e9ecef;
+      opacity: 0.8;
+    }
+  </style>
 </body>
 </html>

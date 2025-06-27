@@ -7,7 +7,7 @@ class LiveFeedManager {
   constructor(client) {
     this.client = client;
     this.intervalId = null;
-    this.checkInterval = 60000; // sprawdzaj co minutę
+    this.checkInterval = 15000; // sprawdzaj co 15 sekund
     this.feeds = new Map(); // przechowuje aktywne feedy w pamięci
     this.lastExecuted = new Map(); // śledzi ostatnie wykonania feedów
   }
@@ -72,35 +72,26 @@ class LiveFeedManager {
   // Główna funkcja sprawdzająca i uruchamiająca feedy
   async checkFeeds() {
     const now = new Date();
-    // Zaokrąglij do najbliższej minuty, resetując sekundy i milisekundy
-    const currentMinute = new Date(now);
-    currentMinute.setSeconds(0);
-    currentMinute.setMilliseconds(0);
+    // Zaokrąglij do najbliższej sekundy, resetując milisekundy
+    now.setMilliseconds(0);
     
-    logger.debug(`Sprawdzanie live feedów... (${currentMinute.toLocaleTimeString()})`);
+    logger.debug(`Sprawdzanie live feedów... (${now.toLocaleTimeString()})`);
     
     for (const [id, feed] of this.feeds.entries()) {
       try {
-        // Sprawdź czy feed powinien zostać uruchomiony na podstawie harmonogramu CRON
-        if (this.shouldRunCron(feed, currentMinute)) {
-          // Sprawdź czy już nie wykonaliśmy tego feed w tej minucie
-          const lastExecuted = this.lastExecuted.get(id);
-          if (lastExecuted && lastExecuted.getTime() === currentMinute.getTime()) {
-            logger.debug(`Feed "${feed.name}" już został wykonany w tej minucie, pomijam`);
-            continue;
+        // Sprawdź czy feed jest aktywny i czy nadszedł czas na jego uruchomienie
+        if (feed.isActive && feed.nextRun) {
+          const diff = Math.abs(feed.nextRun.getTime() - now.getTime());
+          if (diff < 1000) { // różnica mniejsza niż 1 sekunda
+            logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
+            await this.executeFeed(feed);
+            // Zapisz czas wykonania w pamięci i bazie danych
+            this.lastExecuted.set(id, new Date(now));
+            feed.lastRun = now;
+            feed.calculateNextRun(); // Oblicz następny czas uruchomienia
+            await feed.save();
+            logger.info(`Następne uruchomienie live feed "${feed.name}" (ID: ${id}) zaplanowane na: ${feed.nextRun}`);
           }
-          
-          logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
-          await this.executeFeed(feed);
-          
-          // Zapisz czas wykonania w pamięci i bazie danych
-          this.lastExecuted.set(id, new Date(currentMinute));
-          feed.lastRun = currentMinute;
-          feed.calculateNextRun(); // Oblicz następny czas uruchomienia
-          await feed.save();
-          
-          // Dodaj logging informacji o następnym uruchomieniu
-          logger.info(`Następne uruchomienie live feed "${feed.name}" (ID: ${id}) zaplanowane na: ${feed.nextRun}`);
         }
       } catch (error) {
         logger.error(`Błąd podczas wykonywania live feed ${id}: ${error.stack}`);

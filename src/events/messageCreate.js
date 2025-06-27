@@ -308,7 +308,12 @@ module.exports = {
         reactions: processReactions(message),
         stickers: processStickers(message),
         gifAttachment: extractGifInfo(message),
-        createdAt: message.createdAt
+        createdAt: message.createdAt,
+        modActions: [],
+        nicknameChanges: [],
+        roleChanges: [],
+        channelLogs: [],
+        threadLogs: []
       };
       
       // Dodaj informacje o referencji (odpowiedzi), jeśli istnieje
