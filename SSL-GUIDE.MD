@@ -8,7 +8,7 @@ This guide will walk you through setting up SSL for your Discord bot with Nginx 
 ## Prerequisites
 
 - A domain name pointing to your server's IP address
-- Docker and Docker Compose installed
+Node.js and Nginx installed
 - Port 80 and 443 open on your server's firewall
 
 ## Option 1: Setting Up with Let's Encrypt (Recommended)
@@ -26,20 +26,21 @@ This script will:
 - Create the necessary directory structure
 - Generate Nginx configuration with SSL support
 - Create a temporary self-signed certificate
-- Update your docker-compose.yml file
 
-### Step 2: Start the Containers
+### Step 2: Start the Bot and Web Dashboard
 
 ```bash
-docker-compose up -d
+npm install
+npm start
 ```
 
-This will start the Discord bot, MongoDB, Nginx with the temporary certificate, and the Certbot container.
+This will start the Discord bot and web dashboard. Make sure MongoDB and Nginx are running.
 
 ### Step 3: Obtain Let's Encrypt Certificate
 
+Use Certbot manually to obtain your certificate:
 ```bash
-docker-compose exec certbot certbot certonly --webroot -w /var/www/certbot \
+sudo certbot certonly --webroot -w /var/www/certbot \
   --email your@email.com -d yourdomain.com -d www.yourdomain.com \
   --agree-tos --force-renewal
 ```
@@ -47,17 +48,17 @@ docker-compose exec certbot certbot certonly --webroot -w /var/www/certbot \
 ### Step 4: Copy the Certificates to Nginx
 
 ```bash
-docker-compose exec certbot cp -L /etc/letsencrypt/live/yourdomain.com/fullchain.pem /certs/fullchain.pem
-docker-compose exec certbot cp -L /etc/letsencrypt/live/yourdomain.com/privkey.pem /certs/privkey.pem
+sudo cp -L /etc/letsencrypt/live/yourdomain.com/fullchain.pem nginx/certs/fullchain.pem
+sudo cp -L /etc/letsencrypt/live/yourdomain.com/privkey.pem nginx/certs/privkey.pem
 ```
 
 ### Step 5: Reload Nginx
 
 ```bash
-docker-compose exec nginx nginx -s reload
+sudo systemctl reload nginx
 ```
 
-Your Discord bot should now be accessible via HTTPS, with automatic certificate renewal every 12 hours.
+Your Discord bot should now be accessible via HTTPS. Set up automatic certificate renewal with Certbot as needed.
 
 ## Option 2: Setting Up with Self-Signed Certificates (Development Only)
 

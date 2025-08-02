@@ -1,6 +1,6 @@
 # Discord Reaction Roles Bot with Nginx
 
-This repository contains a Discord bot with a web dashboard, containerized with Docker and served through Nginx as a reverse proxy.
+This repository contains a Discord bot with a web dashboard, served through Nginx as a reverse proxy.
 
 ## Architecture
 
@@ -12,8 +12,7 @@ The application consists of three main components:
 
 ## Prerequisites
 
-- Docker
-- Docker Compose
+  
 - Discord Bot credentials (token, client ID, client secret)
 
 ## Setup Instructions
@@ -35,17 +34,13 @@ The application consists of three main components:
    nano .env
    ```
 
-4. Build the Docker images:
+4. Start the bot and web dashboard using Node.js:
    ```bash
-   docker-compose build
+   npm install
+   npm start
    ```
 
-5. Start the containers:
-   ```bash
-   docker-compose up -d
-   ```
-
-6. Access the web dashboard at `http://localhost`
+5. Access the web dashboard at `http://localhost`
 
 ## Configuration
 
@@ -108,13 +103,14 @@ To enable HTTPS:
 To view logs:
 ```bash
 # Discord bot logs
-docker-compose logs discord-bot
+cat logs/bot.log
 
 # Nginx logs
-docker-compose logs nginx
+cat nginx/logs/access.log
+cat nginx/logs/error.log
 
 # MongoDB logs
-docker-compose logs mongodb
+cat mongodb/logs/mongodb.log
 ```
 
 ### Update the Bot
@@ -122,16 +118,15 @@ docker-compose logs mongodb
 To update the bot:
 ```bash
 git pull
-docker-compose down
-docker-compose build
-docker-compose up -d
+npm install
+npm restart
 ```
 
 ### Backup MongoDB Data
 
-The MongoDB data is stored in a Docker volume. To backup:
+The MongoDB data is stored locally. To backup:
 ```bash
-docker-compose exec mongodb mongodump --out=/data/db/backup
+mongodump --out=/data/db/backup
 ```
 
 ## Troubleshooting
