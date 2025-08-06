@@ -72,23 +72,19 @@ class LiveFeedManager {
   // Główna funkcja sprawdzająca i uruchamiająca feedy
   async checkFeeds() {
     const now = new Date();
-    // Zaokrąglij do najbliższej sekundy, resetując milisekundy
     now.setMilliseconds(0);
-    
     logger.debug(`Sprawdzanie live feedów... (${now.toLocaleTimeString()})`);
-    
     for (const [id, feed] of this.feeds.entries()) {
       try {
-        // Sprawdź czy feed jest aktywny i czy nadszedł czas na jego uruchomienie
         if (feed.isActive && feed.nextRun) {
           const diff = Math.abs(feed.nextRun.getTime() - now.getTime());
-          if (diff < 1000) { // różnica mniejsza niż 1 sekunda
+          logger.debug(`Feed: ${feed.name} (ID: ${id}) nextRun: ${feed.nextRun.toISOString()} now: ${now.toISOString()} diff: ${diff}ms`);
+          if (diff < 15000) { // tolerancja do 15 sekund
             logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
             await this.executeFeed(feed);
-            // Zapisz czas wykonania w pamięci i bazie danych
             this.lastExecuted.set(id, new Date(now));
             feed.lastRun = now;
-            feed.calculateNextRun(); // Oblicz następny czas uruchomienia
+            feed.calculateNextRun();
             await feed.save();
             logger.info(`Następne uruchomienie live feed "${feed.name}" (ID: ${id}) zaplanowane na: ${feed.nextRun}`);
           }
