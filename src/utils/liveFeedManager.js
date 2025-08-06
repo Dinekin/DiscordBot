@@ -79,7 +79,7 @@ class LiveFeedManager {
         if (feed.isActive && feed.nextRun) {
           const diff = Math.abs(feed.nextRun.getTime() - now.getTime());
           logger.debug(`Feed: ${feed.name} (ID: ${id}) nextRun: ${feed.nextRun.toISOString()} now: ${now.toISOString()} diff: ${diff}ms`);
-          if (diff < 15000) { // tolerancja do 15 sekund
+          if (diff < 1000) { // tolerancja do 15 sekund
             logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
             await this.executeFeed(feed);
             this.lastExecuted.set(id, new Date(now));
