@@ -106,9 +106,9 @@
                             </p>
                             <p class="mb-1" style="font-size:0.95rem;">
                               <i class="fas fa-clock me-2 text-muted"></i>
-                              <strong>Ostatnie uruchomienie:</strong> 
-                              <% if (feed.nextRun) { %>
-                                <span title="<%= new Date(feed.nextRun).toLocaleString() %>"><%= timeAgo(feed.lastRun) %></span>
+                              <strong>Ostatnie uruchomienie:</strong>
+                              <% if (feed.lastRun) { %>
+                                <span title="<%= new Date(feed.lastRun).toLocaleString() %>"><%= timeAgo(feed.lastRun) %></span>
                               <% } else { %>
                                 Nieznane
                               <% } %>
