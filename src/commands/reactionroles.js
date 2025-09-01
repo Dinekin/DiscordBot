@@ -46,7 +46,12 @@ module.exports = {
             .setRequired(true))
         .addBooleanOption(option =>
           option.setName('notify')
-            .setDescription('Czy wysyłać powiadomienie, gdy ktoś otrzyma tę rolę')))
+            .setDescription('Czy wysyłać powiadomienie, gdy ktoś otrzyma tę rolę')
+            .setRequired(false))
+        .addRoleOption(option =>
+          option.setName('blockedby')
+            .setDescription('Rola, która blokuje dostęp do tej roli (opcjonalne)')
+            .setRequired(false)))
     .addSubcommand(subcommand =>
       subcommand
         .setName('remove')
@@ -86,6 +91,10 @@ module.exports = {
         .addBooleanOption(option =>
           option.setName('notify')
             .setDescription('Czy wysyłać powiadomienie, gdy ktoś otrzyma tę rolę')
+            .setRequired(false))
+        .addRoleOption(option =>
+          option.setName('blockedby')
+            .setDescription('Rola, która blokuje dostęp do tej roli (opcjonalne)')
             .setRequired(false))),
 
   async execute(interaction) {
@@ -125,20 +134,21 @@ module.exports = {
       const role = interaction.options.getRole('role');
       const emoji = interaction.options.getString('emoji');
       const notify = interaction.options.getBoolean('notify') || false;
-      
+      const blockedBy = interaction.options.getRole('blockedby');
+
       // Znajdź reakcję w bazie danych
-      const reactionRole = await ReactionRole.findOne({ 
+      const reactionRole = await ReactionRole.findOne({
         guildId: interaction.guildId,
-        messageId: messageId 
+        messageId: messageId
       });
-      
+
       if (!reactionRole) {
         return interaction.reply({
           content: 'Nie znaleziono wiadomości z tym ID!',
           ephemeral: true
         });
       }
-      
+
       // Sprawdź, czy emoji już istnieje
       if (reactionRole.roles.some(r => r.emoji === emoji)) {
         return interaction.reply({
@@ -146,14 +156,15 @@ module.exports = {
           ephemeral: true
         });
       }
-      
+
       // Dodaj rolę do bazy danych
       reactionRole.roles.push({
         emoji: emoji,
         roleId: role.id,
-        notificationEnabled: notify
+        notificationEnabled: notify,
+        blockedByRoleId: blockedBy ? blockedBy.id : null
       });
-      
+
       await reactionRole.save();
       
       // Dodaj reakcję do wiadomości
@@ -307,6 +318,7 @@ module.exports = {
       const role = interaction.options.getRole('role');
       const emoji = interaction.options.getString('emoji');
       const notify = interaction.options.getBoolean('notify') || false;
+      const blockedBy = interaction.options.getRole('blockedby');
 
       try {
         // Pobierz wiadomość
@@ -357,7 +369,8 @@ module.exports = {
         reactionRole.roles.push({
           emoji: emoji,
           roleId: role.id,
-          notificationEnabled: notify
+          notificationEnabled: notify,
+          blockedByRoleId: blockedBy ? blockedBy.id : null
         });
 
         await reactionRole.save();

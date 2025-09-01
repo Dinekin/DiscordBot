@@ -120,6 +120,31 @@ module.exports = {
           }
           return;
         }
+
+        // NOWA FUNKCJONALNOŚĆ: Sprawdź czy użytkownik ma rolę blokującą dostęp do tej roli
+        if (roleInfo.blockedByRoleId && member.roles.cache.has(roleInfo.blockedByRoleId)) {
+          logger.warn(`🚫 Reaction role: Użytkownik ${user.tag} posiada rolę blokującą ${roleInfo.blockedByRoleId}, blokuję dodanie roli ${role.name}`);
+
+          // Pobierz nazwę roli blokującej
+          const blockingRole = await guild.roles.fetch(roleInfo.blockedByRoleId).catch(() => null);
+          const blockingRoleName = blockingRole ? blockingRole.name : 'nieznana rola';
+
+          // Usuń reakcję żeby użytkownik wiedział, że nie może teraz otrzymać tej roli
+          try {
+            await reaction.users.remove(user.id);
+            logger.info(`Usunięto reakcję użytkownika ${user.tag} - posiada rolę blokującą`);
+
+            // Wyślij prywatną wiadomość użytkownikowi
+            try {
+              await user.send(`Nie możesz otrzymać roli ${role.name}, ponieważ posiadasz rolę "${blockingRoleName}", która blokuje dostęp do tej roli na serwerze ${guild.name}.`);
+            } catch (dmError) {
+              logger.warn(`Nie można wysłać DM do użytkownika ${user.tag}: ${dmError.message}`);
+            }
+          } catch (removeError) {
+            logger.error(`Nie można usunąć reakcji: ${removeError.message}`);
+          }
+          return;
+        }
         
         // Sprawdź, czy bot ma uprawnienia do zarządzania rolami
         const botMember = guild.members.cache.get(guild.client.user.id);

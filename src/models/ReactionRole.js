@@ -19,6 +19,10 @@ const ReactionRoleSchema = new mongoose.Schema({
     notificationEnabled: {
       type: Boolean,
       default: false
+    },
+    blockedByRoleId: {
+      type: String,
+      default: null
     }
   }],
   title: {
