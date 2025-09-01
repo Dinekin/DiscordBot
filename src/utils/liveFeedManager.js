@@ -77,9 +77,8 @@ class LiveFeedManager {
     for (const [id, feed] of this.feeds.entries()) {
       try {
         if (feed.isActive && feed.nextRun) {
-          const diff = Math.abs(feed.nextRun.getTime() - now.getTime());
-          logger.debug(`Feed: ${feed.name} (ID: ${id}) nextRun: ${feed.nextRun.toISOString()} now: ${now.toISOString()} diff: ${diff}ms`);
-          if (diff < 15000 && (!feed.lastRun || feed.lastRun < feed.nextRun)) { // tolerancja do 15 sekund, nie uruchamiaj podwójnie
+          logger.debug(`Feed: ${feed.name} (ID: ${id}) nextRun: ${feed.nextRun.toISOString()} now: ${now.toISOString()}`);
+          if (this.shouldRunCron(feed, now) && (!feed.lastRun || feed.lastRun < feed.nextRun)) { // sprawdź dokładnie czy czas pasuje do CRON i nie uruchamiaj podwójnie
             logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
             await this.executeFeed(feed);
             this.lastExecuted.set(id, new Date(now));
