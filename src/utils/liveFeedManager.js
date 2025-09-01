@@ -78,7 +78,7 @@ class LiveFeedManager {
       try {
         if (feed.isActive && feed.nextRun) {
           logger.debug(`Feed: ${feed.name} (ID: ${id}) nextRun: ${feed.nextRun.toISOString()} now: ${now.toISOString()}`);
-          if (this.shouldRunCron(feed, now) && (!feed.lastRun || feed.lastRun < feed.nextRun)) { // sprawdź dokładnie czy czas pasuje do CRON i nie uruchamiaj podwójnie
+          if (this.shouldRunCron(feed, now) && (!feed.lastRun || this.isDifferentCronIteration(feed.lastRun, now))) { // sprawdź dokładnie czy czas pasuje do CRON i nie uruchamiaj w tej samej iteracji
             logger.info(`Uruchamianie live feed "${feed.name}" (ID: ${id})`);
             await this.executeFeed(feed);
             this.lastExecuted.set(id, new Date(now));
@@ -92,6 +92,25 @@ class LiveFeedManager {
         logger.error(`Błąd podczas wykonywania live feed ${id}: ${error.stack}`);
       }
     }
+  }
+
+  // Sprawdź czy czas się zmienił od ostatniego uruchomienia (żeby nie uruchamiać wielokrotnie w tej samej iteracji CRON)
+  isDifferentCronIteration(lastRun, currentTime) {
+    if (!lastRun) return true;
+
+    const last = new Date(lastRun);
+    const current = new Date(currentTime);
+
+    // Sprawdź czy któryś ze składników czasu się zmienił
+    // Jeśli minuta się zmieniła, to nowa iteracja
+    if (last.getMinutes() !== current.getMinutes()) return true;
+    if (last.getHours() !== current.getHours()) return true;
+    if (last.getDate() !== current.getDate()) return true;
+    if (last.getMonth() !== current.getMonth()) return true;
+    if (last.getFullYear() !== current.getFullYear()) return true;
+
+    // Jeśli wszystkie składniki są takie same, to ta sama iteracja
+    return false;
   }
 
   // Poprawiona funkcja sprawdzania, czy feed powinien zostać uruchomiony
