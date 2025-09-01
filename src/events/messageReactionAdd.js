@@ -129,14 +129,15 @@ module.exports = {
           const blockingRole = await guild.roles.fetch(roleInfo.blockedByRoleId).catch(() => null);
           const blockingRoleName = blockingRole ? blockingRole.name : 'nieznana rola';
 
-          // Usuń reakcję żeby użytkownik wiedział, że nie może teraz otrzymać tej roli
+          // Usuń reakcję i wyślij prywatną wiadomość użytkownikowi
           try {
             await reaction.users.remove(user.id);
             logger.info(`Usunięto reakcję użytkownika ${user.tag} - posiada rolę blokującą`);
 
-            // Wyślij prywatną wiadomość użytkownikowi
+            // Wyślij prywatną wiadomość użytkownikowi z informacją
             try {
               await user.send(`Nie możesz otrzymać roli ${role.name}, ponieważ posiadasz rolę "${blockingRoleName}", która blokuje dostęp do tej roli na serwerze ${guild.name}.`);
+              logger.info(`Wysłano prywatną wiadomość o blokadzie roli do ${user.tag}`);
             } catch (dmError) {
               logger.warn(`Nie można wysłać DM do użytkownika ${user.tag}: ${dmError.message}`);
             }

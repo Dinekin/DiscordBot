@@ -175,19 +175,24 @@ module.exports = {
         
         // Aktualizuj embed z nową rolą
         const embed = EmbedBuilder.from(message.embeds[0]);
-        
+
+        // Upewnij się, że embed ma opis (wymagane przez Discord API)
+        if (!embed.data.description) {
+          embed.setDescription('Kliknij na reakcję, aby otrzymać rolę!');
+        }
+
         // Dodaj lub zaktualizuj pole z rolami
-        const rolesList = reactionRole.roles.map(r => 
+        const rolesList = reactionRole.roles.map(r =>
           `${r.emoji} - <@&${r.roleId}>${r.notificationEnabled ? ' (z powiadomieniem)' : ''}`
         ).join('\n');
-        
+
         if (embed.data.fields && embed.data.fields.find(f => f.name === 'Dostępne role')) {
           const fieldIndex = embed.data.fields.findIndex(f => f.name === 'Dostępne role');
           embed.data.fields[fieldIndex] = { name: 'Dostępne role', value: rolesList };
         } else {
           embed.addFields({ name: 'Dostępne role', value: rolesList });
         }
-        
+
         await message.edit({ embeds: [embed] });
         
         await interaction.reply({
@@ -244,13 +249,18 @@ module.exports = {
         
         // Aktualizuj embed bez usuniętej roli
         const embed = EmbedBuilder.from(message.embeds[0]);
-        
+
+        // Upewnij się, że embed ma opis (wymagane przez Discord API)
+        if (!embed.data.description) {
+          embed.setDescription('Kliknij na reakcję, aby otrzymać rolę!');
+        }
+
         // Zaktualizuj pole z rolami
         if (reactionRole.roles.length > 0) {
-          const rolesList = reactionRole.roles.map(r => 
+          const rolesList = reactionRole.roles.map(r =>
             `${r.emoji} - <@&${r.roleId}>${r.notificationEnabled ? ' (z powiadomieniem)' : ''}`
           ).join('\n');
-          
+
           if (embed.data.fields && embed.data.fields.find(f => f.name === 'Dostępne role')) {
             const fieldIndex = embed.data.fields.findIndex(f => f.name === 'Dostępne role');
             embed.data.fields[fieldIndex] = { name: 'Dostępne role', value: rolesList };
@@ -264,7 +274,7 @@ module.exports = {
             }
           }
         }
-        
+
         await message.edit({ embeds: [embed] });
         
         await interaction.reply({
