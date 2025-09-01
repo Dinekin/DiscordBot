@@ -71,10 +71,6 @@ module.exports = {
           option.setName('messageid')
             .setDescription('ID wiadomości, do której chcesz dodać rolę reaction')
             .setRequired(true))
-        .addChannelOption(option =>
-          option.setName('channel')
-            .setDescription('Kanał, w którym znajduje się wiadomość (domyślnie aktualny kanał)')
-            .setRequired(false))
         .addRoleOption(option =>
           option.setName('role')
             .setDescription('Rola do dodania')
@@ -83,6 +79,10 @@ module.exports = {
           option.setName('emoji')
             .setDescription('Emoji dla tej roli')
             .setRequired(true))
+        .addChannelOption(option =>
+          option.setName('channel')
+            .setDescription('Kanał, w którym znajduje się wiadomość (domyślnie aktualny kanał)')
+            .setRequired(false))
         .addBooleanOption(option =>
           option.setName('notify')
             .setDescription('Czy wysyłać powiadomienie, gdy ktoś otrzyma tę rolę')
