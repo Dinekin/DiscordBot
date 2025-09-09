@@ -70,12 +70,21 @@ module.exports = {
       logger.debug(`Znaleziono konfigurację: ${JSON.stringify(reactionRole)}`);
       
       // Sprawdź, czy emoji jest w bazie danych
-      const emojiIdentifier = reaction.emoji.id || reaction.emoji.name;
+      let emojiIdentifier;
+
+      if (reaction.emoji.id) {
+        // Dla niestandardowych emoji, skonstruuj pełny format
+        emojiIdentifier = `<${reaction.emoji.animated ? 'a' : ''}:${reaction.emoji.name}:${reaction.emoji.id}>`;
+      } else {
+        // Dla standardowych emoji, użyj nazwy
+        emojiIdentifier = reaction.emoji.name;
+      }
+
       logger.debug(`Szukam emoji: ${emojiIdentifier} w konfiguracji ról`);
-      
+
       // Wypisz wszystkie dostępne emoji w konfiguracji
       logger.debug(`Dostępne emoji w konfiguracji: ${reactionRole.roles.map(r => r.emoji).join(', ')}`);
-      
+
       const roleInfo = reactionRole.roles.find(r => r.emoji === emojiIdentifier);
       
       if (!roleInfo) {
