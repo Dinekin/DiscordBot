@@ -78,7 +78,7 @@ module.exports = {
 
             logger.debug(`Szukam emoji: ${emojiIdentifier} w konfiguracji ról`);
 
-            const roleInfo = reactionRole.roles.find(r => r.emoji === emojiIdentifier);
+            const roleInfo = reactionRole.roles.find(r => r.emoji.trim() === emojiIdentifier);
 
             if (!roleInfo) {
                 logger.debug(`Nie znaleziono roli dla emoji ${emojiIdentifier}`);

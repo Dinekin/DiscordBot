@@ -85,7 +85,7 @@ module.exports = {
       // Wypisz wszystkie dostępne emoji w konfiguracji
       logger.debug(`Dostępne emoji w konfiguracji: ${reactionRole.roles.map(r => r.emoji).join(', ')}`);
 
-      const roleInfo = reactionRole.roles.find(r => r.emoji === emojiIdentifier);
+      const roleInfo = reactionRole.roles.find(r => r.emoji.trim() === emojiIdentifier);
       
       if (!roleInfo) {
         logger.debug(`Nie znaleziono roli dla emoji ${emojiIdentifier}`);
