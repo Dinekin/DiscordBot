@@ -34,18 +34,20 @@
             <div class="card shadow-sm mb-4">
               <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><%= reaction.title %></h5>
-                <div>
-                  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal" data-message-id="<%= reaction.messageId %>">
-                    <i class="fas fa-plus"></i> Dodaj rolę
-                  </button>
-                  <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editReactionRoleModal" data-message-id="<%= reaction.messageId %>" data-title="<%= reaction.title.replace(/&/g, '&amp;').replace(/"/g, '&quot;') %>" data-description="<%= reaction.description.replace(/&/g, '&amp;').replace(/"/g, '&quot;') %>">
-                    <i class="fas fa-edit"></i> Edytuj
-                  </button>
-                  <button class="btn btn-sm btn-danger" onclick="deleteReactionRole('<%= guild.id %>', '<%= reaction.messageId %>')">
-                    <i class="fas fa-trash"></i> Usuń
-                  </button>
-                </div>
-              </div>
+                  <div>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal" data-message-id="<%= reaction.messageId %>">
+                      <i class="fas fa-plus"></i> Dodaj rolę
+                    </button>
+                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#addToAnyModal" data-message-id="<%= reaction.messageId %>">
+                      <i class="fas fa-external-link-alt"></i> Do dowolnej
+                    </button>
+                    <button class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#editReactionRoleModal" data-message-id="<%= reaction.messageId %>" data-title="<%= reaction.title.replace(/&/g, '&').replace(/"/g, '"') %>" data-description="<%= reaction.description.replace(/&/g, '&').replace(/"/g, '"') %>">
+                      <i class="fas fa-edit"></i> Edytuj
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteReactionRole('<%= guild.id %>', '<%= reaction.messageId %>')">
+                      <i class="fas fa-trash"></i> Usuń
+                    </button>
+                  </div>
               <div class="card-body">
                 <p><strong>ID wiadomości:</strong> <%= reaction.messageId %></p>
                 <p><strong>Kanał:</strong> <% if (guild.channels.cache.get(reaction.channelId)) { %>#<%= guild.channels.cache.get(reaction.channelId).name %><% } else { %><em>Nieznany kanał</em><% } %></p>
@@ -69,7 +71,7 @@
                             <td><%= role.emoji %></td>
                             <td>
                               <% if (guild.roles.cache.get(role.roleId)) { %>
-                                <span class="badge" style="background-color: #<%= guild.roles.cache.get(role.roleId).color.toString(16).padStart(6, '0') %>">
+                                <span class="badge" style="background-color: #<%= guild.roles.cache.get(role.roleId).color.toString(16).padStart(6, '0').replace(/\s/g, '0') %>">
                                   <%= guild.roles.cache.get(role.roleId).name %>
                                 </span>
                               <% } else { %>
@@ -160,7 +162,7 @@
               <select class="form-select" id="roleId" name="roleId" required>
                 <option value="">Wybierz rolę...</option>
                 <% roles.forEach(role => { %>
-                  <option value="<%= role.id %>" style="color: #<%= role.color.toString(16).padStart(6, '0') %>">
+                  <option value="<%= role.id %>" style="color: #<%= role.color.toString(16).padStart(6, '0').replace(/\s/g, '0') %>">
                     <%= role.name %>
                   </option>
                 <% }); %>
@@ -211,6 +213,63 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
           <button type="button" class="btn btn-primary" onclick="editReactionRole('<%= guild.id %>')">Zapisz zmiany</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal do dodawania roli do dowolnej wiadomości -->
+  <div class="modal fade" id="addToAnyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Dodaj rolę do dowolnej wiadomości</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addToAnyForm">
+            <input type="hidden" id="anyMessageId" name="messageId">
+            <div class="mb-3">
+              <label for="anyChannelId" class="form-label">Kanał wiadomości</label>
+              <select class="form-select" id="anyChannelId" name="channelId" required>
+                <option value="">Wybierz kanał...</option>
+                <% channels.forEach(channel => { %>
+                  <option value="<%= channel.id %>">#<%= channel.name %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="anyMessageIdInput" class="form-label">ID wiadomości</label>
+              <input type="text" class="form-control" id="anyMessageIdInput" name="messageIdInput" placeholder="Wklej ID wiadomości" required>
+              <small class="form-text text-muted">Kliknij prawym przyciskiem na wiadomość w Discordzie i wybierz "Kopiuj ID wiadomości"</small>
+            </div>
+            <div class="mb-3">
+              <label for="anyRoleId" class="form-label">Rola</label>
+              <select class="form-select" id="anyRoleId" name="roleId" required>
+                <option value="">Wybierz rolę...</option>
+                <% roles.forEach(role => { %>
+                  <option value="<%= role.id %>" style="color: #<%= role.color.toString(16).padStart(6, '0').replace(/\s/g, '0') %>">
+                    <%= role.name %>
+                  </option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="anyEmoji" class="form-label">Emoji</label>
+              <input type="text" class="form-control" id="anyEmoji" name="emoji" placeholder="Wpisz emoji lub ID emoji" required>
+              <small class="form-text text-muted">Możesz użyć standardowych emoji (np. 😀) lub własnych emoji serwera (np. :nazwa:)</small>
+            </div>
+            <div class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" id="anyNotificationEnabled" name="notificationEnabled">
+              <label class="form-check-label" for="anyNotificationEnabled">
+                Wysyłaj powiadomienie gdy ktoś doda/usunie tę rolę
+              </label>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-info" onclick="addToAnyMessage('<%= guild.id %>')">Dodaj do wiadomości</button>
         </div>
       </div>
     </div>
@@ -410,6 +469,44 @@
       } catch (error) {
         console.error('Błąd:', error);
         alert('Wystąpił błąd podczas edycji wiadomości.');
+      }
+    }
+
+    // Funkcja do dodawania roli do dowolnej wiadomości
+    async function addToAnyMessage(guildId) {
+      const form = document.getElementById('addToAnyForm');
+      const formData = new FormData(form);
+      const channelId = formData.get('channelId');
+      const messageIdInput = formData.get('messageIdInput');
+
+      try {
+        const response = await fetch(`/api/guilds/${guildId}/reaction-roles/addtoany`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messageId: messageIdInput,
+            channelId: channelId,
+            roleId: formData.get('roleId'),
+            emoji: formData.get('emoji'),
+            notificationEnabled: formData.get('notificationEnabled') ? 'true' : 'false'
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Zamknij modal i odśwież stronę
+          const modal = bootstrap.Modal.getInstance(document.getElementById('addToAnyModal'));
+          modal.hide();
+          location.reload();
+        } else {
+          alert(`Błąd: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas dodawania roli do wiadomości.');
       }
     }
   </script>

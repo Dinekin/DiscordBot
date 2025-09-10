@@ -2619,6 +2619,118 @@ router.patch('/guilds/:guildId/reaction-roles/:messageId', hasGuildPermission, a
   }
 });
 
+// Dodawanie roli do dowolnej wiadomości (addtoany)
+router.post('/guilds/:guildId/reaction-roles/addtoany', hasGuildPermission, async (req, res) => {
+  const guildId = req.params.guildId;
+  const { messageId, channelId, roleId, emoji, notificationEnabled } = req.body;
+
+  try {
+    // Sprawdź, czy kanał istnieje
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({ success: false, error: 'Serwer nie został znaleziony' });
+    }
+
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) {
+      return res.status(404).json({ success: false, error: 'Kanał nie został znaleziony' });
+    }
+
+    // Pobierz wiadomość
+    const message = await channel.messages.fetch(messageId);
+    if (!message) {
+      return res.status(404).json({ success: false, error: 'Wiadomość nie została znaleziona' });
+    }
+
+    // Sprawdź, czy wiadomość należy do tego samego serwera
+    if (message.guildId !== guildId) {
+      return res.status(403).json({ success: false, error: 'Wiadomość nie należy do tego serwera' });
+    }
+
+    // Znajdź istniejący wpis ReactionRole lub utwórz nowy
+    let reactionRole = await ReactionRole.findOne({
+      guildId: guildId,
+      messageId: messageId
+    });
+
+    if (!reactionRole) {
+      // Utwórz nowy wpis
+      reactionRole = new ReactionRole({
+        guildId: guildId,
+        messageId: messageId,
+        channelId: channelId,
+        roles: [],
+        title: message.embeds[0]?.title || 'Role Reaction',
+        description: message.embeds[0]?.description || 'Kliknij na reakcję, aby otrzymać rolę!'
+      });
+    }
+
+    // Sprawdź, czy emoji już istnieje
+    if (reactionRole.roles.some(r => r.emoji === emoji)) {
+      return res.status(400).json({ success: false, error: 'To emoji jest już używane w tej wiadomości' });
+    }
+
+    // Sprawdź, czy rola istnieje
+    const role = guild.roles.cache.get(roleId);
+    if (!role) {
+      return res.status(404).json({ success: false, error: 'Rola nie została znaleziona' });
+    }
+
+    // Dodaj rolę do bazy danych
+    reactionRole.roles.push({
+      emoji: emoji,
+      roleId: roleId,
+      notificationEnabled: notificationEnabled === 'true'
+    });
+
+    await reactionRole.save();
+
+    // Dodaj reakcję do wiadomości
+    await message.react(emoji);
+
+    // Przygotuj lub zaktualizuj embed
+    let embed;
+    if (message.embeds.length > 0) {
+      embed = EmbedBuilder.from(message.embeds[0]);
+    } else {
+      embed = new EmbedBuilder()
+        .setTitle(reactionRole.title)
+        .setDescription(reactionRole.description)
+        .setColor('#3498db')
+        .setFooter({ text: 'Kliknij na reakcję, aby otrzymać rolę!' });
+    }
+
+    // Dodaj lub zaktualizuj pole z rolami
+    const rolesList = reactionRole.roles.map(r =>
+      `${r.emoji} - <@&${r.roleId}>${r.notificationEnabled ? ' (z powiadomieniem)' : ''}`
+    ).join('\n');
+
+    if (embed.data.fields && embed.data.fields.find(f => f.name === 'Dostępne role')) {
+      const fieldIndex = embed.data.fields.findIndex(f => f.name === 'Dostępne role');
+      embed.data.fields[fieldIndex] = { name: 'Dostępne role', value: rolesList };
+    } else {
+      embed.addFields({ name: 'Dostępne role', value: rolesList });
+    }
+
+    // Zaktualizuj wiadomość
+    await message.edit({ embeds: [embed] });
+
+    logger.info(`Dodano rolę ${roleId} z emoji ${emoji} do dowolnej wiadomości ${messageId} na serwerze ${guildId}`);
+
+    res.json({
+      success: true,
+      message: 'Rola została dodana do wiadomości',
+      reactionRole: reactionRole
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas dodawania roli do dowolnej wiadomości: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas dodawania roli do wiadomości'
+    });
+  }
+});
+
 // SZYBKA ZMIANA KATEGORII LIVEFEED
 router.put('/guilds/:guildId/livefeeds/:feedId/category', hasGuildPermission, async (req, res) => {
   const { guildId, feedId } = req.params;
@@ -2652,6 +2764,202 @@ router.put('/guilds/:guildId/livefeeds/:feedId/category', hasGuildPermission, as
   } catch (error) {
     logger.error(`Błąd podczas zmiany kategorii LiveFeed: ${error.stack}`);
     return res.status(500).json({ success: false, error: 'Wystąpił błąd podczas zmiany kategorii' });
+  }
+});
+
+// Wysyłanie wiadomości wiatru
+router.post('/guilds/:guildId/wiatry/send', hasGuildPermission, async (req, res) => {
+  const { guildId } = req.params;
+  const { channelId, wiatrType } = req.body;
+
+  try {
+    // Sprawdź czy kanał istnieje
+    const guild = client.guilds.cache.get(guildId);
+    if (!guild) {
+      return res.status(404).json({ success: false, error: 'Serwer nie został znaleziony' });
+    }
+
+    const channel = guild.channels.cache.get(channelId);
+    if (!channel) {
+      return res.status(404).json({ success: false, error: 'Kanał nie został znaleziony' });
+    }
+
+    // Sprawdź czy kanał jest tekstowy
+    if (channel.type !== 0) {
+      return res.status(400).json({ success: false, error: 'Wiadomości można wysyłać tylko na kanały tekstowe' });
+    }
+
+    // Pobierz role z zmiennych środowiskowych
+    const roleIds = {
+      boreasz: process.env.BOREASZ_ROLE_ID,
+      trakiusz: process.env.TRAKIUSZ_ROLE_ID,
+      iapis: process.env.IAPIS_ROLE_ID,
+      skiron: process.env.SKIRON_ROLE_ID,
+      kajkias: process.env.KAJKIAS_ROLE_ID,
+      euros: process.env.EUROS_ROLE_ID,
+      apeliotes: process.env.APELIOTES_ROLE_ID,
+      euronotos: process.env.EURONOTOS_ROLE_ID,
+      notos: process.env.NOTOS_ROLE_ID,
+      libonotos: process.env.LIBONOTOS_ROLE_ID,
+      lips: process.env.LIPS_ROLE_ID,
+      zefir: process.env.ZEFIR_ROLE_ID
+    };
+
+    // Sprawdź czy wszystkie podstawowe role są zdefiniowane
+    const missingRoles = Object.entries(roleIds).filter(([name, id]) => !id);
+    if (missingRoles.length > 0) {
+      return res.status(500).json({
+        success: false,
+        error: `Brakuje definicji ról: ${missingRoles.map(([name]) => name.toUpperCase()).join(', ')}`
+      });
+    }
+
+    // Funkcja pomocnicza do tworzenia tagów ról
+    const createRoleTag = (roleName) => {
+      const roleId = roleIds[roleName];
+      if (!roleId) {
+        console.warn(`Brak ID roli dla: ${roleName}`);
+        return `@${roleName.charAt(0).toUpperCase() + roleName.slice(1)}`;
+      }
+
+      const role = guild.roles.cache.get(roleId);
+      if (!role) {
+        console.warn(`Rola o ID ${roleId} nie istnieje w serwerze`);
+        return `@${roleName.charAt(0).toUpperCase() + roleName.slice(1)}`;
+      }
+
+      return `<@&${roleId}>`;
+    };
+
+    // Definicje wszystkich wiatrów (skopiowane z komendy wiatr.js)
+    const windPatterns = {
+      boreasz: {
+        roles: ['boreasz', 'trakiusz', 'iapis', 'skiron', 'kajkias'],
+        pattern: (r) => `${r.boreasz} +7 \n${r.trakiusz} | ${r.iapis} +6 \n${r.skiron} | ${r.kajkias} +5`
+      },
+      euros: {
+        roles: ['euros', 'kajkias', 'apeliotes', 'iapis', 'euronotos'],
+        pattern: (r) => `${r.euros} +7 \n${r.kajkias} | ${r.apeliotes} +5 \n${r.iapis} | ${r.euronotos} +4`
+      },
+      notos: {
+        roles: ['notos', 'libonotos', 'euronotos', 'lips', 'apeliotes'],
+        pattern: (r) => `${r.notos} +7 \n${r.libonotos} | ${r.euronotos} +6 \n${r.lips} | ${r.apeliotes} +5`
+      },
+      zefir: {
+        roles: ['zefir', 'skiron', 'lips', 'trakiusz', 'libonotos'],
+        pattern: (r) => `${r.zefir} +7 \n${r.skiron} | ${r.lips} +5 \n${r.trakiusz} | ${r.libonotos} +4`
+      },
+      iapis: {
+        roles: ['iapis', 'boreasz', 'kajkias', 'trakiusz', 'euros', 'skiron'],
+        pattern: (r) => `${r.iapis} +7 \n${r.boreasz} | ${r.kajkias} +6 \n${r.trakiusz} +5 \n${r.euros} | ${r.skiron} +4`
+      },
+      kajkias: {
+        roles: ['kajkias', 'iapis', 'boreasz', 'euros', 'trakiusz'],
+        pattern: (r) => `${r.kajkias} +7 \n${r.iapis} +6 \n${r.boreasz} | ${r.euros} +5 \n${r.trakiusz} +4`
+      },
+      apeliotes: {
+        roles: ['apeliotes', 'euronotos', 'notos', 'euros', 'libonotos'],
+        pattern: (r) => `${r.apeliotes} +7 \n${r.euronotos} +6 \n${r.notos} | ${r.euros} +5 \n${r.libonotos} +4`
+      },
+      euronotos: {
+        roles: ['euronotos', 'notos', 'apeliotes', 'libonotos', 'lips', 'euros'],
+        pattern: (r) => `${r.euronotos} +7 \n${r.notos} | ${r.apeliotes} +6 \n${r.libonotos} +5 \n${r.lips} | ${r.euros} +4`
+      },
+      libonotos: {
+        roles: ['libonotos', 'lips', 'notos', 'euronotos', 'zefir', 'apeliotes'],
+        pattern: (r) => `${r.libonotos} +7 \n${r.lips} | ${r.notos} +6 \n${r.euronotos} +5 \n${r.zefir} | ${r.apeliotes} +4`
+      },
+      lips: {
+        roles: ['lips', 'libonotos', 'zefir', 'notos', 'euronotos'],
+        pattern: (r) => `${r.lips} +7 \n${r.libonotos} +6 \n${r.zefir} | ${r.notos} +5 \n${r.euronotos} +4`
+      },
+      skiron: {
+        roles: ['skiron', 'trakiusz', 'zefir', 'boreasz', 'iapis'],
+        pattern: (r) => `${r.skiron} +7 \n${r.trakiusz} +6 \n${r.zefir} | ${r.boreasz} +5 \n${r.iapis} +4`
+      },
+      trakiusz: {
+        roles: ['trakiusz', 'skiron', 'boreasz', 'iapis', 'zefir', 'kajkias'],
+        pattern: (r) => `${r.trakiusz} +7 \n${r.skiron} | ${r.boreasz} +6 \n${r.iapis} +5 \n${r.zefir} | ${r.kajkias} +4`
+      },
+      // Kombinacje
+      ek: {
+        roles: ['kajkias', 'euros', 'iapis', 'boreasz', 'apeliotes'],
+        pattern: (r) => `${r.kajkias} | ${r.euros} +6 \n${r.iapis} +5 \n${r.boreasz} | ${r.apeliotes} +4`
+      },
+      ea: {
+        roles: ['euros', 'apeliotes', 'euronotos', 'kajkias', 'notos'],
+        pattern: (r) => `${r.euros} | ${r.apeliotes} +6 \n${r.euronotos} +5 \n${r.kajkias} | ${r.notos} +4`
+      },
+      zl: {
+        roles: ['zefir', 'lips', 'libonotos', 'skiron', 'notos'],
+        pattern: (r) => `${r.zefir} | ${r.lips} +6 \n${r.libonotos} +5 \n${r.skiron} | ${r.notos} +4`
+      },
+      zs: {
+        roles: ['skiron', 'zefir', 'trakiusz', 'boreasz', 'lips'],
+        pattern: (r) => `${r.skiron} | ${r.zefir} +6 \n${r.trakiusz} +5 \n${r.boreasz} | ${r.lips} +4`
+      }
+    };
+
+    // Sprawdź czy wybrany wiatr istnieje
+    const windConfig = windPatterns[wiatrType];
+    if (!windConfig) {
+      return res.status(400).json({ success: false, error: 'Nieznany typ wiatru' });
+    }
+
+    // Utwórz obiekty tagów ról
+    const roleTags = {};
+    windConfig.roles.forEach(roleName => {
+      roleTags[roleName] = createRoleTag(roleName);
+    });
+
+    // Wygeneruj wiadomość używając wzorca
+    const windMessage = windConfig.pattern(roleTags);
+
+    // Sprawdź długość wiadomości
+    if (windMessage.length > 2000) {
+      return res.status(400).json({ success: false, error: 'Wiadomość jest za długa' });
+    }
+
+    // Przygotuj listę ID ról do tagowania
+    const validRoleIds = [];
+    for (const roleName of windConfig.roles) {
+      const roleId = roleIds[roleName];
+      if (roleId) {
+        const role = guild.roles.cache.get(roleId);
+        if (role) {
+          validRoleIds.push(roleId);
+        }
+      }
+    }
+
+    // Opcje wiadomości
+    const messageOptions = {
+      content: windMessage
+    };
+
+    // Dodaj allowedMentions tylko jeśli są valide role
+    if (validRoleIds.length > 0) {
+      messageOptions.allowedMentions = {
+        roles: validRoleIds
+      };
+    }
+
+    // Wyślij wiadomość
+    await channel.send(messageOptions);
+
+    logger.info(`Wysłano wiadomość wiatru ${wiatrType} na kanał ${channel.name} (${channelId}) na serwerze ${guild.name}`);
+
+    res.json({
+      success: true,
+      message: `Wiadomość wiatru została wysłana na kanał #${channel.name}`
+    });
+
+  } catch (error) {
+    logger.error(`Błąd podczas wysyłania wiadomości wiatru: ${error.stack}`);
+    res.status(500).json({
+      success: false,
+      error: 'Wystąpił błąd podczas wysyłania wiadomości wiatru'
+    });
   }
 });
 

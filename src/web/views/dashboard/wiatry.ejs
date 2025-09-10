@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wiatry - <%= guild.name %></title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/dark-mode.css">
+  <script src="/js/saved-style.js"></script>
+</head>
+<body>
+  <%- include('../partials/navbar') %>
+
+  <div class="container mt-4">
+    <div class="row">
+      <%- include('../partials/guild-sidebar', { path: '/dashboard/guild/' + guild.id + '/wiatry' }) %>
+
+      <div class="col-md-9">
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <h2 class="card-title">Wiatry</h2>
+            <p class="card-text">Wybierz kanał i kliknij przycisk wiatru, aby wysłać wiadomość z informacjami o wybranym wietrze.</p>
+
+            <!-- Wybór kanału -->
+            <div class="mb-4">
+              <label for="channelSelect" class="form-label">Wybierz kanał:</label>
+              <select class="form-select" id="channelSelect">
+                <option value="">-- Wybierz kanał --</option>
+                <% channels.forEach(channel => { %>
+                  <option value="<%= channel.id %>">#<%= channel.name %></option>
+                <% }); %>
+              </select>
+            </div>
+
+            <!-- Wiatry główne -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">Wiatry główne</h5>
+              </div>
+              <div class="card-body">
+                <div class="row g-2">
+                  <% wiatry.glowne.forEach(wiatr => { %>
+                    <div class="col-md-3 col-sm-6">
+                      <button type="button" class="btn btn-outline-primary w-100" onclick="sendWiatr('<%= wiatr.value %>')">
+                        <i class="fas fa-wind me-2"></i><%= wiatr.name %>
+                      </button>
+                    </div>
+                  <% }); %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Kombinacje wiatrów -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5 class="mb-0">Kombinacje wiatrów</h5>
+              </div>
+              <div class="card-body">
+                <div class="row g-2">
+                  <% wiatry.kombinacje.forEach(wiatr => { %>
+                    <div class="col-md-3 col-sm-6">
+                      <button type="button" class="btn btn-outline-secondary w-100" onclick="sendWiatr('<%= wiatr.value %>')">
+                        <i class="fas fa-wind me-2"></i><%= wiatr.name %>
+                      </button>
+                    </div>
+                  <% }); %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status wysyłania -->
+            <div id="statusAlert" class="alert" style="display: none;" role="alert"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/dark-mode.js"></script>
+
+  <script>
+    // Funkcja do wysyłania wiadomości wiatru
+    async function sendWiatr(wiatrType) {
+      const channelId = document.getElementById('channelSelect').value;
+      const statusAlert = document.getElementById('statusAlert');
+
+      // Sprawdź czy kanał został wybrany
+      if (!channelId) {
+        showAlert('Proszę wybrać kanał przed wysłaniem wiadomości.', 'danger');
+        return;
+      }
+
+      // Pokaż loading
+      showAlert('Wysyłanie wiadomości...', 'info');
+
+      try {
+        const response = await fetch(`/api/guilds/<%= guild.id %>/wiatry/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            channelId: channelId,
+            wiatrType: wiatrType
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          showAlert('Wiadomość została wysłana pomyślnie!', 'success');
+        } else {
+          showAlert('Błąd: ' + (data.error || 'Nieznany błąd'), 'danger');
+        }
+      } catch (error) {
+        console.error('Błąd podczas wysyłania wiadomości:', error);
+        showAlert('Wystąpił błąd podczas wysyłania wiadomości.', 'danger');
+      }
+    }
+
+    // Funkcja do pokazywania alertów
+    function showAlert(message, type) {
+      const statusAlert = document.getElementById('statusAlert');
+      statusAlert.className = `alert alert-${type}`;
+      statusAlert.textContent = message;
+      statusAlert.style.display = 'block';
+
+      // Ukryj alert po 5 sekundach dla sukcesu
+      if (type === 'success') {
+        setTimeout(() => {
+          statusAlert.style.display = 'none';
+        }, 5000);
+      }
+    }
+  </script>
+</body>
+</html>

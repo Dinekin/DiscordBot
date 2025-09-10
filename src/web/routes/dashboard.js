@@ -318,19 +318,19 @@ router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
 router.get('/guild/:guildId/giveaways', hasGuildPermission, async (req, res) => {
   try {
     const guildId = req.params.guildId;
-    
+
     // Pobierz dane serwera z Discorda
     const guild = client.guilds.cache.get(guildId);
-    
+
     if (!guild) {
       return res.redirect('/dashboard');
     }
-    
+
     // Pobierz listę kanałów tekstowych
     const textChannels = guild.channels.cache
       .filter(c => c.type === 0) // 0 = kanał tekstowy
       .map(c => ({ id: c.id, name: c.name }));
-    
+
     res.render('dashboard/giveaways', {
       user: req.user,
       guild: guild,
@@ -344,6 +344,65 @@ router.get('/guild/:guildId/giveaways', hasGuildPermission, async (req, res) => 
       user: req.user,
       statusCode: 500,
       message: 'Wystąpił błąd podczas ładowania strony konkursów'
+    });
+  }
+});
+
+// Zarządzanie wiatrami
+router.get('/guild/:guildId/wiatry', hasGuildPermission, async (req, res) => {
+  try {
+    const guildId = req.params.guildId;
+
+    // Pobierz dane serwera z Discorda
+    const guild = client.guilds.cache.get(guildId);
+
+    if (!guild) {
+      return res.redirect('/dashboard');
+    }
+
+    // Pobierz listę kanałów tekstowych
+    const textChannels = guild.channels.cache
+      .filter(c => c.type === 0) // 0 = kanał tekstowy
+      .map(c => ({ id: c.id, name: c.name }));
+
+    // Definicje wiatrów
+    const wiatry = {
+      glowne: [
+        { name: 'Boreasz', value: 'boreasz' },
+        { name: 'Euros', value: 'euros' },
+        { name: 'Notos', value: 'notos' },
+        { name: 'Zefir', value: 'zefir' },
+        { name: 'Iapis', value: 'iapis' },
+        { name: 'Kajkias', value: 'kajkias' },
+        { name: 'Apeliotes', value: 'apeliotes' },
+        { name: 'Euronotos', value: 'euronotos' },
+        { name: 'Libonotos', value: 'libonotos' },
+        { name: 'Lips', value: 'lips' },
+        { name: 'Skiron', value: 'skiron' },
+        { name: 'Trakiusz', value: 'trakiusz' }
+      ],
+      kombinacje: [
+        { name: 'EK (Euros-Kajkias)', value: 'ek' },
+        { name: 'EA (Euros-Apeliotes)', value: 'ea' },
+        { name: 'ZL (Zefir-Lips)', value: 'zl' },
+        { name: 'ZS (Zefir-Skiron)', value: 'zs' }
+      ]
+    };
+
+    res.render('dashboard/wiatry', {
+      user: req.user,
+      guild: guild,
+      channels: textChannels,
+      wiatry: wiatry,
+      userPermissions: req.userPermissions,
+      path: req.path
+    });
+  } catch (error) {
+    logger.error(`Błąd podczas renderowania strony wiatry: ${error.stack}`);
+    res.status(500).render('error', {
+      user: req.user,
+      statusCode: 500,
+      message: 'Wystąpił błąd podczas ładowania strony wiatrów'
     });
   }
 });

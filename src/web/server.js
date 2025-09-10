@@ -24,13 +24,13 @@ app.set('view engine', 'ejs');
 app.use(session({
   secret: process.env.SESSION_SECRET,
   cookie: {
-    maxAge: 60000 * 60 * 24 // 1 dzień
+    maxAge: 60000 * 60 * 24 * 7 // 7 dni
   },
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ 
+  store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    collectionName: 'sessions' 
+    collectionName: 'sessions'
   })
 }));
 
