@@ -1,6 +1,7 @@
-// Dodaj ten plik jako src/events/threadUpdate.js
+// src/events/threadUpdate.js - zdarzenie aktualizacji wątku
 const { Events, EmbedBuilder } = require('discord.js');
 const Guild = require('../models/Guild');
+const MessageLog = require('../models/MessageLog');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -213,11 +214,61 @@ module.exports = {
           await logChannel.send({ embeds: [logEmbed] });
         }
       }
+
+      // Zapisz informacje o aktualizacji wątku do bazy danych
+      await logThreadUpdateToDatabase(oldThread, newThread, changes);
     } catch (error) {
       logger.error(`Błąd podczas logowania aktualizacji nitki: ${error.stack}`);
     }
   }
 };
+
+// Funkcja do zapisywania aktualizacji wątku do bazy danych
+async function logThreadUpdateToDatabase(oldThread, newThread, changes) {
+  try {
+    // Znajdź lub utwórz dokument MessageLog dla tego wątku
+    let messageLog = await MessageLog.findOne({
+      guildId: newThread.guild.id,
+      channelId: newThread.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: newThread.guild.id,
+        channelId: newThread.id,
+        messageId: `thread-update-${newThread.id}-${Date.now()}`, // Unikalne ID dla aktualizacji wątku
+        authorId: newThread.ownerId || 'system',
+        authorTag: newThread.ownerId ? 'Unknown' : 'System',
+        content: '',
+        threadLogs: []
+      });
+    }
+
+    // Dodaj log wątku z informacjami o zmianach
+    const changeSummary = changes.map(change => `${change.name}: ${change.value.replace(/\*\*/g, '')}`).join('; ');
+
+    messageLog.threadLogs.push({
+      type: 'update',
+      threadId: newThread.id,
+      threadName: newThread.name,
+      parentId: newThread.parent?.id,
+      parentName: newThread.parent?.name,
+      authorId: newThread.ownerId,
+      authorTag: 'Unknown', // Pobierzemy to później jeśli potrzebne
+      isForumPost: newThread.parent?.type === 15,
+      changes: changes.map(change => ({
+        field: change.name,
+        oldValue: change.value.split('\n')[0]?.replace(/\*\*Przed:\*\*/g, '').trim() || '',
+        newValue: change.value.split('\n')[1]?.replace(/\*\*Po:\*\*/g, '').trim() || ''
+      }))
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano aktualizację wątku ${newThread.name} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania aktualizacji wątku do bazy danych: ${error.stack}`);
+  }
+}
 
 // Funkcja pomocnicza do formatowania czasu archiwizacji
 function formatArchiveDuration(minutes) {

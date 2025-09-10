@@ -33,27 +33,32 @@ module.exports = {
       // Sprawdź czy zmienił się nickname
       if (oldMember.nickname !== newMember.nickname) {
         changeEmbed = await handleNicknameChange(oldMember, newMember);
+        await logNicknameChangeToDatabase(oldMember, newMember);
       }
       // Sprawdź czy zmieniono role (dodano lub usunięto)
       else if (!oldMember.roles.cache.equals(newMember.roles.cache)) {
         const addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
         const removedRoles = oldMember.roles.cache.filter(role => !newMember.roles.cache.has(role.id));
-        
+
         if (addedRoles.size > 0) {
           changeEmbed = await handleRoleAdd(oldMember, newMember, addedRoles);
+          await logRoleChangesToDatabase(oldMember, newMember, addedRoles, 'add');
         } else if (removedRoles.size > 0) {
           changeEmbed = await handleRoleRemove(oldMember, newMember, removedRoles);
+          await logRoleChangesToDatabase(oldMember, newMember, removedRoles, 'remove');
         }
       }
       // Sprawdź czy użytkownik został wyciszony (timeout)
       else if (!oldMember.communicationDisabledUntil && newMember.communicationDisabledUntil) {
         changeEmbed = await handleTimeoutAdd(oldMember, newMember);
+        await logTimeoutToDatabase(oldMember, newMember, 'add');
       }
       // Sprawdź czy z użytkownika zdjęto wyciszenie (timeout)
       else if (oldMember.communicationDisabledUntil && !newMember.communicationDisabledUntil) {
         changeEmbed = await handleTimeoutRemove(oldMember, newMember);
+        await logTimeoutToDatabase(oldMember, newMember, 'remove');
       }
-      
+
       // Jeśli wykryto zmianę i utworzono embed, wyślij go na kanał logów
       if (changeEmbed) {
         await logChannel.send({ embeds: [changeEmbed] });
@@ -334,13 +339,219 @@ async function handleTimeoutRemove(oldMember, newMember) {
   return changeEmbed;
 }
 
+// Funkcje do zapisywania danych do bazy danych
+
+async function logNicknameChangeToDatabase(oldMember, newMember) {
+  try {
+    // Pobierz informacje o executor i reason z audit logs
+    let executor = null;
+    let reason = null;
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const auditLogs = await newMember.guild.fetchAuditLogs({
+        limit: 5,
+        type: AuditLogEvent.MemberUpdate
+      });
+
+      const nickLog = auditLogs.entries.find(entry =>
+        entry.target.id === newMember.user.id &&
+        entry.changes.some(change => change.key === 'nick') &&
+        (Date.now() - entry.createdTimestamp) < 10000
+      );
+
+      if (nickLog) {
+        executor = nickLog.executor;
+        reason = nickLog.reason;
+      }
+    } catch (error) {
+      logger.error(`Błąd podczas pobierania audit logs dla nick change: ${error.message}`);
+    }
+
+    // Znajdź lub utwórz dokument MessageLog dla tego użytkownika
+    let messageLog = await MessageLog.findOne({
+      guildId: newMember.guild.id,
+      authorId: newMember.user.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: newMember.guild.id,
+        channelId: newMember.guild.systemChannel?.id || newMember.guild.channels.cache.filter(c => c.type === 0).first()?.id,
+        messageId: `nick-${newMember.user.id}-${Date.now()}`, // Unikalne ID dla zmian nicku
+        authorId: newMember.user.id,
+        authorTag: newMember.user.tag,
+        content: '',
+        nicknameChanges: []
+      });
+    }
+
+    // Dodaj zmianę nicku
+    messageLog.nicknameChanges.push({
+      userId: newMember.user.id,
+      userTag: newMember.user.tag,
+      oldNickname: oldMember.nickname,
+      newNickname: newMember.nickname,
+      changedById: executor?.id,
+      changedByTag: executor?.tag,
+      reason: reason
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano zmianę nicku dla użytkownika ${newMember.user.tag} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania zmiany nicku do bazy danych: ${error.stack}`);
+  }
+}
+
+async function logRoleChangesToDatabase(oldMember, newMember, roles, type) {
+  try {
+    // Pobierz informacje o executor i reason z audit logs
+    let executor = null;
+    let reason = null;
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const auditLogs = await newMember.guild.fetchAuditLogs({
+        limit: 5,
+        type: AuditLogEvent.MemberRoleUpdate
+      });
+
+      const roleLog = auditLogs.entries.find(entry =>
+        entry.target.id === newMember.user.id &&
+        entry.changes.some(change => change.key === (type === 'add' ? '$add' : '$remove')) &&
+        (Date.now() - entry.createdTimestamp) < 10000
+      );
+
+      if (roleLog) {
+        executor = roleLog.executor;
+        reason = roleLog.reason;
+      }
+    } catch (error) {
+      logger.error(`Błąd podczas pobierania audit logs dla zmiany roli: ${error.message}`);
+    }
+
+    // Znajdź lub utwórz dokument MessageLog dla tego użytkownika
+    let messageLog = await MessageLog.findOne({
+      guildId: newMember.guild.id,
+      authorId: newMember.user.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: newMember.guild.id,
+        channelId: newMember.guild.systemChannel?.id || newMember.guild.channels.cache.filter(c => c.type === 0).first()?.id,
+        messageId: `role-${newMember.user.id}-${Date.now()}`, // Unikalne ID dla zmian ról
+        authorId: newMember.user.id,
+        authorTag: newMember.user.tag,
+        content: '',
+        roleChanges: []
+      });
+    }
+
+    // Dodaj każdą zmianę roli
+    for (const role of roles) {
+      messageLog.roleChanges.push({
+        userId: newMember.user.id,
+        userTag: newMember.user.tag,
+        roleId: role.id,
+        roleName: role.name,
+        type: type,
+        changedById: executor?.id,
+        changedByTag: executor?.tag,
+        reason: reason
+      });
+    }
+
+    await messageLog.save();
+    logger.info(`Zapisano ${type === 'add' ? 'dodanie' : 'usunięcie'} ról dla użytkownika ${newMember.user.tag} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania zmiany roli do bazy danych: ${error.stack}`);
+  }
+}
+
+async function logTimeoutToDatabase(oldMember, newMember, type) {
+  try {
+    // Pobierz informacje o executor i reason z audit logs
+    let executor = null;
+    let reason = null;
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const auditLogs = await newMember.guild.fetchAuditLogs({
+        limit: 5,
+        type: AuditLogEvent.MemberUpdate
+      });
+
+      const timeoutLog = auditLogs.entries.find(entry =>
+        entry.target.id === newMember.user.id &&
+        entry.changes.some(change => change.key === 'communication_disabled_until') &&
+        (Date.now() - entry.createdTimestamp) < 10000
+      );
+
+      if (timeoutLog) {
+        executor = timeoutLog.executor;
+        reason = timeoutLog.reason;
+      }
+    } catch (error) {
+      logger.error(`Błąd podczas pobierania audit logs dla timeout: ${error.message}`);
+    }
+
+    // Oblicz czas trwania
+    let duration = null;
+    let expiresAt = null;
+
+    if (type === 'add' && newMember.communicationDisabledUntil) {
+      expiresAt = new Date(newMember.communicationDisabledUntil);
+      const now = new Date();
+      const durationMs = expiresAt - now;
+      duration = formatDuration(durationMs);
+    }
+
+    // Znajdź lub utwórz dokument MessageLog dla tego użytkownika
+    let messageLog = await MessageLog.findOne({
+      guildId: newMember.guild.id,
+      authorId: newMember.user.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: newMember.guild.id,
+        channelId: newMember.guild.systemChannel?.id || newMember.guild.channels.cache.filter(c => c.type === 0).first()?.id,
+        messageId: `timeout-${newMember.user.id}-${Date.now()}`, // Unikalne ID dla timeoutów
+        authorId: newMember.user.id,
+        authorTag: newMember.user.tag,
+        content: '',
+        modActions: []
+      });
+    }
+
+    // Dodaj akcję moderacyjną
+    messageLog.modActions.push({
+      type: type === 'add' ? 'timeout' : 'remove_timeout',
+      targetId: newMember.user.id,
+      targetTag: newMember.user.tag,
+      moderatorId: executor?.id,
+      moderatorTag: executor?.tag,
+      reason: reason,
+      duration: duration,
+      expiresAt: expiresAt
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano ${type === 'add' ? 'dodanie' : 'usunięcie'} timeout dla użytkownika ${newMember.user.tag} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania timeout do bazy danych: ${error.stack}`);
+  }
+}
+
 // Funkcja pomocnicza do formatowania czasu trwania
 function formatDuration(ms) {
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (days > 0) {
     return `${days} dni, ${hours % 24} godz.`;
   } else if (hours > 0) {

@@ -1,7 +1,7 @@
-// Plik: src/events/forumPostDelete.js
-// Dedykowany event handler dla logowania usuwania postów forum
+// src/events/forumPostDelete.js - zdarzenie usunięcia postu na forum
 const { Events, EmbedBuilder, ChannelType, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
+const MessageLog = require('../models/MessageLog');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -236,14 +236,61 @@ module.exports = {
       }
       
       await logChannel.send({ embeds: [embed] });
-      
+
+      // Zapisz informacje o usunięciu postu forum do bazy danych
+      await logForumPostDeleteToDatabase(thread, executor, reason);
+
       logger.info(`Zalogowano usunięcie postu forum "${thread.name}" przez ${executor ? executor.tag : 'nieznany'} w ${thread.parent.name}`);
-      
+
     } catch (error) {
       logger.error(`Błąd podczas logowania usunięcia postu forum: ${error.stack}`);
     }
   }
 };
+
+// Funkcja do zapisywania usunięcia postu forum do bazy danych
+async function logForumPostDeleteToDatabase(thread, executor, reason) {
+  try {
+    // Znajdź lub utwórz dokument MessageLog dla tego postu
+    let messageLog = await MessageLog.findOne({
+      guildId: thread.guild.id,
+      channelId: thread.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: thread.guild.id,
+        channelId: thread.id,
+        messageId: `forum-post-delete-${thread.id}-${Date.now()}`, // Unikalne ID dla usunięcia postu forum
+        authorId: thread.ownerId || 'system',
+        authorTag: thread.ownerId ? 'Unknown' : 'System',
+        content: '',
+        threadLogs: []
+      });
+    }
+
+    // Dodaj log postu forum
+    messageLog.threadLogs.push({
+      type: 'forum_post_delete',
+      threadId: thread.id,
+      threadName: thread.name,
+      parentId: thread.parent?.id,
+      parentName: thread.parent?.name,
+      authorId: thread.ownerId,
+      authorTag: 'Unknown', // Pobierzemy to później jeśli potrzebne
+      isForumPost: true,
+      appliedTags: thread.appliedTags || [],
+      moderatorId: executor?.id,
+      moderatorTag: executor?.tag,
+      reason: reason
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano usunięcie postu forum ${thread.name} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania usunięcia postu forum do bazy danych: ${error.stack}`);
+  }
+}
 
 // Funkcja pomocnicza do formatowania czasu archiwizacji
 function formatArchiveDuration(minutes) {

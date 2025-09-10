@@ -1,7 +1,7 @@
-// Plik: src/events/forumPostCreate.js
-// Dedykowany event handler dla logowania nowych postów na forum
+// src/events/forumPostCreate.js - zdarzenie utworzenia postu na forum
 const { Events, EmbedBuilder, ChannelType } = require('discord.js');
 const Guild = require('../models/Guild');
+const MessageLog = require('../models/MessageLog');
 const logger = require('../utils/logger');
 
 // Funkcja do pobierania treści pierwszej wiadomości z postu forum
@@ -239,11 +239,59 @@ module.exports = {
       }
       
       await logChannel.send({ embeds: [embed] });
-      
+
+      // Zapisz informacje o utworzeniu postu forum do bazy danych
+      await logForumPostCreateToDatabase(thread, postContent);
+
       logger.info(`Zalogowano nowy post forum "${thread.name}" przez ${authorInfo} w ${thread.parent.name}`);
-      
+
     } catch (error) {
       logger.error(`Błąd podczas logowania nowego postu forum: ${error.stack}`);
     }
   }
 };
+
+// Funkcja do zapisywania utworzenia postu forum do bazy danych
+async function logForumPostCreateToDatabase(thread, postContent) {
+  try {
+    // Znajdź lub utwórz dokument MessageLog dla tego postu
+    let messageLog = await MessageLog.findOne({
+      guildId: thread.guild.id,
+      channelId: thread.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: thread.guild.id,
+        channelId: thread.id,
+        messageId: `forum-post-create-${thread.id}-${Date.now()}`, // Unikalne ID dla utworzenia postu forum
+        authorId: thread.ownerId || 'system',
+        authorTag: thread.ownerId ? 'Unknown' : 'System',
+        content: postContent?.text || '',
+        attachments: postContent?.attachments || [],
+        embeds: postContent?.embeds || [],
+        stickers: postContent?.stickers || [],
+        threadLogs: []
+      });
+    }
+
+    // Dodaj log postu forum
+    messageLog.threadLogs.push({
+      type: 'forum_post_create',
+      threadId: thread.id,
+      threadName: thread.name,
+      parentId: thread.parent?.id,
+      parentName: thread.parent?.name,
+      authorId: thread.ownerId,
+      authorTag: 'Unknown', // Pobierzemy to później jeśli potrzebne
+      isForumPost: true,
+      appliedTags: thread.appliedTags || [],
+      forumContent: postContent
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano utworzenie postu forum ${thread.name} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania utworzenia postu forum do bazy danych: ${error.stack}`);
+  }
+}

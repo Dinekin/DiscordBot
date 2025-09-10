@@ -1,6 +1,7 @@
-// Plik: src/events/threadCreate.js
+// src/events/threadCreate.js - zdarzenie utworzenia wątku
 const { Events, EmbedBuilder } = require('discord.js');
 const Guild = require('../models/Guild');
+const MessageLog = require('../models/MessageLog');
 const logger = require('../utils/logger');
 
 // Funkcja do pobierania treści pierwszej wiadomości z wątku
@@ -152,11 +153,54 @@ module.exports = {
           await logChannel.send({ embeds: [logEmbed] });
         }
       }
+
+      // Zapisz informacje o utworzeniu wątku do bazy danych
+      await logThreadCreateToDatabase(thread);
     } catch (error) {
       logger.error(`Błąd podczas logowania utworzenia nitki: ${error.stack}`);
     }
   }
 };
+
+// Funkcja do zapisywania utworzenia wątku do bazy danych
+async function logThreadCreateToDatabase(thread) {
+  try {
+    // Znajdź lub utwórz dokument MessageLog dla tego wątku
+    let messageLog = await MessageLog.findOne({
+      guildId: thread.guild.id,
+      channelId: thread.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: thread.guild.id,
+        channelId: thread.id,
+        messageId: `thread-create-${thread.id}-${Date.now()}`, // Unikalne ID dla utworzenia wątku
+        authorId: thread.ownerId || 'system',
+        authorTag: thread.ownerId ? 'Unknown' : 'System',
+        content: '',
+        threadLogs: []
+      });
+    }
+
+    // Dodaj log wątku
+    messageLog.threadLogs.push({
+      type: 'create',
+      threadId: thread.id,
+      threadName: thread.name,
+      parentId: thread.parent?.id,
+      parentName: thread.parent?.name,
+      authorId: thread.ownerId,
+      authorTag: 'Unknown', // Pobierzemy to później jeśli potrzebne
+      isForumPost: thread.parent?.type === 15
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano utworzenie wątku ${thread.name} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania utworzenia wątku do bazy danych: ${error.stack}`);
+  }
+}
 
 // Funkcja pomocnicza do tłumaczenia typu nitki
 function getThreadTypeText(type) {

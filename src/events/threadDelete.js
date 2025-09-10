@@ -1,6 +1,7 @@
-// Dodaj ten plik jako src/events/threadDelete.js
+// src/events/threadDelete.js - zdarzenie usunięcia wątku
 const { Events, EmbedBuilder, AuditLogEvent } = require('discord.js');
 const Guild = require('../models/Guild');
+const MessageLog = require('../models/MessageLog');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -191,11 +192,54 @@ module.exports = {
           await logChannel.send({ embeds: [logEmbed] });
         }
       }
+
+      // Zapisz informacje o usunięciu wątku do bazy danych
+      await logThreadDeleteToDatabase(thread);
     } catch (error) {
       logger.error(`Błąd podczas logowania usunięcia nitki: ${error.stack}`);
     }
   }
 };
+
+// Funkcja do zapisywania usunięcia wątku do bazy danych
+async function logThreadDeleteToDatabase(thread) {
+  try {
+    // Znajdź lub utwórz dokument MessageLog dla tego wątku
+    let messageLog = await MessageLog.findOne({
+      guildId: thread.guild.id,
+      channelId: thread.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: thread.guild.id,
+        channelId: thread.id,
+        messageId: `thread-delete-${thread.id}-${Date.now()}`, // Unikalne ID dla usunięcia wątku
+        authorId: thread.ownerId || 'system',
+        authorTag: thread.ownerId ? 'Unknown' : 'System',
+        content: '',
+        threadLogs: []
+      });
+    }
+
+    // Dodaj log wątku
+    messageLog.threadLogs.push({
+      type: 'delete',
+      threadId: thread.id,
+      threadName: thread.name,
+      parentId: thread.parent?.id,
+      parentName: thread.parent?.name,
+      authorId: thread.ownerId,
+      authorTag: 'Unknown', // Pobierzemy to później jeśli potrzebne
+      isForumPost: thread.parent?.type === 15
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano usunięcie wątku ${thread.name} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania usunięcia wątku do bazy danych: ${error.stack}`);
+  }
+}
 
 // Funkcja pomocnicza do tłumaczenia typu nitki
 function getThreadTypeText(type) {

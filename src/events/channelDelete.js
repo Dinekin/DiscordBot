@@ -1,6 +1,7 @@
-// Dodaj ten plik jako src/events/channelDelete.js
+// src/events/channelDelete.js - zdarzenie usunięcia kanału
 const { Events, EmbedBuilder, AuditLogEvent, ChannelType } = require('discord.js');
 const Guild = require('../models/Guild');
+const MessageLog = require('../models/MessageLog');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -306,11 +307,53 @@ module.exports = {
       }
       
       await logChannel.send({ embeds: [embed] });
+
+      // Zapisz informacje o usunięciu kanału do bazy danych
+      await logChannelDeleteToDatabase(channel, executor, reason);
     } catch (error) {
       logger.error(`Błąd podczas logowania usunięcia kanału: ${error.stack}`);
     }
   }
 };
+
+// Funkcja do zapisywania usunięcia kanału do bazy danych
+async function logChannelDeleteToDatabase(channel, executor, reason) {
+  try {
+    // Znajdź lub utwórz dokument MessageLog dla tego kanału
+    let messageLog = await MessageLog.findOne({
+      guildId: channel.guild.id,
+      channelId: channel.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: channel.guild.id,
+        channelId: channel.id,
+        messageId: `channel-delete-${channel.id}-${Date.now()}`, // Unikalne ID dla usunięcia kanału
+        authorId: executor?.id || 'system',
+        authorTag: executor?.tag || 'System',
+        content: '',
+        channelLogs: []
+      });
+    }
+
+    // Dodaj log kanału
+    messageLog.channelLogs.push({
+      type: 'delete',
+      channelId: channel.id,
+      channelName: channel.name,
+      channelType: getChannelTypeText(channel.type),
+      moderatorId: executor?.id,
+      moderatorTag: executor?.tag,
+      reason: reason
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano usunięcie kanału ${channel.name} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania usunięcia kanału do bazy danych: ${error.stack}`);
+  }
+}
 
 // Funkcja pomocnicza do tłumaczenia typu kanału
 function getChannelTypeText(type) {

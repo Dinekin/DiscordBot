@@ -1,6 +1,7 @@
-// Dodaj ten plik jako src/events/channelUpdate.js
+// src/events/channelUpdate.js - zdarzenie aktualizacji kanału
 const { Events, EmbedBuilder, AuditLogEvent, ChannelType } = require('discord.js');
 const Guild = require('../models/Guild');
+const MessageLog = require('../models/MessageLog');
 const logger = require('../utils/logger');
 
 module.exports = {
@@ -368,11 +369,60 @@ module.exports = {
       }
       
       await logChannel.send({ embeds: [embed] });
+
+      // Zapisz informacje o aktualizacji kanału do bazy danych
+      await logChannelUpdateToDatabase(oldChannel, newChannel, changes, executor, reason);
     } catch (error) {
       logger.error(`Błąd podczas logowania aktualizacji kanału: ${error.stack}`);
     }
   }
 };
+
+// Funkcja do zapisywania aktualizacji kanału do bazy danych
+async function logChannelUpdateToDatabase(oldChannel, newChannel, changes, executor, reason) {
+  try {
+    // Znajdź lub utwórz dokument MessageLog dla tego kanału
+    let messageLog = await MessageLog.findOne({
+      guildId: newChannel.guild.id,
+      channelId: newChannel.id
+    });
+
+    if (!messageLog) {
+      messageLog = new MessageLog({
+        guildId: newChannel.guild.id,
+        channelId: newChannel.id,
+        messageId: `channel-update-${newChannel.id}-${Date.now()}`, // Unikalne ID dla aktualizacji kanału
+        authorId: executor?.id || 'system',
+        authorTag: executor?.tag || 'System',
+        content: '',
+        channelLogs: []
+      });
+    }
+
+    // Dodaj log kanału z informacjami o zmianach
+    const changeSummary = changes.map(change => `${change.name}: ${change.value.replace(/\*\*/g, '')}`).join('; ');
+
+    messageLog.channelLogs.push({
+      type: 'update',
+      channelId: newChannel.id,
+      channelName: newChannel.name,
+      channelType: getChannelTypeText(newChannel.type),
+      moderatorId: executor?.id,
+      moderatorTag: executor?.tag,
+      reason: reason,
+      changes: changes.map(change => ({
+        field: change.name,
+        oldValue: change.value.split('\n')[0]?.replace(/\*\*Przed:\*\*/g, '').trim() || '',
+        newValue: change.value.split('\n')[1]?.replace(/\*\*Po:\*\*/g, '').trim() || ''
+      }))
+    });
+
+    await messageLog.save();
+    logger.info(`Zapisano aktualizację kanału ${newChannel.name} w bazie danych`);
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania aktualizacji kanału do bazy danych: ${error.stack}`);
+  }
+}
 
 // Funkcja pomocnicza do tłumaczenia typu kanału
 function getChannelTypeText(type) {
