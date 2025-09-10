@@ -138,6 +138,15 @@
                         <span class="badge bg-info p-2 me-1 mb-1">
                           <i class="fas fa-comments me-1"></i> Wątki
                         </span>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-gavel me-1"></i> Akcje moderacyjne
+                        </span>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-id-card me-1"></i> Zmiany nicku
+                        </span>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-tags me-1"></i> Zmiany ról
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -240,6 +249,8 @@
                         <option value="channel">Kanały</option>
                         <option value="thread">Wątki</option>
                         <option value="role">Role</option>
+                        <option value="moderation">Akcje moderacyjne</option>
+                        <option value="nickname">Zmiany nicku</option>
                       </select>
                     </div>
                     
@@ -340,7 +351,7 @@
               </div>
             </div>
 
-            <!-- Sekcja statystyk (nowa) -->
+            <!-- Sekcja statystyk (rozszerzona) -->
             <div class="card mt-4">
               <div class="card-header bg-dark text-white">
                 <div class="d-flex align-items-center">
@@ -360,7 +371,7 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="col-md-3 mb-3">
                     <div class="card bg-light h-100">
                       <div class="card-body">
@@ -371,7 +382,7 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="col-md-3 mb-3">
                     <div class="card bg-light h-100">
                       <div class="card-body">
@@ -382,7 +393,7 @@
                       </div>
                     </div>
                   </div>
-                  
+
                   <div class="col-md-3 mb-3">
                     <div class="card bg-light h-100">
                       <div class="card-body">
@@ -394,7 +405,53 @@
                     </div>
                   </div>
                 </div>
-                
+
+                <div class="row text-center mt-3">
+                  <div class="col-md-3 mb-3">
+                    <div class="card bg-light h-100">
+                      <div class="card-body">
+                        <h3 class="text-danger" id="statModeration">-</h3>
+                        <p class="mb-0">
+                          <i class="fas fa-gavel me-1"></i> Akcje moderacyjne
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <div class="card bg-light h-100">
+                      <div class="card-body">
+                        <h3 class="text-info" id="statNicknames">-</h3>
+                        <p class="mb-0">
+                          <i class="fas fa-id-card me-1"></i> Zmiany nicku
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <div class="card bg-light h-100">
+                      <div class="card-body">
+                        <h3 class="text-secondary" id="statRoles">-</h3>
+                        <p class="mb-0">
+                          <i class="fas fa-tags me-1"></i> Zmiany ról
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3 mb-3">
+                    <div class="card bg-light h-100">
+                      <div class="card-body">
+                        <h3 class="text-primary" id="statChannels">-</h3>
+                        <p class="mb-0">
+                          <i class="fas fa-hashtag me-1"></i> Kanały
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="text-center mt-3">
                   <button class="btn btn-sm btn-dark" onclick="loadStatistics('<%= guild.id %>')">
                     <i class="fas fa-sync me-1"></i> Odśwież statystyki
@@ -787,7 +844,7 @@ async function searchLogsWithPage(guildId, page, params) {
       </div>
     `;
   }
-}c
+}
     
     function displayResults(logs, page, totalPages, channels, users) {
       const resultsContainer = document.getElementById('resultsContainer');
@@ -911,6 +968,18 @@ async function searchLogsWithPage(guildId, page, params) {
         headerClass = 'bg-warning';
         logIcon = 'edit';
         logTitle = 'Wiadomość edytowana';
+      } else if (log.modActions && log.modActions.length > 0) {
+        headerClass = 'bg-danger text-white';
+        logIcon = 'gavel';
+        logTitle = 'Akcja moderacyjna';
+      } else if (log.nicknameChanges && log.nicknameChanges.length > 0) {
+        headerClass = 'bg-info text-white';
+        logIcon = 'id-card';
+        logTitle = 'Zmiana pseudonimu';
+      } else if (log.roleChanges && log.roleChanges.length > 0) {
+        headerClass = 'bg-secondary text-white';
+        logIcon = 'tags';
+        logTitle = 'Zmiana roli';
       } else if (log.channelLogs && log.channelLogs.length > 0) {
         headerClass = 'bg-info text-white';
         logIcon = 'hashtag';
@@ -919,10 +988,6 @@ async function searchLogsWithPage(guildId, page, params) {
         headerClass = 'bg-primary text-white';
         logIcon = 'comments';
         logTitle = 'Wątek';
-      } else if (log.modActions && log.modActions.length > 0) {
-        headerClass = 'bg-danger text-white';
-        logIcon = 'gavel';
-        logTitle = 'Akcja moderacyjna';
       }
       
       // Przygotuj dane autora i kanału
@@ -965,6 +1030,23 @@ async function searchLogsWithPage(guildId, page, params) {
       
       if (log.gifAttachment) {
         badges += `<span class="badge bg-dark log-tag me-1"><i class="fas fa-film me-1"></i>GIF</span>`;
+      }
+
+      // Dodatkowe etykiety dla typów rozszerzonych
+      if (log.modActions && log.modActions.length > 0) {
+        badges += `<span class="badge bg-danger log-tag me-1"><i class="fas fa-gavel me-1"></i>${log.modActions.length}</span>`;
+      }
+      if (log.nicknameChanges && log.nicknameChanges.length > 0) {
+        badges += `<span class="badge bg-info log-tag me-1"><i class="fas fa-id-card me-1"></i>${log.nicknameChanges.length}</span>`;
+      }
+      if (log.roleChanges && log.roleChanges.length > 0) {
+        badges += `<span class="badge bg-secondary log-tag me-1"><i class="fas fa-tags me-1"></i>${log.roleChanges.length}</span>`;
+      }
+      if (log.channelLogs && log.channelLogs.length > 0) {
+        badges += `<span class="badge bg-info log-tag me-1"><i class="fas fa-hashtag me-1"></i>${log.channelLogs.length}</span>`;
+      }
+      if (log.threadLogs && log.threadLogs.length > 0) {
+        badges += `<span class="badge bg-primary log-tag me-1"><i class="fas fa-comments me-1"></i>${log.threadLogs.length}</span>`;
       }
       
       card.innerHTML = `
@@ -1080,15 +1162,21 @@ async function searchLogsWithPage(guildId, page, params) {
         logTypeIcon = 'edit';
       }
       
-      if (log.channelLogs && log.channelLogs.length > 0) {
+      if (log.modActions && log.modActions.length > 0) {
+        logTypeIcon = 'gavel';
+        logTypeText = 'Akcja moderacyjna';
+      } else if (log.nicknameChanges && log.nicknameChanges.length > 0) {
+        logTypeIcon = 'id-card';
+        logTypeText = 'Zmiana pseudonimu';
+      } else if (log.roleChanges && log.roleChanges.length > 0) {
+        logTypeIcon = 'tags';
+        logTypeText = 'Zmiany ról';
+      } else if (log.channelLogs && log.channelLogs.length > 0) {
         logTypeIcon = 'hashtag';
         logTypeText = 'Kanał';
       } else if (log.threadLogs && log.threadLogs.length > 0) {
         logTypeIcon = 'comments';
         logTypeText = 'Wątek';
-      } else if (log.modActions && log.modActions.length > 0) {
-        logTypeIcon = 'gavel';
-        logTypeText = 'Akcja moderacyjna';
       }
       
       // Nagłówek szczegółów
@@ -1709,20 +1797,23 @@ async function searchLogsWithPage(guildId, page, params) {
                     <div>
                       <strong>${log.reference.authorTag || 'Nieznany użytkownik'}</strong>
                     </div>
-                    <div>
-                      <small class="text-muted">ID: ${log.reference.messageId}</small>
-                    </div>
-                  </div>
-                  <div class="mb-2">
-                    ${log.reference.content || '<em>(Brak treści)</em>'}
-                  </div>
-                  <div>
-                    <small class="text-muted">
-                      Kanał: ${channels[log.reference.channelId] ? `#${channels[log.reference.channelId]}` : log.reference.channelId}
-                    </small>
-                  </div>
-                </div>
-              </div>
+                      <div>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-comment me-1"></i> Wiadomości
+                        </span>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-user me-1"></i> Użytkownicy
+                        </span>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-hashtag me-1"></i> Kanały
+                        </span>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-comments me-1"></i> Wątki
+                        </span>
+                        <span class="badge bg-info p-2 me-1 mb-1">
+                          <i class="fas fa-tags me-1"></i> Role
+                        </span>
+                      </div>
             </div>
           </div>
         `;
@@ -1979,33 +2070,49 @@ async function searchLogsWithPage(guildId, page, params) {
             document.getElementById('statDeleted').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
             document.getElementById('statEdited').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
             document.getElementById('statAttachments').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
-            
+            document.getElementById('statModeration').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            document.getElementById('statNicknames').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            document.getElementById('statRoles').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            document.getElementById('statChannels').innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+
             const response = await fetch(`/api/guilds/${guildId}/message-logs/stats`);
             const data = await response.json();
-            
+
             if (data.success) {
               // Aktualizuj statystyki
               document.getElementById('statMessages').textContent = data.stats.totalMessages.toLocaleString();
               document.getElementById('statDeleted').textContent = data.stats.deletedMessages.toLocaleString();
               document.getElementById('statEdited').textContent = data.stats.editedMessages.toLocaleString();
               document.getElementById('statAttachments').textContent = data.stats.attachmentsCount.toLocaleString();
+              document.getElementById('statModeration').textContent = (data.stats.modActionsCount || 0).toLocaleString();
+              document.getElementById('statNicknames').textContent = (data.stats.nicknameChangesCount || 0).toLocaleString();
+              document.getElementById('statRoles').textContent = (data.stats.roleChangesCount || 0).toLocaleString();
+              document.getElementById('statChannels').textContent = (data.stats.channelLogsCount || 0).toLocaleString();
             } else {
               // Pokaż błąd
               document.getElementById('statMessages').textContent = '-';
               document.getElementById('statDeleted').textContent = '-';
               document.getElementById('statEdited').textContent = '-';
               document.getElementById('statAttachments').textContent = '-';
-              
+              document.getElementById('statModeration').textContent = '-';
+              document.getElementById('statNicknames').textContent = '-';
+              document.getElementById('statRoles').textContent = '-';
+              document.getElementById('statChannels').textContent = '-';
+
               alert(`Błąd: ${data.error || 'Nie można pobrać statystyk'}`);
             }
           } catch (error) {
             console.error('Błąd:', error);
-            
+
             document.getElementById('statMessages').textContent = '-';
             document.getElementById('statDeleted').textContent = '-';
             document.getElementById('statEdited').textContent = '-';
             document.getElementById('statAttachments').textContent = '-';
-            
+            document.getElementById('statModeration').textContent = '-';
+            document.getElementById('statNicknames').textContent = '-';
+            document.getElementById('statRoles').textContent = '-';
+            document.getElementById('statChannels').textContent = '-';
+
             alert('Wystąpił błąd podczas pobierania statystyk');
           }
         }

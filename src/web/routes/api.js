@@ -457,31 +457,56 @@ router.get('/guilds/:guildId/toggle-message-log/:state', hasGuildPermission, asy
 // Endpoint do pobierania statystyk logów wiadomości
 router.get('/guilds/:guildId/message-logs/stats', hasGuildPermission, async (req, res) => {
   const guildId = req.params.guildId;
-  
+
   try {
     // Pobierz statystyki z bazy danych
     const totalMessages = await MessageLog.countDocuments({ guildId });
     const deletedMessages = await MessageLog.countDocuments({ guildId, deletedAt: { $ne: null } });
     const editedMessages = await MessageLog.countDocuments({ guildId, editedAt: { $ne: null } });
-    
+
     // Oblicz liczbę załączników
-    const logsWithAttachments = await MessageLog.find({ 
-      guildId, 
-      'attachments.0': { $exists: true } 
+    const logsWithAttachments = await MessageLog.find({
+      guildId,
+      'attachments.0': { $exists: true }
     });
-    
+
     let attachmentsCount = 0;
     for (const log of logsWithAttachments) {
       attachmentsCount += log.attachments.length;
     }
-    
+
+    // Nowe statystyki dla rozszerzonych typów zdarzeń
+    const modActionsCount = await MessageLog.countDocuments({
+      guildId,
+      'modActions.0': { $exists: true }
+    });
+
+    const nicknameChangesCount = await MessageLog.countDocuments({
+      guildId,
+      'nicknameChanges.0': { $exists: true }
+    });
+
+    const roleChangesCount = await MessageLog.countDocuments({
+      guildId,
+      'roleChanges.0': { $exists: true }
+    });
+
+    const channelLogsCount = await MessageLog.countDocuments({
+      guildId,
+      'channelLogs.0': { $exists: true }
+    });
+
     res.json({
       success: true,
       stats: {
         totalMessages,
         deletedMessages,
         editedMessages,
-        attachmentsCount
+        attachmentsCount,
+        modActionsCount,
+        nicknameChangesCount,
+        roleChangesCount,
+        channelLogsCount
       }
     });
   } catch (error) {
@@ -1199,35 +1224,41 @@ router.get('/guilds/:guildId/message-logs', hasGuildPermission, async (req, res)
     // --- KONIEC POPRAWKI ---
     if (channelId) filter.channelId = channelId;
     if (status) {
-      if (status === 'deleted') filter.deletedAt = { $ne: null };
-      else if (status === 'edited') filter.editedAt = { $ne: null };
+      if (status === 'deleted') filter.deletedAt = { $exists: true };
+      else if (status === 'edited') filter.editedAt = { $exists: true };
       else if (status === 'created') {
-        filter.deletedAt = null;
-        filter.editedAt = null;
+        filter.$and = [
+          { $or: [ { deletedAt: { $exists: false } }, { deletedAt: null } ] },
+          { $or: [ { editedAt: { $exists: false } }, { editedAt: null } ] }
+        ];
       }
     }
     // --- POPRAWKA: Filtrowanie po typie logu ---
     if (logType && logType !== 'all') {
       if (logType === 'message') {
-        filter.$and = [
-          { $or: [ { modActions: { $exists: false } }, { modActions: { $size: 0 } } ] },
-          { $or: [ { channelLogs: { $exists: false } }, { channelLogs: { $size: 0 } } ] },
-          { $or: [ { threadLogs: { $exists: false } }, { threadLogs: { $size: 0 } } ] },
-          { $or: [ { nicknameChanges: { $exists: false } }, { nicknameChanges: { $size: 0 } } ] },
-          { $or: [ { roleChanges: { $exists: false } }, { roleChanges: { $size: 0 } } ] }
+        // Wiadomości to te, które mają content, attachments, embeds lub stickers
+        filter.$or = [
+          { content: { $exists: true, $ne: '' } },
+          { 'attachments.0': { $exists: true } },
+          { 'embeds.0': { $exists: true } },
+          { 'stickers.0': { $exists: true } }
         ];
       } else if (logType === 'member') {
         filter.$or = [
-          { modActions: { $exists: true, $ne: [] } },
-          { nicknameChanges: { $exists: true, $ne: [] } },
-          { roleChanges: { $exists: true, $ne: [] } }
+          { 'modActions.0': { $exists: true } },
+          { 'nicknameChanges.0': { $exists: true } },
+          { 'roleChanges.0': { $exists: true } }
         ];
       } else if (logType === 'channel') {
-        filter.channelLogs = { $exists: true, $ne: [] };
+        filter['channelLogs.0'] = { $exists: true };
       } else if (logType === 'thread') {
-        filter.threadLogs = { $exists: true, $ne: [] };
+        filter['threadLogs.0'] = { $exists: true };
       } else if (logType === 'role') {
-        filter.roleChanges = { $exists: true, $ne: [] };
+        filter['roleChanges.0'] = { $exists: true };
+      } else if (logType === 'moderation') {
+        filter['modActions.0'] = { $exists: true };
+      } else if (logType === 'nickname') {
+        filter['nicknameChanges.0'] = { $exists: true };
       }
     }
     // --- KONIEC POPRAWKI ---
