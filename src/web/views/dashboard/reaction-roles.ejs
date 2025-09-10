@@ -48,6 +48,7 @@
                       <i class="fas fa-trash"></i> Usuń
                     </button>
                   </div>
+              </div>
               <div class="card-body">
                 <p><strong>ID wiadomości:</strong> <%= reaction.messageId %></p>
                 <p><strong>Kanał:</strong> <% if (guild.channels.cache.get(reaction.channelId)) { %>#<%= guild.channels.cache.get(reaction.channelId).name %><% } else { %><em>Nieznany kanał</em><% } %></p>

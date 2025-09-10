@@ -259,3 +259,97 @@ body {
         width: 100%;
     }
 }
+
+/* Compact layout for Reaction Roles */
+.reaction-roles-container { 
+    font-size: 0.92rem; 
+}
+
+.reaction-roles-container .card-header {
+    padding: 0.5rem 0.75rem;
+}
+
+.reaction-roles-container .card-body {
+    padding: 0.75rem 1rem;
+}
+
+.reaction-roles-container .card-title {
+    font-size: 1.1rem;
+}
+
+.reaction-roles-container .card-text,
+.reaction-roles-container p {
+    margin-bottom: 0.5rem;
+}
+
+.reaction-roles-container .btn {
+    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.reaction-roles-container .btn.btn-sm {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.45rem;
+}
+
+.reaction-roles-container .table {
+    font-size: 0.9rem;
+    table-layout: fixed;
+}
+
+.reaction-roles-container .table thead th,
+.reaction-roles-container .table tbody td {
+    padding: 0.5rem 0.6rem;
+}
+
+.reaction-roles-container .table thead th:nth-child(1) { /* Emoji */
+    width: 72px;
+}
+.reaction-roles-container .table thead th:nth-child(2) { /* Rola */
+    width: 40%;
+}
+.reaction-roles-container .table thead th:nth-child(3) { /* Powiadomienie */
+    width: 120px;
+}
+.reaction-roles-container .table thead th:nth-child(4) { /* Akcje */
+    width: 220px;
+}
+
+.reaction-roles-container .table td,
+.reaction-roles-container .table th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reaction-roles-container .badge {
+    font-size: 0.75em;
+    padding: 0.25em 0.6em;
+}
+
+.reaction-roles-container .action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+/* Medium screens */
+@media (max-width: 992px) {
+    .reaction-roles-container .table thead th:nth-child(4) {
+        width: 180px;
+    }
+}
+
+/* Small screens refinements */
+@media (max-width: 768px) {
+    .reaction-roles-container { 
+        font-size: 0.9rem; 
+    }
+    .reaction-roles-container .table td, 
+    .reaction-roles-container .table th {
+        white-space: normal;
+    }
+    .reaction-roles-container .action-buttons .btn {
+        width: auto;
+    }
+}
