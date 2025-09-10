@@ -17,7 +17,7 @@
     <div class="row">
       <%- include('../partials/guild-sidebar', { path: '/dashboard/guild/' + guild.id + '/reaction-roles' }) %>
 
-      <div class="col-md-9">
+      <div class="col-md-9 reaction-roles-container">
         <div class="card shadow-sm mb-4">
           <div class="card-body">
             <h2 class="card-title">Role reakcji</h2>
@@ -79,7 +79,7 @@
                               <% } %>
                             </td>
                             <td><%= role.notificationEnabled ? 'Tak' : 'Nie' %></td>
-                            <td>
+                            <td class="action-buttons">
                               <button class="btn btn-sm btn-danger" onclick="deleteRole('<%= guild.id %>', '<%= reaction.messageId %>', '<%= role.emoji %>')">
                                 <i class="fas fa-trash"></i>
                               </button>

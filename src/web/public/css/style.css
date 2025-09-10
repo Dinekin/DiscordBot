@@ -113,3 +113,149 @@ body {
 :root {
     transition: color 0.3s, background-color 0.3s;
   }
+
+/* Style specyficzne dla strony Reaction Roles */
+.reaction-roles-container .card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.reaction-roles-container .card:hover {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+}
+
+.reaction-roles-container .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 1rem 1.5rem;
+}
+
+.reaction-roles-container .card-header h5 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.reaction-roles-container .btn {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.reaction-roles-container .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.reaction-roles-container .table {
+    margin-bottom: 0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.reaction-roles-container .table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+    padding: 0.75rem;
+}
+
+.reaction-roles-container .table tbody td {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+.reaction-roles-container .badge {
+    font-size: 0.85em;
+    padding: 0.4em 0.8em;
+    border-radius: 20px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+}
+
+.reaction-roles-container .badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: currentColor;
+    opacity: 0.8;
+}
+
+.reaction-roles-container .alert {
+    border-radius: 8px;
+    border: none;
+    font-weight: 500;
+}
+
+.reaction-roles-container .alert-info {
+    background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+    color: white;
+}
+
+.reaction-roles-container .alert-warning {
+    background: linear-gradient(135deg, #ffeaa7 0%, #d63031 100%);
+    color: #2d3436;
+}
+
+.reaction-roles-container .modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.reaction-roles-container .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    border-bottom: none;
+}
+
+.reaction-roles-container .modal-header .btn-close {
+    filter: invert(1);
+}
+
+.reaction-roles-container .form-select,
+.reaction-roles-container .form-control {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reaction-roles-container .form-select:focus,
+.reaction-roles-container .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.reaction-roles-container .form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.reaction-roles-container .action-buttons .btn {
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Responsywność dla tabeli */
+@media (max-width: 768px) {
+    .reaction-roles-container .table-responsive {
+        border-radius: 8px;
+    }
+
+    .reaction-roles-container .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .reaction-roles-container .action-buttons .btn {
+        margin-right: 0;
+        width: 100%;
+    }
+}
