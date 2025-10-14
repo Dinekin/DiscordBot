@@ -188,7 +188,7 @@
                     <option value="">Wybierz kanał...</option>
                     <%
                       // Sortowanie kanałów: ulubione alfabetycznie, potem zwykłe alfabetycznie
-                      const sortedChannels = channels.slice().sort((a, b) => {
+                      const sortedChannelsEdit = channels.slice().sort((a, b) => {
                         const aFav = favoriteChannels.includes(a.id);
                         const bFav = favoriteChannels.includes(b.id);
 
@@ -199,10 +199,10 @@
                       });
 
                       // Oddziel ulubione od zwykłych jeśli istnieją obie grupy
-                      const favoriteSortedChannels = sortedChannels.filter(c => favoriteChannels.includes(c.id));
-                      const regularSortedChannels = sortedChannels.filter(c => !favoriteChannels.includes(c.id));
+                      const favoriteSortedChannelsEdit = sortedChannelsEdit.filter(c => favoriteChannels.includes(c.id));
+                      const regularSortedChannelsEdit = sortedChannelsEdit.filter(c => !favoriteChannels.includes(c.id));
 
-                      favoriteSortedChannels.forEach(channel => {
+                      favoriteSortedChannelsEdit.forEach(channel => {
                         const isFavorite = favoriteChannels.includes(channel.id);
                         const favoriteLabel = isFavorite ? '★' : '';
                     %>
@@ -211,11 +211,11 @@
                       </option>
                     <% }); %>
 
-                    <% if (favoriteSortedChannels.length > 0 && regularSortedChannels.length > 0) { %>
+                    <% if (favoriteSortedChannelsEdit.length > 0 && regularSortedChannelsEdit.length > 0) { %>
                       <option value="" disabled>─────────</option>
                     <% } %>
 
-                    <% regularSortedChannels.forEach(channel => {
+                    <% regularSortedChannelsEdit.forEach(channel => {
                         const isFavorite = favoriteChannels.includes(channel.id);
                         const favoriteLabel = isFavorite ? '★' : '';
                     %>
