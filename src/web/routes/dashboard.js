@@ -270,14 +270,14 @@ router.get('/guild/:guildId/message-logs', hasGuildPermission, async (req, res) 
 router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
   try {
     const guildId = req.params.guildId;
-    
+
     // Pobierz dane serwera z Discorda
     const guild = client.guilds.cache.get(guildId);
-    
+
     if (!guild) {
       return res.redirect('/dashboard');
     }
-    
+
     // Sprawdź czy manager LiveFeed jest dostępny
     if (!client.liveFeedManager) {
       return res.status(500).render('error', {
@@ -286,9 +286,18 @@ router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
         message: 'System Live Feed nie jest jeszcze zainicjalizowany.'
       });
     }
-    
-    // Pobierz wszystkie feedy dla tego serwera
-    const feeds = await client.liveFeedManager.getGuildFeeds(guildId);
+
+    // Pobierz wszystkie feedy dla tego serwera z obsługą błędów
+    let feeds = [];
+    try {
+      feeds = await client.liveFeedManager.getGuildFeeds(guildId);
+      if (!Array.isArray(feeds)) {
+        feeds = [];
+      }
+    } catch (feedError) {
+      logger.error(`Błąd podczas pobierania feedów dla serwera ${guildId}: ${feedError.message}`);
+      // Kontynuuj z pustą listą feedów zamiast rzucać błąd
+    }
     
     // Pobierz ustawienia serwera
     const guildSettings = await Guild.findOne({ guildId: guildId });
