@@ -186,7 +186,23 @@
                 <div class="input-group">
                   <select class="form-select channel-select" id="channelId" name="channelId" required>
                     <option value="">Wybierz kanał...</option>
-                    <% channels.forEach(channel => {
+                    <%
+                      // Sortowanie kanałów: ulubione alfabetycznie, potem zwykłe alfabetycznie
+                      const sortedChannels = channels.slice().sort((a, b) => {
+                        const aFav = favoriteChannels.includes(a.id);
+                        const bFav = favoriteChannels.includes(b.id);
+
+                        if (aFav && !bFav) return -1;
+                        if (!aFav && bFav) return 1;
+
+                        return a.name.localeCompare(b.name);
+                      });
+
+                      // Oddziel ulubione od zwykłych jeśli istnieją obie grupy
+                      const favoriteSortedChannels = sortedChannels.filter(c => favoriteChannels.includes(c.id));
+                      const regularSortedChannels = sortedChannels.filter(c => !favoriteChannels.includes(c.id));
+
+                      favoriteSortedChannels.forEach(channel => {
                         const isFavorite = favoriteChannels.includes(channel.id);
                         const favoriteLabel = isFavorite ? '★' : '';
                     %>
@@ -194,10 +210,23 @@
                         <%= favoriteLabel %> #<%= channel.name %>
                       </option>
                     <% }); %>
-                    <% if (favoriteChannels.length > 0 && channels.filter(c => !favoriteChannels.includes(c.id)).length > 0) { %>
+
+                    <% if (favoriteSortedChannels.length > 0 && regularSortedChannels.length > 0) { %>
                       <option value="" disabled>─────────</option>
                     <% } %>
+
+                    <% regularSortedChannels.forEach(channel => {
+                        const isFavorite = favoriteChannels.includes(channel.id);
+                        const favoriteLabel = isFavorite ? '★' : '';
+                    %>
+                      <option value="<%= channel.id %>" data-favorite="<%= isFavorite %>">
+                        <%= favoriteLabel %> #<%= channel.name %>
+                      </option>
+                    <% }); %>
                   </select>
+                  <button class="btn btn-outline-secondary favorite-toggle-btn" type="button" id="favoriteChannelBtn" title="Dodaj/usuń z ulubionych">
+                    <i class="far fa-star" id="favoriteIcon"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -305,7 +334,36 @@
                 <div class="input-group">
                   <select class="form-select channel-select" id="editChannelId" name="channelId" required>
                     <option value="">Wybierz kanał...</option>
-                    <% channels.forEach(channel => {
+                    <%
+                      // Sortowanie kanałów: ulubione alfabetycznie, potem zwykłe alfabetycznie
+                      const sortedChannels = channels.slice().sort((a, b) => {
+                        const aFav = favoriteChannels.includes(a.id);
+                        const bFav = favoriteChannels.includes(b.id);
+
+                        if (aFav && !bFav) return -1;
+                        if (!aFav && bFav) return 1;
+
+                        return a.name.localeCompare(b.name);
+                      });
+
+                      // Oddziel ulubione od zwykłych jeśli istnieją obie grupy
+                      const favoriteSortedChannels = sortedChannels.filter(c => favoriteChannels.includes(c.id));
+                      const regularSortedChannels = sortedChannels.filter(c => !favoriteChannels.includes(c.id));
+
+                      favoriteSortedChannels.forEach(channel => {
+                        const isFavorite = favoriteChannels.includes(channel.id);
+                        const favoriteLabel = isFavorite ? '★' : '';
+                    %>
+                      <option value="<%= channel.id %>" data-favorite="<%= isFavorite %>">
+                        <%= favoriteLabel %> #<%= channel.name %>
+                      </option>
+                    <% }); %>
+
+                    <% if (favoriteSortedChannels.length > 0 && regularSortedChannels.length > 0) { %>
+                      <option value="" disabled>─────────</option>
+                    <% } %>
+
+                    <% regularSortedChannels.forEach(channel => {
                         const isFavorite = favoriteChannels.includes(channel.id);
                         const favoriteLabel = isFavorite ? '★' : '';
                     %>
