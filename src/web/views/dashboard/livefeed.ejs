@@ -1107,12 +1107,19 @@
     });
 
     // Dodaj obsługę kliknięć przycisków ulubionych
-    document.getElementById('favoriteChannelBtn').addEventListener('click', function() {
-      toggleFavoriteChannel('channelId', 'favoriteIcon');
-    });
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('favoriteChannelBtn').addEventListener('click', function() {
+        console.log('Kliknięto przycisk tworzenia');
+        toggleFavoriteChannel('channelId', 'favoriteIcon');
+      });
 
-    document.getElementById('editFavoriteChannelBtn').addEventListener('click', function() {
-      toggleFavoriteChannel('editChannelId', 'editFavoriteIcon');
+      document.getElementById('editFavoriteChannelBtn').addEventListener('click', function() {
+        console.log('Kliknięto przycisk edycji');
+        toggleFavoriteChannel('editChannelId', 'editFavoriteIcon');
+      });
+
+      // Sprawdź czy przyciski istnieją
+      console.log('Przyciski ulubionych:', document.getElementById('favoriteChannelBtn'), document.getElementById('editFavoriteChannelBtn'));
     });
 
     // --- Przy starcie ---
