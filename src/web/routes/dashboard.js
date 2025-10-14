@@ -294,22 +294,24 @@ router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
     const guildSettings = await Guild.findOne({ guildId: guildId });
 
     // Pobierz listę kanałów tekstowych i sortuj
+    const favorites = guildSettings?.favoriteChannels || [];
     let textChannels = guild.channels.cache
       .filter(c => c.type === 0) // 0 = kanał tekstowy
       .map(c => ({ id: c.id, name: c.name }));
 
-    // Sortuj kanały: ulubione na górze, potem alfabetycznie
-    const favorites = guildSettings?.favoriteChannels || [];
-    textChannels.sort((a, b) => {
-      const aFav = favorites.includes(a.id);
-      const bFav = favorites.includes(b.id);
+    // Rozdziel kanały na ulubione i pozostałe
+    const favoriteChannels = textChannels.filter(c => favorites.includes(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+    const otherChannels = textChannels.filter(c => !favorites.includes(c.id)).sort((a, b) => a.name.localeCompare(b.name));
 
-      if (aFav && !bFav) return -1;
-      if (!aFav && bFav) return 1;
-
-      // Jeśli oba są ulubione lub oba nie są, sortuj alfabetycznie
-      return a.name.localeCompare(b.name);
-    });
+    // Połącz z separatorem jeśli są ulubione kanały
+    if (favoriteChannels.length > 0 && otherChannels.length > 0) {
+      // Dodaj separator między ulubionymi a pozostałymi
+      textChannels = [...favoriteChannels, { id: 'separator', name: '─────────', isSeparator: true }, ...otherChannels];
+    } else if (favoriteChannels.length > 0) {
+      textChannels = favoriteChannels;
+    } else {
+      textChannels = otherChannels;
+    }
 
     // Renderuj widok
     res.render('dashboard/livefeed', {
@@ -378,10 +380,28 @@ router.get('/guild/:guildId/wiatry', hasGuildPermission, async (req, res) => {
       return res.redirect('/dashboard');
     }
 
-    // Pobierz listę kanałów tekstowych
-    const textChannels = guild.channels.cache
+    // Pobierz ustawienia serwera
+    const guildSettings = await Guild.findOne({ guildId: guildId });
+
+    // Pobierz listę kanałów tekstowych i sortuj
+    const favorites = guildSettings?.favoriteChannels || [];
+    let textChannels = guild.channels.cache
       .filter(c => c.type === 0) // 0 = kanał tekstowy
       .map(c => ({ id: c.id, name: c.name }));
+
+    // Rozdziel kanały na ulubione i pozostałe
+    const favoriteChannels = textChannels.filter(c => favorites.includes(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+    const otherChannels = textChannels.filter(c => !favorites.includes(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+
+    // Połącz z separatorem jeśli są obie grupy
+    if (favoriteChannels.length > 0 && otherChannels.length > 0) {
+      // Dodaj separator między ulubionymi a pozostałymi
+      textChannels = [...favoriteChannels, { id: 'separator', name: '─────────', isSeparator: true }, ...otherChannels];
+    } else if (favoriteChannels.length > 0) {
+      textChannels = favoriteChannels;
+    } else {
+      textChannels = otherChannels;
+    }
 
     // Definicje wiatrów
     const wiatry = {
@@ -411,6 +431,8 @@ router.get('/guild/:guildId/wiatry', hasGuildPermission, async (req, res) => {
       user: req.user,
       guild: guild,
       channels: textChannels,
+      favoriteChannels: favorites,
+      guildSettings: guildSettings,
       wiatry: wiatry,
       userPermissions: req.userPermissions,
       path: req.path
