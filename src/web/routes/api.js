@@ -3082,3 +3082,32 @@ router.post('/guilds/:guildId/livefeed-layout', hasGuildPermission, async (req, 
     res.status(500).json({ success: false, error: 'Wystąpił błąd podczas zapisywania layoutu' });
   }
 });
+
+// Ulubione kanały
+router.get('/guilds/:guildId/favorite-channels', hasGuildPermission, async (req, res) => {
+  const { guildId } = req.params;
+  try {
+    const guild = await Guild.findOne({ guildId });
+    if (!guild) return res.status(404).json({ success: false, error: 'Nie znaleziono serwera' });
+    res.json({ success: true, favoriteChannels: guild.favoriteChannels || [] });
+  } catch (error) {
+    logger.error(`Błąd podczas pobierania ulubionych kanałów: ${error.stack}`);
+    res.status(500).json({ success: false, error: 'Wystąpił błąd podczas pobierania ulubionych kanałów' });
+  }
+});
+
+router.put('/guilds/:guildId/favorite-channels', hasGuildPermission, async (req, res) => {
+  const { guildId } = req.params;
+  const { favoriteChannels } = req.body;
+  if (!Array.isArray(favoriteChannels)) return res.status(400).json({ success: false, error: 'favoriteChannels musi być tablicą' });
+  try {
+    const guild = await Guild.findOne({ guildId });
+    if (!guild) return res.status(404).json({ success: false, error: 'Nie znaleziono serwera' });
+    guild.favoriteChannels = favoriteChannels;
+    await guild.save();
+    res.json({ success: true, favoriteChannels: guild.favoriteChannels });
+  } catch (error) {
+    logger.error(`Błąd podczas zapisywania ulubionych kanałów: ${error.stack}`);
+    res.status(500).json({ success: false, error: 'Wystąpił błąd podczas zapisywania ulubionych kanałów' });
+  }
+});

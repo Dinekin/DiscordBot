@@ -183,12 +183,22 @@
               </div>
               <div class="col-md-6">
                 <label for="channelId" class="form-label">Kanał</label>
-                <select class="form-select" id="channelId" name="channelId" required>
-                  <option value="">Wybierz kanał...</option>
-                  <% channels.forEach(channel => { %>
-                    <option value="<%= channel.id %>">#<%= channel.name %></option>
-                  <% }); %>
-                </select>
+                <div class="input-group">
+                  <select class="form-select channel-select" id="channelId" name="channelId" required>
+                    <option value="">Wybierz kanał...</option>
+                    <% channels.forEach(channel => {
+                        const isFavorite = favoriteChannels.includes(channel.id);
+                        const favoriteLabel = isFavorite ? '★' : '';
+                    %>
+                      <option value="<%= channel.id %>" data-favorite="<%= isFavorite %>">
+                        <%= favoriteLabel %> #<%= channel.name %>
+                      </option>
+                    <% }); %>
+                  </select>
+                  <button class="btn btn-outline-secondary favorite-toggle-btn" type="button" id="favoriteChannelBtn" title="Dodaj/usuń z ulubionych">
+                    <i class="far fa-star" id="favoriteIcon"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <div class="row mb-3">
@@ -292,12 +302,22 @@
               </div>
               <div class="col-md-6">
                 <label for="editChannelId" class="form-label">Kanał</label>
-                <select class="form-select" id="editChannelId" name="channelId" required>
-                  <option value="">Wybierz kanał...</option>
-                  <% channels.forEach(channel => { %>
-                    <option value="<%= channel.id %>">#<%= channel.name %></option>
-                  <% }); %>
-                </select>
+                <div class="input-group">
+                  <select class="form-select channel-select" id="editChannelId" name="channelId" required>
+                    <option value="">Wybierz kanał...</option>
+                    <% channels.forEach(channel => {
+                        const isFavorite = favoriteChannels.includes(channel.id);
+                        const favoriteLabel = isFavorite ? '★' : '';
+                    %>
+                      <option value="<%= channel.id %>" data-favorite="<%= isFavorite %>">
+                        <%= favoriteLabel %> #<%= channel.name %>
+                      </option>
+                    <% }); %>
+                  </select>
+                  <button class="btn btn-outline-secondary favorite-toggle-btn" type="button" id="editFavoriteChannelBtn" title="Dodaj/usuń z ulubionych">
+                    <i class="far fa-star" id="editFavoriteIcon"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <div class="row mb-3">
@@ -962,11 +982,145 @@
       }
     }
 
+    // Funkcjonalność ulubionych kanałów
+    async function toggleFavoriteChannel(channelSelectId, iconId) {
+      const select = document.getElementById(channelSelectId);
+      const icon = document.getElementById(iconId);
+      const selectedOption = select.options[select.selectedIndex];
+      if (!selectedOption || !selectedOption.value) return;
+
+      const channelId = selectedOption.value;
+      const isCurrentlyFavorite = selectedOption.getAttribute('data-favorite') === 'true';
+      const guildId = '<%= guild.id %>';
+
+      try {
+        // Pobierz aktualne ulubione kanały
+        const getRes = await fetch(`/api/guilds/${guildId}/favorite-channels`);
+        const getData = await getRes.json();
+
+        if (!getData.success) {
+          alert('Błąd podczas pobierania ulubionych kanałów');
+          return;
+        }
+
+        let favoriteChannels = getData.favoriteChannels || [];
+
+        // Przełącz ulubione
+        if (isCurrentlyFavorite) {
+          favoriteChannels = favoriteChannels.filter(id => id !== channelId);
+          selectedOption.setAttribute('data-favorite', 'false');
+          selectedOption.innerHTML = `#${selectedOption.textContent.replace('★ ', '')}`;
+          icon.classList.remove('fas');
+          icon.classList.add('far');
+        } else {
+          favoriteChannels.push(channelId);
+          selectedOption.setAttribute('data-favorite', 'true');
+          selectedOption.innerHTML = `★ #${selectedOption.textContent.replace('★ ', '')}`;
+          icon.classList.remove('far');
+          icon.classList.add('fas');
+        }
+
+        // Zapisz zmiany
+        const putRes = await fetch(`/api/guilds/${guildId}/favorite-channels`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ favoriteChannels })
+        });
+
+        const putData = await putRes.json();
+
+        if (!putData.success) {
+          alert('Błąd podczas zapisywania zmian');
+          // Przywraca poprzedni stan
+          location.reload();
+          return;
+        }
+
+        // Odśwież dropdowny
+        await updateAllChannelSelects();
+
+      } catch (error) {
+        console.error('Błąd:', error);
+        alert('Wystąpił błąd podczas zmiany ulubionych kanałów');
+      }
+    }
+
+    async function updateAllChannelSelects() {
+      const guildId = '<%= guild.id %>';
+
+      try {
+        // Pobierz aktualne ulubione kanały
+        const res = await fetch(`/api/guilds/${guildId}/favorite-channels`);
+        const data = await res.json();
+
+        if (!data.success) return;
+
+        const favorites = data.favoriteChannels || [];
+
+        // Zaktualizuj wszystkie selecty kanałów
+        document.querySelectorAll('.channel-select').forEach(select => {
+          Array.from(select.options).forEach(option => {
+            if (option.value) {
+              const channelId = option.value;
+              const isFavorite = favorites.includes(channelId);
+              const displayText = option.textContent.replace('★ ', '').replace('★', '');
+              option.setAttribute('data-favorite', isFavorite.toString());
+              option.innerHTML = isFavorite ? `★ ${displayText}` : displayText;
+            }
+          });
+        });
+
+        // Zaktualizuj ikony przycisków
+        updateFavoriteIcons();
+
+      } catch (error) {
+        console.error('Błąd podczas aktualizacji dropdown:', error);
+      }
+    }
+
+    function updateFavoriteIcons() {
+      document.querySelectorAll('.favorite-toggle-btn').forEach(btn => {
+        const selectId = btn.previousElementSibling.id;
+        const select = document.getElementById(selectId);
+        const icon = btn.querySelector('i');
+
+        if (select && icon) {
+          const selectedOption = select.options[select.selectedIndex];
+          const isFavorite = selectedOption && selectedOption.getAttribute('data-favorite') === 'true';
+
+          if (isFavorite) {
+            icon.classList.remove('far');
+            icon.classList.add('fas');
+          } else {
+            icon.classList.remove('fas');
+            icon.classList.add('far');
+          }
+        }
+      });
+    }
+
+    // Obsługa zmiany wyboru w dropdown kanałów
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('channel-select')) {
+        updateFavoriteIcons();
+      }
+    });
+
+    // Dodaj obsługę kliknięć przycisków ulubionych
+    document.getElementById('favoriteChannelBtn').addEventListener('click', function() {
+      toggleFavoriteChannel('channelId', 'favoriteIcon');
+    });
+
+    document.getElementById('editFavoriteChannelBtn').addEventListener('click', function() {
+      toggleFavoriteChannel('editChannelId', 'editFavoriteIcon');
+    });
+
     // --- Przy starcie ---
     document.addEventListener('DOMContentLoaded', async function() {
       await fetchCategories();
       await fetchLayout();
       applyLayoutToDOM();
+      updateFavoriteIcons(); // Inicjalizuj ikony ulubionych
     });
   </script>
   <style>

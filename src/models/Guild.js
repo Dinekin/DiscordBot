@@ -89,6 +89,10 @@ const GuildSchema = new mongoose.Schema({
     type: Map,
     of: Boolean,
     default: {}
+  },
+  favoriteChannels: {
+    type: [String],
+    default: []
   }
 }, { timestamps: true });
 

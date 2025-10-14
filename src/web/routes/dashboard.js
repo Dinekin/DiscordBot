@@ -290,17 +290,35 @@ router.get('/guild/:guildId/livefeed', hasGuildPermission, async (req, res) => {
     // Pobierz wszystkie feedy dla tego serwera
     const feeds = await client.liveFeedManager.getGuildFeeds(guildId);
     
-    // Pobierz listę kanałów tekstowych
-    const textChannels = guild.channels.cache
+    // Pobierz ustawienia serwera
+    const guildSettings = await Guild.findOne({ guildId: guildId });
+
+    // Pobierz listę kanałów tekstowych i sortuj
+    let textChannels = guild.channels.cache
       .filter(c => c.type === 0) // 0 = kanał tekstowy
       .map(c => ({ id: c.id, name: c.name }));
-    
+
+    // Sortuj kanały: ulubione na górze, potem alfabetycznie
+    const favorites = guildSettings?.favoriteChannels || [];
+    textChannels.sort((a, b) => {
+      const aFav = favorites.includes(a.id);
+      const bFav = favorites.includes(b.id);
+
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
+
+      // Jeśli oba są ulubione lub oba nie są, sortuj alfabetycznie
+      return a.name.localeCompare(b.name);
+    });
+
     // Renderuj widok
     res.render('dashboard/livefeed', {
       user: req.user,
       guild: guild,
       feeds: feeds,
       channels: textChannels,
+      favoriteChannels: favorites,
+      guildSettings: guildSettings,
       userPermissions: req.userPermissions,
       path: req.path
     });
